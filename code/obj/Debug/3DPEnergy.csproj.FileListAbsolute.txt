@@ -1,0 +1,11 @@
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\bin\WearablePlugin.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\bin\WearablePlugin.pdb
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\bin\MetroFramework.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\bin\MetroFramework.Fonts.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\3DPEnergy.csprojResolveAssemblyReference.cache
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\WearablePlugin.Properties.Resources.resources
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\EnergyPlugin.ProcessingWarningWindow.resources
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\EnergyPlugin.EnergyPluginControl.resources
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\3DPEnergy.csproj.GenerateResource.Cache
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\WearablePlugin.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\code\obj\Debug\WearablePlugin.pdb
