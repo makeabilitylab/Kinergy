@@ -28,6 +28,9 @@ The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. T
 
 This task aims to help you walkthrough the codebase architecture and gain more experience developing a feature for a custom Rhino plugin in C# from end to end. The algorithm for voxelization and required steps are provided below. You are free to raise any question as you learn more about the codebase and work on this task.
 
+### Voxel/Voxelization: 
+A voxel represents a value on a regular grid in three-dimensional space. More information can be found on [this page](https://en.wikipedia.org/wiki/Voxel). 
+
 ### Work on your own solution:
 **Please fork a new branch from the *master* branch and implement your own solution in your branch. Don't publish your branch before 12/22.**
 
@@ -41,4 +44,4 @@ u/lectures/triangle_intersection.pdf) algorithm (*action: implement the algorith
 6. Visualize each voxels (*action: your pick of visualization form, e.g., points, boxes, spheres, etc.*)
 
 ### Q&A:
-Please try at least one solution before ask any questions. This is a learning-by-practice process and you will gain benefits from trials. Otherwise, Liang can help with learning the codebase, software setups, and explaining the workflow of the task. Liang plan to give a quick demo of the codebase to all students who will involve in the development.
+Please try at least one solution before ask any questions. This is a learning-by-practice process and you will gain benefits from trials. Otherwise, Liang can help with learning the codebase, software setups, and explaining the workflow of the task. Liang plans to give a quick demo of the codebase to all students who will involve in the development.
