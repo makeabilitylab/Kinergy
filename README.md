@@ -28,6 +28,9 @@ The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. T
 
 This task aims to help you walkthrough the codebase architecture and gain more experience developing a feature for a custom Rhino plugin in C# from end to end. The algorithm for voxelization and required steps are provided below. You are free to raise any question as you learn more about the codebase and work on this task.
 
+### Work on your own solution:
+**Please fork a new branch from the *master* branch and implement your own solution in your branch. Don't publish your branch before 12/22.**
+
 ### Model voxelization workflow:
 1. Select a 3D model in the editting environment;
 2. Click a button in the plugin interface (*action: add a new button to the interface*);
