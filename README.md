@@ -34,7 +34,7 @@ This task aims to help you walkthrough the codebase architecture and gain more e
 ### Model voxelization workflow:
 1. Select a 3D model in the editting environment;
 2. Click a button in the plugin interface (*action: add a new button to the interface*);
-3. Convert the selected model from a [brep](https://en.wikipedia.org/wiki/Boundary_representation) to a [mesh](https://en.wikipedia.org/wiki/Mesh) (*action: you might need to refer to Rhinocommon APIs to convert the model to a mesh*);
+3. Convert the selected model from a [B-rep](https://en.wikipedia.org/wiki/Boundary_representation) to a [mesh](https://en.wikipedia.org/wiki/Mesh) (*action: you might need to refer to Rhinocommon APIs to convert the model to a mesh*);
 4. Find the triangles in the converted mesh (*action: you might need to triangulate the mesh using Rhinocommon APIs*);
 5. Following the [Ray-Triangle Intersection](https://courses.cs.washington.edu/courses/csep557/10a
 u/lectures/triangle_intersection.pdf) algorithm (*action: implement the algorithm in C#*);
