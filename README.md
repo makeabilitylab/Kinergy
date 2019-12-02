@@ -28,6 +28,16 @@ The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. T
 
 This task aims to help you walkthrough the codebase architecture and gain more experience developing a feature for a custom Rhino plugin in C# from end to end. The algorithm for voxelization and required steps are provided below. You are free to raise any question as you learn more about the codebase and work on this task.
 
+### Pre-task Exercise
+Before we jump into the real task, we can add a new button to the plugin and print out "Hello World" in Rhino by clicking that button :)
+1. Go to *3DPEnergyPanel.cs* and drag and drop a button control on the graphical interface;
+2. Double-click the new button to add a function for the button-click event;
+3. In the function, call a new function called *"PrintHelloWorld"*. This function is a member function of the *class Controller* object *controller*.
+4. Go to *Controller* class and add the definition of the member function *PrintHelloWorld*;
+5. In *"PrintHelloWorld"* function, call *rhinoModel's* member function *"PrintHelloWorld"* to execute the printout;
+6. Refer to Rhinocommon API to figure out how to print a line "Hello World" in Rhino's command window in the body of *class RhinoModel's* member function *"PrintHelloWorld"* 
+5. Sofar, you have learned how to add a new feature to the plugin and how the end user interface communicates with the backend implementation.
+
 ### Voxel/Voxelization: 
 A voxel represents a value on a regular grid in three-dimensional space. More information can be found on [this page](https://en.wikipedia.org/wiki/Voxel). 
 
@@ -39,8 +49,7 @@ A voxel represents a value on a regular grid in three-dimensional space. More in
 2. Click a button in the plugin interface (*action: add a new button to the interface*);
 3. Convert the selected model from a [B-rep](https://en.wikipedia.org/wiki/Boundary_representation) to a [mesh](https://en.wikipedia.org/wiki/Mesh) (*action: you might need to refer to Rhinocommon APIs to convert the model to a mesh*);
 4. Find the triangles in the converted mesh (*action: you might need to triangulate the mesh using Rhinocommon APIs*);
-5. Following the [Ray-Triangle Intersection](https://courses.cs.washington.edu/courses/csep557/10a
-u/lectures/triangle_intersection.pdf) algorithm (*action: implement the algorithm in C#*);
+5. Following the [Ray-Triangle Intersection](https://courses.cs.washington.edu/courses/csep557/10au/lectures/triangle_intersection.pdf) algorithm (*action: implement the algorithm in C#*);
 6. Visualize each voxels (*action: your pick of visualization form, e.g., points, boxes, spheres, etc.*)
 
 ### Q&A:
