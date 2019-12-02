@@ -30,13 +30,15 @@ This task aims to help you walkthrough the codebase architecture and gain more e
 
 ### Pre-task Exercise
 Before we jump into the real task, we can add a new button to the plugin and print out "Hello World" in Rhino by clicking that button :)
+
 1. Go to *3DPEnergyPanel.cs* and drag and drop a button control on the graphical interface;
 2. Double-click the new button to add a function for the button-click event;
 3. In the function, call a new function called *"PrintHelloWorld"*. This function is a member function of the *class Controller* object *controller*.
 4. Go to *Controller* class and add the definition of the member function *PrintHelloWorld*;
 5. In *"PrintHelloWorld"* function, call *rhinoModel's* member function *"PrintHelloWorld"* to execute the printout;
 6. Refer to Rhinocommon API to figure out how to print a line "Hello World" in Rhino's command window in the body of *class RhinoModel's* member function *"PrintHelloWorld"* 
-5. Sofar, you have learned how to add a new feature to the plugin and how the end user interface communicates with the backend implementation.
+
+Now you understand how to add a new feature to the plugin and how the end user interface communicates with the backend implementation. Let's move on to the main task.
 
 ### Voxel/Voxelization: 
 A voxel represents a value on a regular grid in three-dimensional space. More information can be found on [this page](https://en.wikipedia.org/wiki/Voxel). 
