@@ -28,6 +28,9 @@ The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. T
 
 This task aims to help you walkthrough the codebase architecture and gain more experience developing a feature for a custom Rhino plugin in C# from end to end. The algorithm for voxelization and required steps are provided below. You are free to raise any question as you learn more about the codebase and work on this task.
 
+### Work on your own solution:
+**Please fork a new branch from the *master* branch and implement your own solution in your branch. Don't publish your branch before 12/22.**
+
 ### Pre-task Exercise
 Before we jump into the real task, we can add a new button to the plugin and print out "Hello World" in Rhino by clicking that button :)
 
@@ -42,9 +45,6 @@ Now you understand how to add a new feature to the plugin and how the end user i
 
 ### Voxel/Voxelization: 
 A voxel represents a value on a regular grid in three-dimensional space. More information can be found on [this page](https://en.wikipedia.org/wiki/Voxel). 
-
-### Work on your own solution:
-**Please fork a new branch from the *master* branch and implement your own solution in your branch. Don't publish your branch before 12/22.**
 
 ### Model voxelization workflow:
 1. Select a 3D model in the editting environment;
