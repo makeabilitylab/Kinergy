@@ -13,7 +13,8 @@ If you cannot run the code successfully, check the following project settings be
 1. After the project is loaded in VS 2017, go to "Project -> xxxx properties...", check "Start external program" in "Debug" tab is located to Rhino 6 execution file (the default path is *C:\Program Files\Rhino 6\System\Rhino.exe*);
 2. Check "Target framework" is set to ".NET Framework 4.5.2" in "Application" tab;
 3. Go to "Solution Explorer" side panel, expand "References", remove "RhinoCommon" and "Rhino_DotNet" references (they should have a small warning icon). Right-click "References" and select "Add reference...", add RhinoCommon.dll and Rhino_DotNet.dll (for Rhino 6) in *C:\Program Files\Rhino 6\System\RhinoCommon.dll* and *C:\Program Files\Rhino 6\System\Rhino_DotNet.dll* in "Browse" tab, and select both of them and hit "OK";
-4. Clean and rebuild the solution and it should be ready to go.
+4. Set "Copy Local" property "False" for both new references (you can find the property by clicking the reference and look for "Copy Local" in the property list at the bottom panel); 
+5. Clean and rebuild the solution and it should be ready to go.
 
 ### The architecture of the codebase:
 - *PluginBarCommand.cs*/*PluginBarDialog.cs*/*PluginBarPlugIn.cs*: They are related to the initialization and registration of the plugin
