@@ -1,10 +1,19 @@
-# 3D Printing Energy - Getting Familiar with the Codebase & Mini Task (Due 12/22)
+# 3D Printing Energy - Getting Familiar with the Codebase & Mini Task (Due 1/2)
 
 To help all members who will contribute in the development of our design tool, I created a codebase with two simple features in a custom Rhino plugin example. After learning the codebase, you will understand the architecture of Rhino plugin development and you will add another feature to the current plugin interface.
 
 ## Example Rhino Plugin 
 
-The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. These two software can be downloaded and installed from this [Google Drive folder](https://drive.google.com/drive/folders/1wYBMWHzkhhNNpjThSnpCZC947AjmC39U?usp=sharing).
+The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. These two software can be downloaded and installed from this [Google Drive folder](https://drive.google.com/drive/folders/1wYBMWHzkhhNNpjThSnpCZC947AjmC39U?usp=sharing) (Visual Studio 2017 is uploaded).
+
+### Troubleshooting of Development Environment
+**UPDATE:** Since we are using Rhino 6 (SDK), I have updated VS from 2015 to 2017. Please install VS 2017 professional (your choice of uninstalling VS 2015).
+
+If you cannot run the code successfully, check the following project settings before running the project:
+1. After the project is loaded in VS 2017, go to "Project -> xxxx properties...", check "Start external program" in "Debug" tab is located to Rhino 6 execution file (the default path is *C:\Program Files\Rhino 6\System\Rhino.exe*);
+2. Check "Target framework" is set to ".NET Framework 4.5.2" in "Application" tab;
+3. Go to "Solution Explorer" side panel, expand "References", remove "RhinoCommon" and "Rhino_DotNet" references (they should have a small warning icon). Right-click "References" and select "Add reference...", add RhinoCommon.dll and Rhino_DotNet.dll (for Rhino 6) in *C:\Program Files\Rhino 6\System\RhinoCommon.dll* and *C:\Program Files\Rhino 6\System\Rhino_DotNet.dll* in "Browse" tab, and select both of them and hit "OK";
+4. Clean and rebuild the solution and it should be ready to go.
 
 ### The architecture of the codebase:
 - *PluginBarCommand.cs*/*PluginBarDialog.cs*/*PluginBarPlugIn.cs*: They are related to the initialization and registration of the plugin
