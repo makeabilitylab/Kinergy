@@ -6,7 +6,7 @@ To help all members who will contribute in the development of our design tool, I
 
 The provided codebase is developed with VS studio 2015 and Rhino 6 on Windows. These two software can be downloaded and installed from this [Google Drive folder](https://drive.google.com/drive/folders/1wYBMWHzkhhNNpjThSnpCZC947AjmC39U?usp=sharing) (Visual Studio 2017 is uploaded).
 
-### Troubleshooting of Development Environment
+### Troubleshooting for Development Environment
 **UPDATE:** Since we are using Rhino 6 (SDK), I have updated VS from 2015 to 2017. Please install VS 2017 professional (your choice of uninstalling VS 2015).
 
 If you cannot run the code successfully, check the following project settings before running the project:
