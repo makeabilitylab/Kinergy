@@ -1,22 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.IO;
 using Rhino;
 using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino.Input;
 using System.Drawing;
-using System.Diagnostics;
-using Rhino.Geometry.Intersect;
+using Rhino.Input.Custom;
 
 namespace EnergyPlugin
-{ 
+{
     public interface RhinoModel
     {
         void AddRandomGeometry();
         void ExportModel();
+        void Voxelize();
     }
 
     public class IncRhinoModel : RhinoModel
@@ -27,7 +24,7 @@ namespace EnergyPlugin
 
         #region declarations of local variables for all features
         RhinoDoc myDoc = null;
-        ObjectAttributes redAttribute, whiteAttribute, greenAttribute, orangeAttribute, blueAttribute;
+        readonly ObjectAttributes redAttribute, whiteAttribute, greenAttribute, orangeAttribute, blueAttribute;
         #endregion
 
         public IncRhinoModel()
@@ -44,12 +41,14 @@ namespace EnergyPlugin
             redMat.DiffuseColor = System.Drawing.Color.Red;
             redMat.SpecularColor = System.Drawing.Color.Red;
             redMat.CommitChanges();
-            redAttribute = new ObjectAttributes();
-            redAttribute.LayerIndex = 1;
-            redAttribute.MaterialIndex = redIndex;
-            redAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
-            redAttribute.ObjectColor = Color.Red;
-            redAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+            redAttribute = new ObjectAttributes
+            {
+                LayerIndex = 1,
+                MaterialIndex = redIndex,
+                MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject,
+                ObjectColor = Color.Red,
+                ColorSource = ObjectColorSource.ColorFromObject
+            };
 
             int whiteIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material whiteMat = myDoc.Materials[whiteIndex];
@@ -57,26 +56,30 @@ namespace EnergyPlugin
             whiteMat.SpecularColor = System.Drawing.Color.White;
             whiteMat.Transparency = 0;
             whiteMat.CommitChanges();
-            whiteAttribute = new ObjectAttributes();
-            whiteAttribute.LayerIndex = 2;
-            whiteAttribute.MaterialIndex = whiteIndex;
-            whiteAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
-            whiteAttribute.ObjectColor = Color.White;
-            whiteAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+            whiteAttribute = new ObjectAttributes
+            {
+                LayerIndex = 2,
+                MaterialIndex = whiteIndex,
+                MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject,
+                ObjectColor = Color.White,
+                ColorSource = ObjectColorSource.ColorFromObject
+            };
 
             int blueIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material blueMat = myDoc.Materials[blueIndex];
-            blueMat.DiffuseColor = System.Drawing.Color.FromArgb(16,150,206);
+            blueMat.DiffuseColor = System.Drawing.Color.FromArgb(16, 150, 206);
             blueMat.SpecularColor = System.Drawing.Color.FromArgb(16, 150, 206);
             blueMat.Transparency = 0.7f;
             blueMat.TransparentColor = System.Drawing.Color.FromArgb(16, 150, 206);
             blueMat.CommitChanges();
-            blueAttribute = new ObjectAttributes();
-            blueAttribute.LayerIndex = 5;
-            blueAttribute.MaterialIndex = blueIndex;
-            blueAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
-            blueAttribute.ObjectColor = Color.FromArgb(16, 150, 206);
-            blueAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+            blueAttribute = new ObjectAttributes
+            {
+                LayerIndex = 5,
+                MaterialIndex = blueIndex,
+                MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject,
+                ObjectColor = Color.FromArgb(16, 150, 206),
+                ColorSource = ObjectColorSource.ColorFromObject
+            };
 
             int greenIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material greenMat = myDoc.Materials[greenIndex];
@@ -84,12 +87,14 @@ namespace EnergyPlugin
             greenMat.SpecularColor = System.Drawing.Color.Green;
             greenMat.Transparency = 0.7f;
             greenMat.CommitChanges();
-            greenAttribute = new ObjectAttributes();
-            greenAttribute.LayerIndex = 3;
-            greenAttribute.MaterialIndex = greenIndex;
-            greenAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
-            greenAttribute.ObjectColor = Color.Green;
-            greenAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+            greenAttribute = new ObjectAttributes
+            {
+                LayerIndex = 3,
+                MaterialIndex = greenIndex,
+                MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject,
+                ObjectColor = Color.Green,
+                ColorSource = ObjectColorSource.ColorFromObject
+            };
 
             int orangeIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material orangeMat = myDoc.Materials[orangeIndex];
@@ -97,18 +102,20 @@ namespace EnergyPlugin
             orangeMat.Transparency = 0.3;
             orangeMat.SpecularColor = System.Drawing.Color.Orange;
             orangeMat.CommitChanges();
-            orangeAttribute = new ObjectAttributes();
-            orangeAttribute.LayerIndex = 4;
-            orangeAttribute.MaterialIndex = orangeIndex;
-            orangeAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
-            orangeAttribute.ObjectColor = Color.Orange;
-            orangeAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+            orangeAttribute = new ObjectAttributes
+            {
+                LayerIndex = 4,
+                MaterialIndex = orangeIndex,
+                MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject,
+                ObjectColor = Color.Orange,
+                ColorSource = ObjectColorSource.ColorFromObject
+            };
 
             #endregion
 
             myDoc.Views.Redraw();
         }
-       
+
         public void AddRandomGeometry()
         {
             processingwindow.Show();
@@ -152,7 +159,7 @@ namespace EnergyPlugin
                         myDoc.Objects.AddSphere(new Sphere(new Point3d(0, 0, 0), 30), orangeAttribute);
                     }
                     break;
-                default:break;
+                default: break;
             }
 
             myDoc.Views.Redraw();
@@ -165,8 +172,7 @@ namespace EnergyPlugin
         public void ExportModel()
         {
             // Ask the user to select one object
-            ObjRef objSel_ref;
-            var rcommand = RhinoGet.GetOneObject("Select surface or polysurface to export", false, ObjectType.AnyObject, out objSel_ref);
+            var rcommand = RhinoGet.GetOneObject("Select surface or polysurface to export", false, ObjectType.AnyObject, out ObjRef objSel_ref);
             if (rcommand == Rhino.Commands.Result.Success)
             {
                 string currentPath = System.IO.Directory.GetCurrentDirectory();
@@ -175,6 +181,113 @@ namespace EnergyPlugin
                 Rhino.RhinoApp.RunScript("-Export " + STLFileName + " y=n Enter Enter", false);
             }
         }
-    }
 
+        public void Voxelize()
+        {
+            const int side = 5;
+
+            for (int x = -side; x < side; x++)
+            {
+                for (int y = -side; y < side; y++)
+                {
+                    for (int z = -side; z < side; z++)
+                    {
+                        var center = new Point3d(x, y, z);
+                        var voxel = new Sphere(center, 0.5);
+                        var radius = IsVoxelOnSurface(voxel) ? 0.5 : 0.2;
+                        myDoc.Objects.AddSphere(new Sphere(center, radius));
+                    }
+                }
+            }
+
+            myDoc.Views.Redraw();
+        }
+
+        private bool IsVoxelOnSurface(Sphere voxel)
+        {
+            var model = GetSelectedModel();
+
+            var meshes = Mesh.CreateFromBrep(model, MeshingParameters.Default);
+            foreach (var mesh in meshes)
+            {
+                mesh.Faces.ConvertQuadsToTriangles();
+            }
+
+            return meshes.Any(mesh => IsVoxelOnSurface(voxel, mesh));
+        }
+
+        private Brep GetSelectedModel()
+        {
+            var go = new GetObject
+            {
+                GeometryFilter = ObjectType.Brep
+            };
+            go.EnablePreSelect(true, true);
+            go.EnablePostSelect(false);
+            go.Get();
+
+            if (go.ObjectCount > 0)
+            {
+                return go.Object(0).Brep();
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        private bool IsVoxelOnSurface(Sphere voxel, Mesh mesh)
+        {
+            for (int i = 0; i < mesh.Faces.Count; i++)
+            {
+                mesh.Faces.GetFaceVertices(i, out var a, out var b, out var c, out var d);
+                if (IsVoxelOnSurface(voxel, a, b, c))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        #region Face Intersection
+        private bool IsVoxelOnSurface(Sphere voxel, Point3d a, Point3d b, Point3d c)
+        {
+            return IsVoxelOnSurface(voxel, new Vector3d(1, 0, 0), a, b, c)
+                || IsVoxelOnSurface(voxel, new Vector3d(0, 1, 0), a, b, c)
+                || IsVoxelOnSurface(voxel, new Vector3d(0, 0, 1), a, b, c);
+        }
+
+        private bool IsVoxelOnSurface(Sphere voxel, Vector3d direction, Point3d a, Point3d b, Point3d c)
+        {
+            var ray = new Ray3d(voxel.Center, direction);
+            var plane = SupportingPlane(a, b, c);
+
+            if (Vector3d.CrossProduct(plane, ray.Direction).IsTiny())
+            {
+                var q = PointOfIntersection(ray, plane, a);
+                return FaceContainsPoint(a, b, c, plane, q) && IsPointWithinVoxel(voxel, q);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        private Vector3d SupportingPlane(Point3d a, Point3d b, Point3d c) => Vector3d.CrossProduct(b - a, c - a);
+
+        private Point3d PointOfIntersection(Ray3d ray, Vector3d plane, Point3d a)
+        {
+            var d = plane * (Vector3d)a;
+            var t = (d - (plane * (Vector3d)ray.Position)) / (plane * ray.Direction);
+            return ray.Position + (t * ray.Direction);
+        }
+
+        private bool FaceContainsPoint(Point3d a, Point3d b, Point3d c, Vector3d plane, Point3d point) => Vector3d.CrossProduct(b - a, point - a) * plane >= 0
+            && Vector3d.CrossProduct(c - b, point - b) * plane >= 0
+            && Vector3d.CrossProduct(a - c, point - c) * plane >= 0;
+
+        private bool IsPointWithinVoxel(Sphere voxel, Point3d point) => (voxel.Center - point).SquareLength <= (voxel.Radius * voxel.Radius);
+        #endregion
+    }
 }

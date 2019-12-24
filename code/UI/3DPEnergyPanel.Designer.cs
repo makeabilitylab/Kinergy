@@ -36,6 +36,7 @@ namespace EnergyPlugin
         {
             this.ExportBtn = new System.Windows.Forms.Button();
             this.AddShapeBtn = new System.Windows.Forms.Button();
+            this.VoxelizeBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // ExportBtn
@@ -58,11 +59,22 @@ namespace EnergyPlugin
             this.AddShapeBtn.UseVisualStyleBackColor = true;
             this.AddShapeBtn.Click += new System.EventHandler(this.AddShapeBtn_Click);
             // 
-            // WearablePluginControl
+            // VoxelizeBtn
             // 
+            this.VoxelizeBtn.Location = new System.Drawing.Point(152, 257);
+            this.VoxelizeBtn.Name = "VoxelizeBtn";
+            this.VoxelizeBtn.Size = new System.Drawing.Size(195, 59);
+            this.VoxelizeBtn.TabIndex = 2;
+            this.VoxelizeBtn.Text = "Voxelize";
+            this.VoxelizeBtn.UseVisualStyleBackColor = true;
+            this.VoxelizeBtn.Click += new System.EventHandler(this.VoxelizeBtn_Click);
+            // 
+            // EnergyPluginControl
+            // 
+            this.Controls.Add(this.VoxelizeBtn);
             this.Controls.Add(this.AddShapeBtn);
             this.Controls.Add(this.ExportBtn);
-            this.Name = "WearablePluginControl";
+            this.Name = "EnergyPluginControl";
             this.Size = new System.Drawing.Size(500, 812);
             this.ResumeLayout(false);
 
@@ -71,5 +83,6 @@ namespace EnergyPlugin
 
         private Button ExportBtn;
         private Button AddShapeBtn;
+        private Button VoxelizeBtn;
     }
 }

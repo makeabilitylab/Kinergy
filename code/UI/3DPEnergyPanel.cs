@@ -1,22 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using Rhino.UI;
-using System.Xml;
-using Rhino.DocObjects;
-using Rhino.Geometry;
-using System.Drawing.Drawing2D;
-using System.IO;
-using Rhino;
-using Rhino.Commands;
-using Rhino.Input;
-using Rhino.Geometry;
-using Rhino.DocObjects;
 
 namespace EnergyPlugin
 {
@@ -55,6 +39,10 @@ namespace EnergyPlugin
         private void AddShapeBtn_Click(object sender, EventArgs e)
         {
             controller.AddRandomGeometry();
+        }
+
+        private void VoxelizeBtn_Click(object sender, EventArgs e) {
+            controller.Voxelize();
         }
     }
 }

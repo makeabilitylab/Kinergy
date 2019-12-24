@@ -20,6 +20,7 @@ namespace EnergyPlugin
         void ExportModel();
         #endregion
 
+        void Voxelize();
     }
 
     public class IncController : Controller
@@ -42,6 +43,11 @@ namespace EnergyPlugin
         public void ExportModel()
         {
             rhinoModel.ExportModel();
+        }
+
+        public void Voxelize()
+        {
+            rhinoModel.Voxelize();
         }
     }
 }
