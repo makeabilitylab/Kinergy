@@ -18,6 +18,7 @@ namespace EnergyPlugin
         #region default functions
         void AddRandomGeometry();
         void ExportModel();
+        void Voxelize();
         #endregion
 
     }
@@ -42,6 +43,10 @@ namespace EnergyPlugin
         public void ExportModel()
         {
             rhinoModel.ExportModel();
+        }
+        public void Voxelize()
+        {
+            rhinoModel.Voxelize();
         }
     }
 }

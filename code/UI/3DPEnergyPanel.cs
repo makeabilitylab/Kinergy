@@ -56,5 +56,15 @@ namespace EnergyPlugin
         {
             controller.AddRandomGeometry();
         }
+
+        private void button1_Click_1(object sender, EventArgs e)
+        {
+            controller.Voxelize();
+        }
+
+        private void EnergyPluginControl_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

@@ -50,11 +50,11 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="RhinoCommon">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Rhino 6\System\RhinoCommon.dll</HintPath>
+      <HintPath>C:\Program Files\Rhino 6\System\RhinoCommon.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Rhino_DotNet">
-      <HintPath>..\..\..\..\..\..\..\Program Files\Rhino 6\System\Rhino_DotNet.dll</HintPath>
+      <HintPath>C:\Program Files\Rhino 6\System\Rhino_DotNet.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
