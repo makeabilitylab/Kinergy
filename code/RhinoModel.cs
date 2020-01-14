@@ -183,15 +183,17 @@ namespace EnergyPlugin
             processingwindow.Show();
             processingwindow.Refresh();
 
+            // Ask the user to select one object
+            ObjRef objSel_ref;
+            var rcommand = RhinoGet.GetOneObject("Select surface or polysurface to export", false, ObjectType.AnyObject, out objSel_ref);
+            if (rcommand == Rhino.Commands.Result.Success) { 
             // Find the object already selected
-            Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
-            go.AlreadySelectedObjectSelect = true;
-            go.GeometryFilter = Rhino.DocObjects.ObjectType.Surface | ObjectType.PolysrfFilter;
-            Rhino.DocObjects.ObjRef objref = go.Object(0);
-            Rhino.DocObjects.RhinoObject obj = objref.Object();
-            if (obj != null)
-            {
-                var brep = objref.Brep();
+            //Rhino.Input.Custom.GetObject go = new Rhino.Input.Custom.GetObject();
+            //go.AlreadySelectedObjectSelect = true;
+            //go.GeometryFilter = Rhino.DocObjects.ObjectType.Surface | ObjectType.PolysrfFilter;
+            //Rhino.DocObjects.ObjRef objref = go.Object(0);
+                RhinoObject obj = objSel_ref.Object();         
+                var brep = objSel_ref.Brep();
                 if (brep != null)
                 {
                     // Convert brep to mesh
@@ -209,7 +211,6 @@ namespace EnergyPlugin
                         Vector3d ray = new Vector3d(0, 0, 1);
                         //Compute origin points in the x-y planes
                         List < Vector3d > origins= new List<Vector3d>();
-                        List<int> count = new List<int>();
                         for (var i = bbox.Min.X; i < bbox.Max.X + dMin; i += dMin)
                         {
                             for (var j = bbox.Min.Y; j < bbox.Max.Y + dMin; j += dMin)
@@ -243,13 +244,12 @@ namespace EnergyPlugin
                             var n = Vector3d.Divide(normal, normal.Length);
                             var d = Vector3d.Multiply(n, pa);
                             //Compute the intersections of rays and triangles
-                            foreach (var origin in origins)
-                            {
-                                var nd = Vector3d.Multiply(n, ray);
-                                if (nd != 0)
+                            var nd = Vector3d.Multiply(n, ray);
+                            if (nd != 0) { 
+                                foreach (var origin in origins)                                         
                                 {
                                     var t = (d - Vector3d.Multiply(n, origin)) / nd;
-                                    Vector3d pq = new Vector3d(origin.X, origin.Y, t*dMin);
+                                    Vector3d pq = new Vector3d(origin.X, origin.Y, t);
                                     if (Vector3d.Multiply(Vector3d.CrossProduct((pb - pa), (pq - pa)), n) >= 0)
                                     {
                                         if (Vector3d.Multiply(Vector3d.CrossProduct((pc - pb), (pq - pb)), n) >= 0)
@@ -257,7 +257,7 @@ namespace EnergyPlugin
                                             if (Vector3d.Multiply(Vector3d.CrossProduct((pa - pc), (pq - pc)), n) >= 0)
                                             {
                                                 //Q is inside triangle ABC
-                                                int intersect_z = (int)(t - bbox.Min.Z)/dMin+1;                                               
+                                                int intersect_z = (int)((pq.Z - bbox.Min.Z)/dMin)+1;                                               
                                                 for (int i= intersect_z; i < VoxelZCount; i++)
                                                 {
                                                     voxelArrays[origins.IndexOf(origin), i]++;
@@ -274,8 +274,8 @@ namespace EnergyPlugin
                         {
                             for (int j = 0; j < VoxelZCount; j++)
                             {
-                                //The interaction rimes before ray reaches voxel is odds
-                                if(voxelArrays[i, j] / 2 != 0)
+                                //If the interaction times before ray reaches voxel is odds
+                                if(voxelArrays[i, j] % 2 != 0)
                                 {
                                     var x = origins[i].X;
                                     var y = origins[i].Y;
