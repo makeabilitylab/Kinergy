@@ -1,0 +1,6 @@
+E:\winter research\library\Animation\Animation\bin\Animation.dll
+E:\winter research\library\Animation\Animation\bin\Animation.pdb
+E:\winter research\library\Animation\Animation\obj\Debug\Animation.csprojAssemblyReference.cache
+E:\winter research\library\Animation\Animation\obj\Debug\Animation.csproj.CoreCompileInputs.cache
+E:\winter research\library\Animation\Animation\obj\Debug\Animation.dll
+E:\winter research\library\Animation\Animation\obj\Debug\Animation.pdb

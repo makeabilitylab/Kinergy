@@ -1,0 +1,6 @@
+E:\winter research\library\DynamicConnection\DynamicConnection\obj\Debug\DynamicConnection.csproj.CoreCompileInputs.cache
+E:\winter research\library\DynamicConnection\DynamicConnection\bin\DynamicConnection.dll
+E:\winter research\library\DynamicConnection\DynamicConnection\bin\DynamicConnection.pdb
+E:\winter research\library\DynamicConnection\DynamicConnection\obj\Debug\DynamicConnection.dll
+E:\winter research\library\DynamicConnection\DynamicConnection\obj\Debug\DynamicConnection.pdb
+E:\winter research\library\DynamicConnection\DynamicConnection\obj\Debug\DynamicConnection.csprojAssemblyReference.cache

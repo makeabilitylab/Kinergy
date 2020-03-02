@@ -1,0 +1,6 @@
+E:\winter research\library\PlaceBoxInsideBrep\PlaceBoxInsideBrep\bin\PlaceBoxInsideBrep.dll
+E:\winter research\library\PlaceBoxInsideBrep\PlaceBoxInsideBrep\bin\PlaceBoxInsideBrep.pdb
+E:\winter research\library\PlaceBoxInsideBrep\PlaceBoxInsideBrep\obj\Debug\PlaceBoxInsideBrep.csproj.CoreCompileInputs.cache
+E:\winter research\library\PlaceBoxInsideBrep\PlaceBoxInsideBrep\obj\Debug\PlaceBoxInsideBrep.dll
+E:\winter research\library\PlaceBoxInsideBrep\PlaceBoxInsideBrep\obj\Debug\PlaceBoxInsideBrep.pdb
+E:\winter research\library\PlaceBoxInsideBrep\PlaceBoxInsideBrep\obj\Debug\PlaceBoxInsideBrep.csprojAssemblyReference.cache
