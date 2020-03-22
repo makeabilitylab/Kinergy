@@ -1,0 +1,8 @@
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\bin\MotionSolver.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\bin\MotionSolver.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\bin\Kinergy.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\bin\Kinergy.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\obj\Debug\MotionSolver.csprojAssemblyReference.cache
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\obj\Debug\MotionSolver.csproj.CopyComplete
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\obj\Debug\MotionSolver.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Basic-helical\MotionSolver\MotionSolver\obj\Debug\MotionSolver.pdb
