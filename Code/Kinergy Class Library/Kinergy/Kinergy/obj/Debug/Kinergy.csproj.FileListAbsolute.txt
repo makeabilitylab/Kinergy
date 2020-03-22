@@ -1,0 +1,7 @@
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\bin\Debug\Kinergy.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\bin\Debug\Kinergy.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\bin\Debug\GH_Util.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\obj\Debug\Kinergy.csprojAssemblyReference.cache
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CopyComplete
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\obj\Debug\Kinergy.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\Kinergy Geometry Package\Kinergy\Kinergy\obj\Debug\Kinergy.pdb
