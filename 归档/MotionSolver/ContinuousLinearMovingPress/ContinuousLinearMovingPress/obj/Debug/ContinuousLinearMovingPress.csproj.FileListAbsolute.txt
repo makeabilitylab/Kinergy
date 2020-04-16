@@ -1,0 +1,10 @@
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\bin\ContinuousLinearMovingPress.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\bin\ContinuousLinearMovingPress.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\bin\Kinergy.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\bin\Mono.Cecil.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\bin\GH_Util.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\bin\Kinergy.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\obj\Debug\ContinuousLinearMovingPress.csprojAssemblyReference.cache
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\obj\Debug\ContinuousLinearMovingPress.csproj.CopyComplete
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\obj\Debug\ContinuousLinearMovingPress.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingPress\ContinuousLinearMovingPress\obj\Debug\ContinuousLinearMovingPress.pdb

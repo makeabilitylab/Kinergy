@@ -1,0 +1,8 @@
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\bin\InstantExtension.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\bin\InstantExtension.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\bin\Kinergy.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\bin\Kinergy.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\obj\Debug\InstantExtension.csprojAssemblyReference.cache
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\obj\Debug\InstantExtension.csproj.CopyComplete
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\obj\Debug\InstantExtension.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\InstantExtension\InstantExtension\obj\Debug\InstantExtension.pdb
