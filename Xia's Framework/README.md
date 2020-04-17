@@ -2,8 +2,10 @@
 其中motion solver包含了两个已经初步写完的motion，分别是InstantExtension和ContinuousLinearMovingByPress，他们各自都引用了Kinergy类库。
 utilities是之后要完善的部分，包含了所有辅助工具电池，目前只写了一个EntityReader,之后simulation的电池也会写在这里面。
 
-如果需要加载电池，最好先打开vs项目，确保kinergy的引用有效，然后重新生成一次，这样可以保证所有电池引用的Kinergy.dll是一个版本
-之后将每个项目的bin文件夹里的gha文件拷贝到 Program Files\Rhino 6\Plug-ins\Grasshopper\Components文件夹里，
-另外再拷贝一份Kinergy.dll(只要引用的都是用同一个版本的类库，各个项目文件夹里的dll就都是一样的，有一份就行)，以及KinergyResources文件夹到上面的路径下
+如果需要加载电池，只需要将每个项目的bin文件夹里的gha文件拷贝到 Program Files\Rhino 6\Plug-ins\Grasshopper\Components文件夹里，
+另外再拷贝Kinergy.dll(只要引用的都是用同一个版本的类库，各个项目文件夹里的dll就都是一样的，有一份就行)，以及KinergyResources文件夹到上面的路径
+之后启动grasshopper，就能看到电池了
 
+如果电池报错说dll找不到或者版本不对，是因为不同电池对kinergy的引用版本不统一，这种情况下打开各个电池的vs项目，
+确保kinergy的引用有效，然后重新生成一次就行了
 现有版本小bug应该不少，我这几天会密集更新
