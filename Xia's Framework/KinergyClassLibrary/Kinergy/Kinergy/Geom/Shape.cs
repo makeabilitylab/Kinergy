@@ -27,5 +27,9 @@ namespace Kinergy.Geom
             base.model.Transform(move.Trans);
             UpdateBasicParams();
         }
+        public void SetModel(Brep m)
+        {
+            model = m;
+        }
     }
 }

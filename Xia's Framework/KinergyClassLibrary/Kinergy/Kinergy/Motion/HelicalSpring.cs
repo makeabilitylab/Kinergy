@@ -46,8 +46,8 @@ namespace Kinergy
             private Interval skeletonAvailableRange;
 
             private Curve skeleton = null;
-            private List<Entity> modelCut;
-            private List<Entity> locks;
+            private List<Shape> modelCut;
+            private List<Lock> locks;
             private Spring spring;
 
             /// <summary> Default constructor without basic input parameter </summary>
@@ -61,10 +61,10 @@ namespace Kinergy
                 addLock = AddLock;
                 xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);
                 xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
-                modelCut = new List<Entity>();
+                modelCut = new List<Shape>();
                 myDoc = RhinoDoc.ActiveDoc;
                 if (addLock)
-                { locks = new List<Entity>(); }
+                { locks = new List<Lock>(); }
                 
         }
             /// <summary> Call this method to  </summary>
@@ -239,8 +239,8 @@ namespace Kinergy
                 Brep[] Cut_Brep1 = model.Trim(plane1, 0.0001);
                 Brep[] Cut_Brep2 = model.Trim(plane2, 0.0001);
                 
-                Shape mc1 = new Shape(Cut_Brep1[0].CapPlanarHoles(0.00001));
-                Shape mc2 = new Shape(Cut_Brep2[0].CapPlanarHoles(0.00001));
+                Shape mc1 = new Shape(Cut_Brep1[0].CapPlanarHoles(0.00001),false,"model");
+                Shape mc2 = new Shape(Cut_Brep2[0].CapPlanarHoles(0.00001), false, "model");
                 modelCut.Add(mc1);
                 modelCut.Add( mc2);
                 entityList.Add(mc1);
@@ -283,9 +283,9 @@ namespace Kinergy
                            new Interval(-skeleton.GetLength() * (springStart - lockT), skeleton.GetLength() * (springStart - lockT)));
 
                     box2 = new Rhino.Geometry.Box(basePlane2, new Interval(-box2_x / 2, box2_x / 2), new Interval(-box2_y / 2, box2_y/2), new Interval(-box2_z / 2, box2_z / 2));
-                    
-                    modelCut[0] = new Shape(Brep.CreateBooleanDifference(modelCut[0].Model, box1.ToBrep(), 0.000001)[0]);
-                    modelCut[0] = new Shape(Brep.CreateBooleanDifference(modelCut[0].Model, box2.ToBrep(), 0.000001)[0]);
+
+                    modelCut[0].SetModel(Brep.CreateBooleanDifference(modelCut[0].Model, box1.ToBrep(), 0.000001)[0]);
+                    modelCut[0].SetModel(Brep.CreateBooleanDifference(modelCut[0].Model, box2.ToBrep(), 0.000001)[0]);
                 }
                 else
                 {
@@ -297,8 +297,10 @@ namespace Kinergy
 
                     box2 = new Rhino.Geometry.Box(basePlane2, new Interval(-box2_x / 2, box2_x / 2), new Interval(-box2_y, box2_y), new Interval(-box2_z / 2, box2_z / 2));
 
-                    modelCut[1] = new Shape(Brep.CreateBooleanDifference(modelCut[1].Model, box1.ToBrep(), 0.000001)[0]);
-                    modelCut[1] = new Shape( Brep.CreateBooleanDifference(modelCut[1].Model, box2.ToBrep(), 0.000001)[0]);
+                    modelCut[1].SetModel(Brep.CreateBooleanDifference(modelCut[1].Model, box1.ToBrep(), 0.000001)[0]);
+                    modelCut[1].SetModel(Brep.CreateBooleanDifference(modelCut[1].Model, box2.ToBrep(), 0.000001)[0]);
+                    //modelCut[1] = new Shape(Brep.CreateBooleanDifference(modelCut[1].Model, box1.ToBrep(), 0.000001)[0]);
+                   // modelCut[1] = new Shape( Brep.CreateBooleanDifference(modelCut[1].Model, box2.ToBrep(), 0.000001)[0]);
                 }
 
                 return true;
@@ -315,11 +317,11 @@ namespace Kinergy
                 DirectoryInfo pathInfo = new DirectoryInfo(path);
                 string newPath = pathInfo.Parent.FullName;
                 //directory for test
-                //Brep Lock_head = FileOperation.SingleBrepFromResourceFile(newPath+"\\Resources\\lockHead.3dm");
-                //Brep Locker = FileOperation.SingleBrepFromResourceFile(newPath + "\\Resources\\lockBase.3dm");
+                Brep LockHead = FileOperation.SingleBrepFromResourceFile(newPath+"\\KinergyResources\\lockHead.3dm");
+                Brep LockBase = FileOperation.SingleBrepFromResourceFile(newPath + "\\KinergyResources\\lockBase.3dm");
                 //directory for actual use
-                Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Plug-ins\\Grasshopper\\Components\\KinergyResources\\lockHead.3dm");
-                Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Plug-ins\\Grasshopper\\Components\\KinergyResources\\lockBase.3dm");
+                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Plug-ins\\Grasshopper\\Components\\KinergyResources\\lockHead.3dm");
+                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Plug-ins\\Grasshopper\\Components\\KinergyResources\\lockBase.3dm");
                 Cylinder rod = new Cylinder();
                 Transform scaler = Transform.Scale(new Point3d(0, 0, 0), scale);
                 LockHead.Transform(scaler);
@@ -380,6 +382,14 @@ namespace Kinergy
                 
                 return true;
             }
+            public override void LoadMotion()
+            {
+                Movement compression = new Movement(spring, 3, springLength * distance);
+                compression.Activate();
+                locks[0].locked(locks[1]);
+                locks[0].Activate();//Create point and wait for selection
+
+            }
             public Curve GetSkeleton()
             {
                 return skeleton;
@@ -389,7 +399,7 @@ namespace Kinergy
             {
                 return spring.Model;
             }
-            public List<Entity> GetLock()
+            public List<Lock> GetLock()
             {
                 return locks;
             }

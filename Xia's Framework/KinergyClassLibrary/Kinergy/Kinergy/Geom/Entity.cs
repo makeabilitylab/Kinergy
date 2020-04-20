@@ -45,6 +45,7 @@ namespace Kinergy.Geom
         public bool DfsMark { get => dfsMark;protected set => dfsMark = value; }
         public string Name { get => name;}
         public  Transform RotateBack { get => rotateBack;protected set => rotateBack = value; }
+        public List<Constraint> Constraints { get => constraints;protected set => constraints = value; }
 
         public Entity(bool isStatic = true,string n="")
         { 
@@ -62,7 +63,7 @@ namespace Kinergy.Geom
             dfsMark = false;
             name = n;
         }
-        public bool AddConstraint(Constraint constraint)
+        public virtual bool AddConstraint(Constraint constraint)
         {
             if(constraint.IsValid() && constraint.Include(this))
             {
