@@ -2,3 +2,4 @@
 code/bin/WearablePlugin.pdb
 *.cache
 *.pdb
+Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/db.lock
