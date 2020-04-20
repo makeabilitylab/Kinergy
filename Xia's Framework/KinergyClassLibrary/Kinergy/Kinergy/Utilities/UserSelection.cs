@@ -28,7 +28,7 @@ namespace Kinergy.Utilities
             bool success = false;
             while (success == false)
             {
-                var command = RhinoGet.GetOneObject("Please select a Point", false, ObjectType.Point, out selectedPoint);
+                var command = RhinoGet.GetOneObject("Please select a Point", true, ObjectType.Point, out selectedPoint);
                 Guid guid_r = selectedPoint.ObjectId;
 
                 if (command == Rhino.Commands.Result.Success)
@@ -62,7 +62,7 @@ namespace Kinergy.Utilities
             bool success = false;
             while (success == false)
             {
-                var command = RhinoGet.GetOneObject("Please select a curve", false, ObjectType.Curve, out selectedCurve);
+                var command = RhinoGet.GetOneObject("Please select a curve", true, ObjectType.Curve, out selectedCurve);
                 Guid guid_r = selectedCurve.ObjectId;
 
                 if (command == Rhino.Commands.Result.Success)

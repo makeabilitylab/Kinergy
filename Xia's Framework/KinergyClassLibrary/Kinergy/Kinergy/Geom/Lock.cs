@@ -13,7 +13,7 @@ using Kinergy.Constraints;
 
 namespace Kinergy.Geom
 {
-    class Lock:Entity
+    public class Lock:Entity
     {
         private bool headOrBase;
         private Lock otherPart=null;
@@ -98,7 +98,9 @@ namespace Kinergy.Geom
             {
                 return false;
             }
-
+            Locking l = new Locking(this, otherPart);
+            AddConstraint(l);
+            return true;
         }
         public bool Activate()
         {
@@ -116,8 +118,22 @@ namespace Kinergy.Geom
                 return false;
             }
             //generate Point at releasePosition and let user select it
-
-            //when selected,
+            if(Utilities.UserSelection.UserSelectPointInRhino(new List<Point3d> { releasePosition }, RhinoDoc.ActiveDoc)==0)
+            {
+                Release();
+            }
+            return true;
+        }
+        private void Release()
+        {
+            foreach(Constraint c in Constraints)
+            {
+                if(c.GetType()==typeof(Locking))
+                {
+                    Locking l = (Locking)c;
+                    l.Release();
+                }
+            }
         }
     }
 }

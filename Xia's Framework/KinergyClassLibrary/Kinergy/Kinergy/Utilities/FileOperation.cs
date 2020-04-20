@@ -27,7 +27,7 @@ namespace Kinergy.Utilities
                 string dir = Environment.CurrentDirectory;
                 System.IO.DirectoryInfo pathInfo = new System.IO.DirectoryInfo(dir);
                 string newPath = pathInfo.Parent.FullName;
-                return newPath + "\\Plug - ins\\Grasshopper\\Components";
+                return newPath + "\\Plug-ins\\Grasshopper\\Components";
 
             }
             public static String FindCurrentFolderResourceDirectory()

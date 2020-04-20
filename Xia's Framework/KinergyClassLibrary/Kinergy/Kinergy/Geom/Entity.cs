@@ -142,5 +142,11 @@ namespace Kinergy.Geom
         {
             rotateBack = rb;
         }
+        public Brep GetModelinWorldCoordinate()
+        {
+            Brep m = model.DuplicateBrep();
+            m.Transform(rotateBack);
+            return m;
+        }
     }
 }

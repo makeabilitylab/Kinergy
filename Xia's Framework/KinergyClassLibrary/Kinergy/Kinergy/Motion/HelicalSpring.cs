@@ -50,6 +50,8 @@ namespace Kinergy
             private List<Lock> locks;
             private Spring spring;
 
+            public Spring Spring { get => spring;private set => spring = value; }
+
             /// <summary> Default constructor without basic input parameter </summary>
             /// <returns> Returns empty instance</returns>
             public HelicalSpring(Brep Model,double Energy,double Distance,Vector3d Direction,bool AddLock)
@@ -66,7 +68,20 @@ namespace Kinergy
                 if (addLock)
                 { locks = new List<Lock>(); }
                 
-        }
+            }
+            public HelicalSpring(Brep Model, Vector3d Direction,double Energy, double Distance)
+            {
+                model = Model;
+                energy = Energy;
+                distance = Distance;
+                direction = Direction;
+                
+                xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);
+                xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
+                modelCut = new List<Shape>();
+                myDoc = RhinoDoc.ActiveDoc;
+                locks = new List<Lock>();
+            }
             /// <summary> Call this method to  </summary>
             /// <returns> Returns bool value showing whether all processes go well</returns>
             public bool Process()
@@ -127,6 +142,24 @@ namespace Kinergy
                 else 
                 { return false; }
             }
+            public bool SetSpringPosition(Point3d pos)
+            {
+                springPosition = pos;
+                skeleton.ClosestPoint(springPosition, out springT);
+                springStart = springT - springLength / 2 / skeleton.GetLength();
+                springEnd = springT + springLength / 2 / skeleton.GetLength();
+                return true;
+            }
+            public List<Point3d> GetSpringPositionCandidates()
+            {
+                List<Point3d> points = new List<Point3d>();
+                for (int i = 0; i <= 20; i++)
+                {
+                    points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20));
+
+                }
+                return points;
+            }
             public bool SetLockDirection()
             {
                 var xrotate1 = Transform.Rotation(Vector3d.XAxis, -Vector3d.XAxis, Point3d.Origin);
@@ -146,6 +179,18 @@ namespace Kinergy
                 RhinoApp.WriteLine("Please select the direction of spring Lock");
                 lockDirection = UserSelection.UserSelectCurveInRhino(crvs, myDoc)+1;
                 
+                return true;
+            }
+            public bool SetLockDirection(Arrow d)
+            {
+                if(direction*d.Direction>0.5)
+                {
+                    lockDirection = 1;
+                }
+                else
+                {
+                    lockDirection = 2;
+                }
                 return true;
             }
             public bool SetLockPosition()
@@ -194,7 +239,61 @@ namespace Kinergy
                 { return false; }
                 return true;
             }
-            private bool CalculateSkeleton()
+            public List<Point3d> GetLockPositionCandidates()
+            {
+                Vector3d v = skeletonVector;
+                double start = 0, end = 0;
+                Brep B;
+                if (lockDirection == 1)//the lock structure start from the left and stick into the right part
+                {
+                    start = springEnd + 5 / skeleton.GetLength();
+                    end = 1 - 5 / skeleton.GetLength();
+                    B = modelCut[1].Model;
+                }
+                else //the lock structure start from the right and stick into the left part
+                {
+                    end = springStart - 5 / skeleton.GetLength();
+                    start = 5 / skeleton.GetLength();
+                    B = modelCut[0].Model;
+                }
+                double span = end - start, span_len = span * skeleton.GetLength();
+                List<Point3d> candidates = new List<Point3d>();
+                for (int i = 0; i < span_len / 2; i++)
+                {
+                    Point3d p = skeleton.PointAtNormalizedLength(start + i * 2 / skeleton.GetLength());
+                    Plane plane = new Plane(p, v);
+                    Curve[] c;
+                    Point3d[] pt;
+                    Rhino.Geometry.Intersect.Intersection.BrepPlane(B, plane, 0.0000001, out c, out pt);
+                    for (int j = 0; j < 10; j++)
+                    {
+                        candidates.Add(c[0].PointAtNormalizedLength(j * 0.1));
+                    }
+                }
+                if (candidates.Count == 0)
+                {
+                    RhinoApp.WriteLine("No space for lock!");
+                }
+                return candidates;
+
+            }
+            public void SetLockPosition(Point3d p)
+            {
+                lockPosition = p;
+                skeleton.ClosestPoint(p, out lockT);
+            }
+            public List<Arrow> GetLockDirectionCandidates()
+            {
+                
+                Vector3d v1 = direction;
+                Vector3d v2 = -v1;
+                Point3d p1 = springPosition + v1 * (springLength / 2 + 5);
+                Point3d p2 = springPosition - v1 * (springLength / 2 + 5);
+                Arrow a1 = new Arrow(v1, p1);
+                Arrow a2 = new Arrow(v2, p2);
+                return new List<Arrow> { a1, a2 };
+            }
+            public bool CalculateSkeleton()
             {
                 //here skeleton is calculated using bbox. Spring parameters are now determined by shape and ratio of bbox. energy and distance havn't been adopted.
                 model.Transform(xrotate);
@@ -209,6 +308,17 @@ namespace Kinergy
                     springLength = l.Length * 0.5;
                     springRadius = springLength * 7.5 / 25*0.9;
                 }
+                /*
+                if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
+                {
+                    springLength = l.Length * 0.7;
+                    springRadius = springLength * 7.5 / 25 * 0.9;
+                }
+                if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
+                {
+                    springLength = l.Length * 0.8;
+                    springRadius = springLength * 7.5 / 25 * 0.9;
+                }*/
                 wireRadius = springRadius / 7.5 * 1;
                 skeletonAvailableRange = new Interval((springLength/2+5)/l.Length,1- (springLength/2 + 5) / l.Length);
                 
@@ -226,7 +336,7 @@ namespace Kinergy
                 }
                 return false;
             }
-            private bool CutModelForSpring()
+            public bool CutModelForSpring()
             {   
                 BoundingBox box = model.GetBoundingBox(true);
 
@@ -247,7 +357,7 @@ namespace Kinergy
                 entityList.Add(mc2);
                 return true;
             }
-            private bool ConstructSpring()
+            public bool ConstructSpring()
             {
                 Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
                 Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
@@ -259,7 +369,7 @@ namespace Kinergy
                 }
                 else { return false; }
             }
-            private bool CutModelForLock()
+            public bool CutModelForLock()
             {
                 Point3d p_inside = skeleton.PointAtNormalizedLength(lockT);
                 Vector3d lockBaseVector = new Vector3d(lockPosition) - new Vector3d(p_inside);
@@ -305,7 +415,7 @@ namespace Kinergy
 
                 return true;
             }
-            private bool ConstructLock()
+            public bool ConstructLock()
             {
                 Point3d p_inside = skeleton.PointAtNormalizedLength(lockT);
                 Vector3d lockBaseVector = new Vector3d(lockPosition) - new Vector3d(p_inside);
@@ -317,11 +427,12 @@ namespace Kinergy
                 DirectoryInfo pathInfo = new DirectoryInfo(path);
                 string newPath = pathInfo.Parent.FullName;
                 //directory for test
-                Brep LockHead = FileOperation.SingleBrepFromResourceFile(newPath+"\\KinergyResources\\lockHead.3dm");
-                Brep LockBase = FileOperation.SingleBrepFromResourceFile(newPath + "\\KinergyResources\\lockBase.3dm");
+                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(newPath+"\\KinergyResources\\lockHead.3dm");
+                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(newPath + "\\KinergyResources\\lockBase.3dm");
                 //directory for actual use
-                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Plug-ins\\Grasshopper\\Components\\KinergyResources\\lockHead.3dm");
-                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Plug-ins\\Grasshopper\\Components\\KinergyResources\\lockBase.3dm");
+                RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
+                Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
+                Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBase.3dm");
                 Cylinder rod = new Cylinder();
                 Transform scaler = Transform.Scale(new Point3d(0, 0, 0), scale);
                 LockHead.Transform(scaler);
@@ -374,6 +485,7 @@ namespace Kinergy
                 LockHead = Brep.CreateBooleanUnion(new List<Brep> { LockHead, rod.ToBrep(true, true) }, myDoc.ModelAbsoluteTolerance)[0];
                 Lock lockHead = new Lock(LockHead,true);
                 Lock lockBase = new Lock(LockBase, false);
+                lockHead.RegisterOtherPart(lockBase);
                 entityList.Add(lockHead);
                 entityList.Add(lockBase);
                 
@@ -386,23 +498,11 @@ namespace Kinergy
             {
                 Movement compression = new Movement(spring, 3, springLength * distance);
                 compression.Activate();
-                locks[0].locked(locks[1]);
+                locks[0].SetLocked();
                 locks[0].Activate();//Create point and wait for selection
 
             }
-            public Curve GetSkeleton()
-            {
-                return skeleton;
-            }
             
-            public Brep GetSpring()
-            {
-                return spring.Model;
-            }
-            public List<Lock> GetLock()
-            {
-                return locks;
-            }
         }
     }
     

@@ -3,16 +3,15 @@ using System.Collections.Generic;
 
 using Grasshopper.Kernel;
 using Rhino.Geometry;
-using Kinergy.Motion;
 
 // In order to load the result of this wizard, you will also need to
 // add the output bin/ folder of this project to the list of loaded
 // folder in Grasshopper.
 // You can use the _GrasshopperDeveloperSettings Rhino command for that.
 
-namespace InstantExtension
+namespace KinergyUtilities
 {
-    public class InstantExtensionComponent : GH_Component
+    public class KinergyUtilitiesComponent : GH_Component
     {
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -21,10 +20,10 @@ namespace InstantExtension
         /// Subcategory the panel. If you use non-existing tab or panel names, 
         /// new tabs/panels will automatically be created.
         /// </summary>
-        public InstantExtensionComponent()
-          : base("InstantExtension", "IE",
-              "Solve instant extension motion",
-              "Kinergy", "InstantExtension")
+        public KinergyUtilitiesComponent()
+          : base("KinergyUtilities", "Nickname",
+              "useful tools",
+              "Kinergy", "Utilities")
         {
         }
 
@@ -33,11 +32,6 @@ namespace InstantExtension
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddBooleanParameter("Start", "S", "Whether to start calculating", GH_ParamAccess.item);
-            pManager.AddBrepParameter("Model", "M", "Model to process", GH_ParamAccess.item);
-            pManager.AddVectorParameter("SpringDirection", "SD", "Direction of spring", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Distance", "D", "Proportion of spring that's able to be compressed", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -45,9 +39,6 @@ namespace InstantExtension
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("MotionInstance", "M", "Motion instance generated in motion solver." +
-                " U could import it to Simulation cell. ", GH_ParamAccess.item);
-            
         }
 
         /// <summary>
@@ -57,23 +48,7 @@ namespace InstantExtension
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool start = false;
-            Brep model = null;
-            Vector3d direction = Vector3d.Unset;
-            double energy=0;
-            double distance=0;
-            if (!DA.GetData(0, ref start)) { return; }
-            if (start == false) { return; }
-            if (!DA.GetData(1, ref model)) { return; }
-            if (!DA.GetData(2, ref direction)) { return; }
-            if (!DA.GetData(3, ref energy)) { return; }
-            if (!DA.GetData(4, ref distance)) { return; }
-
-            HelicalSpring motion = new HelicalSpring(model, direction,energy,distance);
-            
-            DA.SetData(0, motion);
         }
-
 
         /// <summary>
         /// Provides an Icon for every component that will be visible in the User Interface.
@@ -96,7 +71,7 @@ namespace InstantExtension
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("da709922-b416-496f-b555-4a735eb0fe36"); }
+            get { return new Guid("1958c2d6-34d9-4745-b09c-f2872384047f"); }
         }
     }
 }

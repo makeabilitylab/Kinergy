@@ -27,6 +27,9 @@ namespace Kinergy
             private double wireRadius = 0;
             private double length=0;
             private int roundNum=0;
+            private double deltaSpringRadius = 0;
+            private double deltaWireRadius = 0;
+            private int deltaRoundNum = 0;
             private Vector3d direction = Vector3d.Unset;
             private double maxPressDistance = 0;
 
@@ -106,8 +109,19 @@ namespace Kinergy
             private void GenerateSpring()
             {
                 FixParameter();
-                
-                int points_per_round = 10, point_num = roundNum * points_per_round;
+                if(roundNum + deltaRoundNum<3)
+                {
+                    deltaRoundNum = 3 - roundNum;
+                }
+                if(springRadius + deltaSpringRadius<4)
+                {
+                    deltaSpringRadius = 4 - springRadius;
+                }
+                if(wireRadius+deltaWireRadius<0.2)
+                {
+                    deltaWireRadius = 0.2 - wireRadius;
+                }
+                int points_per_round = 10, point_num = (roundNum+deltaRoundNum) * points_per_round;
                 var Pi = Math.PI;
                 Vector3d v = new Vector3d(new Vector3d(end) - new Vector3d(start));
                 Plane plane = new Rhino.Geometry.Plane(start, v);
@@ -119,12 +133,13 @@ namespace Kinergy
                 for (int i = 0; i <= point_num; i++)
                 {
                     Point3d p = new Point3d(start + v * 1 / point_num * i);
-                    p = p + v1 * System.Math.Sin(2 * Pi / points_per_round * i) * springRadius + v2 * System.Math.Cos(2 * Pi / points_per_round * i) * springRadius;
+                    p = p + v1 * System.Math.Sin(2 * Pi / points_per_round * i) * (springRadius+deltaSpringRadius) 
+                        + v2 * System.Math.Cos(2 * Pi / points_per_round * i) * (springRadius + deltaSpringRadius);
                     pts.Add(p);
                 }
                 Curve s = Rhino.Geometry.Curve.CreateInterpolatedCurve(pts, 3);
                 Plane spring_plane = new Rhino.Geometry.Plane(s.PointAtNormalizedLength(0), s.TangentAt(0));
-                Circle c = new Circle(spring_plane, pts[0], wireRadius);
+                Circle c = new Circle(spring_plane, pts[0], wireRadius+deltaWireRadius);
                 Curve cc = NurbsCurve.CreateFromCircle(c);
                 base.BaseCurve = cc;
                 Brep[] new_Spring = Rhino.Geometry.Brep.CreateFromSweep(s, cc, true, 0.000001);
@@ -207,6 +222,12 @@ namespace Kinergy
             {
                 //TODO do the linear scaling
 
+            }
+            public void AdjustParameter(double deltaR,int deltaN,double deltaT)
+            {
+                deltaSpringRadius = deltaR;
+                deltaRoundNum = deltaN;
+                deltaWireRadius = deltaT;
             }
         }
     }

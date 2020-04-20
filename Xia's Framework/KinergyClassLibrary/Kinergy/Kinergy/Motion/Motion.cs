@@ -32,6 +32,10 @@ namespace Kinergy.Motion
             foreach(Entity e in entityList)
             {
                 Brep b = e.Model.DuplicateBrep();
+                if(this.GetType()==typeof(HelicalSpring))
+                {
+                    models.Add(b);
+                }
                 if(e.RotateBack!=Transform.Unset)
                 { b.Transform(e.RotateBack); }
                 models.Add(b);
