@@ -31,10 +31,11 @@ namespace Kinergy.Geom
             //TODO add lock features to this class
             headOrBase = LockHeadOrLockBase;
         }
-        public Lock(Brep brep, bool LockHeadOrLockBase, Point3d PointingPosition, bool stat = false, string n = "") : base(brep, stat, n)
+        public Lock(Brep brep, bool LockHeadOrLockBase, Point3d Release, bool stat = false, string n = "") : base(brep, stat, n)
         {
-            //TODO add lock features to this class
+            //This is base,so LockHeadOrBase should be false
             headOrBase = LockHeadOrLockBase;
+            releasePosition = Release;
         }
         public bool HeadOrBase { get => headOrBase;private set => headOrBase = value; }
         public Lock OtherPart { get => otherPart;private set => otherPart = value; }

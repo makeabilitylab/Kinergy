@@ -60,10 +60,27 @@ namespace Kinergy.Utilities
             
                 return bps[0];
             }
-            /// <summary>
-            /// This method returns multiple breps from file as a list
-            /// </summary>
-            public static List<Brep> BrepsFromResourceFile(string fileDirectory)
+        public static Point3d SinglePointFromResourceFile(string fileDirectory)
+        {
+            Rhino.FileIO.File3dm file = Rhino.FileIO.File3dm.Read(fileDirectory);
+            List<Point3d> pts = new List<Point3d>();
+            foreach (Rhino.FileIO.File3dmObject obj in file.Objects)
+            {
+
+                Point3d pt =Point3d.Unset;
+                if (GH_Convert.ToPoint3d(obj.Geometry, ref pt, GH_Conversion.Both))
+                {
+                    pts.Add(pt);
+                }
+            }
+            file.Dispose();
+
+            return pts[0];
+        }
+        /// <summary>
+        /// This method returns multiple breps from file as a list
+        /// </summary>
+        public static List<Brep> BrepsFromResourceFile(string fileDirectory)
             {
                 Rhino.FileIO.File3dm file = Rhino.FileIO.File3dm.Read(fileDirectory);
                 List<Brep> bps = new List<Brep>();

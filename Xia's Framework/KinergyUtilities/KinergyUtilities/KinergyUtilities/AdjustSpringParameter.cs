@@ -25,7 +25,8 @@ namespace KinergyUtilities
         {
             pManager.AddScriptVariableParameter("Spring", "S", "The spring entity to adjust", GH_ParamAccess.item);
             pManager.AddNumberParameter("RadiusAdjustment", "R", "Adjustment value of spring radius", GH_ParamAccess.item);
-            pManager.AddNumberParameter("RoundNumberAdjustment", "N", "Adjustment value of spring round number", GH_ParamAccess.item);
+            //pManager.AddNumberParameter("RoundNumberAdjustment", "N", "Adjustment value of spring round number", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("RoundNumberAdjustment", "N", "Adjustment value of spring round number", GH_ParamAccess.item);
             pManager.AddNumberParameter("WireRadiusAdjustment", "W", "Adjustment value of wire radius", GH_ParamAccess.item);
         }
 

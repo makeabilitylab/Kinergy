@@ -11,6 +11,7 @@ using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Geom;
 using Kinergy.Constraints;
+using Grasshopper.Kernel;
 namespace Kinergy.Motion
 {
     public class Motion
@@ -31,14 +32,7 @@ namespace Kinergy.Motion
             List<Brep> models = new List<Brep>();
             foreach(Entity e in entityList)
             {
-                Brep b = e.Model.DuplicateBrep();
-                if(this.GetType()==typeof(HelicalSpring))
-                {
-                    models.Add(b);
-                }
-                if(e.RotateBack!=Transform.Unset)
-                { b.Transform(e.RotateBack); }
-                models.Add(b);
+                models.Add(e.GetModelinWorldCoordinate());
             }
             return models;
         }
@@ -78,10 +72,15 @@ namespace Kinergy.Motion
                 loaded = false;
             }
         }
-        public virtual void LoadMotion()
+        public virtual bool LoadMotion()
         {
             //to be overritten
+            return false;
         }
-        
+        public virtual Movement Simulate(GH_Component simulator, double interval = 20, double precision=0.01)
+        {
+            Movement m=null;
+            return m;
+        }
     }
 }

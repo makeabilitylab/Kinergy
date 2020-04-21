@@ -423,21 +423,22 @@ namespace Kinergy
                 double lock_radius = 1.5 * scale;
                 
                 double lock_length;
-                string path = System.IO.Directory.GetCurrentDirectory();
-                DirectoryInfo pathInfo = new DirectoryInfo(path);
-                string newPath = pathInfo.Parent.FullName;
+                
                 //directory for test
-                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(newPath+"\\KinergyResources\\lockHead.3dm");
-                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(newPath + "\\KinergyResources\\lockBase.3dm");
+                RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHead.3dm");
+                Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHead.3dm");
+                Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBase.3dm");
+                Point3d LockBaseTrigger = FileOperation.SinglePointFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBase.3dm");
                 //directory for actual use
-                RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
-                Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
-                Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBase.3dm");
+                //RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
+                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
+                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBase.3dm");
+                //Point3d LockBaseTrigger = FileOperation.SinglePointFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBase.3dm");
                 Cylinder rod = new Cylinder();
                 Transform scaler = Transform.Scale(new Point3d(0, 0, 0), scale);
                 LockHead.Transform(scaler);
                 LockBase.Transform(scaler);
-
+                LockBaseTrigger.Transform(scaler);
                 if (lockT < springStart)
                 {
                     //Generate the rod of lock structure
@@ -494,15 +495,21 @@ namespace Kinergy
                 
                 return true;
             }
-            public override void LoadMotion()
+            public override bool LoadMotion()
             {
                 Movement compression = new Movement(spring, 3, springLength * distance);
                 compression.Activate();
                 locks[0].SetLocked();
-                locks[0].Activate();//Create point and wait for selection
+                return locks[0].Activate();//Create point and wait for selection
 
             }
-            
+            public override Movement Simulate(GH_Component simulator, double interval = 20, double precision=0.01)
+            {
+                Movement m=null;
+                m=spring.Activate(interval);
+                m.Activate();
+                return m;
+            }
         }
     }
     

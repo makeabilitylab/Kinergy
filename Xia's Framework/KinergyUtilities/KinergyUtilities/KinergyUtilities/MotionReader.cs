@@ -43,11 +43,16 @@ namespace KinergyUtilities
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            Motion motion = null;
+            Motion motion=null;
             List<Brep> E = new List<Brep>();
             List<Brep> C = new List<Brep>();
             List<Brep> L = new List<Brep>();
             if (!DA.GetData(0, ref motion)) { return; }
+            if(motion==null)
+            { return; }
+            if(motion.EntityList.Count==0)
+            { return; }
+            
             foreach (Entity e in motion.EntityList)
             {
                 if(e.GetType()==typeof(Spring) || e.GetType() == typeof(Gear) || e.GetType() == typeof(Spiral) || e.GetType() == typeof(Rack))

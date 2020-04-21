@@ -28,6 +28,7 @@ namespace Kinergy.Geom
         private bool dfsMark;
         private string name;
         private Transform rotateBack = Transform.Unset;
+        private Transform offset = Transform.Unset;
         public Brep Model 
         { 
             get 
@@ -46,22 +47,26 @@ namespace Kinergy.Geom
         public string Name { get => name;}
         public  Transform RotateBack { get => rotateBack;protected set => rotateBack = value; }
         public List<Constraint> Constraints { get => constraints;protected set => constraints = value; }
+        public Transform Offset { get => offset;protected set => offset = value; }
 
-        public Entity(bool isStatic = true,string n="")
+        public Entity(bool isStatic = false,string n="")
         { 
             staticEntity = isStatic;
             constraints = new List<Constraint>();
             dfsMark = false;
             name = n;
+            offset = Transform.ZeroTransformation;
         }
         
-        public Entity(Brep m,bool isStatic=true, string n= "")
+        public Entity(Brep m,bool isStatic=false, string n= "")
         {
             model = m;
             staticEntity = isStatic;
             constraints = new List<Constraint>();
             dfsMark = false;
             name = n;
+
+            offset = Transform.ZeroTransformation;
         }
         public virtual bool AddConstraint(Constraint constraint)
         {
@@ -100,7 +105,6 @@ namespace Kinergy.Geom
                     CanIMove = false;
                     break;
                 }
-
             }
             if(CanIMove)
             {
@@ -111,10 +115,10 @@ namespace Kinergy.Geom
         }
         protected virtual void ConductMoveAndUpdateParam(Movement move)
         {
-            //This method would be overridden by different kinds of entity.Here constraints dosen't matter, just move the model!
+            //This method would be overridden by different kinds of entity.Here constraints dosen't matter, just move the model by changing offset and rotate!
             
-            model.Transform(move.Trans);
-            UpdateBasicParams();
+            offset = Transform.Multiply(offset, move.Trans);
+            
         }
         public void UpdateBasicParams()
         {
@@ -145,7 +149,11 @@ namespace Kinergy.Geom
         public Brep GetModelinWorldCoordinate()
         {
             Brep m = model.DuplicateBrep();
-            m.Transform(rotateBack);
+            if(rotateBack!=Transform.Unset)
+            { m.Transform(rotateBack);}
+            if (Offset != Transform.Unset)
+            { m.Transform(offset); }
+            
             return m;
         }
     }
