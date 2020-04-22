@@ -32,8 +32,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Kinergy">
-      <HintPath>..\..\..\Kinergy Class Library\Kinergy\Kinergy\bin\Debug\Kinergy.dll</HintPath>
+    <Reference Include="Kinergy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -59,6 +60,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="01ModelPreprocessOfIE.cs" />
+    <Compile Include="02ConstructSpringOfIE.cs" />
+    <Compile Include="03GenerateLockPositionCandidateOfIE.cs" />
+    <Compile Include="04ConstructLockOfIE.cs" />
     <Compile Include="InstantExtensionComponent.cs" />
     <Compile Include="InstantExtensionInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

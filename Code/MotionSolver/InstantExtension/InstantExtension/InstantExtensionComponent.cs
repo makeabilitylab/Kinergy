@@ -22,9 +22,9 @@ namespace InstantExtension
         /// new tabs/panels will automatically be created.
         /// </summary>
         public InstantExtensionComponent()
-          : base("InstantExtension", "InsExt",
+          : base("InstantExtension", "IE",
               "Solve instant extension motion",
-              "Kinergy", "MotionSolver")
+              "Kinergy", "InstantExtension")
         {
         }
 
@@ -37,9 +37,7 @@ namespace InstantExtension
             pManager.AddBrepParameter("Model", "M", "Model to process", GH_ParamAccess.item);
             pManager.AddVectorParameter("SpringDirection", "SD", "Direction of spring", GH_ParamAccess.item);
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Distance", "D", "Proportion of spring compression", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("AddLock", "L", "Whether to add lock", GH_ParamAccess.item);
-
+            pManager.AddNumberParameter("Distance", "D", "Proportion of spring that's able to be compressed", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -47,11 +45,9 @@ namespace InstantExtension
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddBrepParameter("Models", "M", "Brep models of all generated entities in this motion solver", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Entities", "E", "List of entities generated in motion solver. " +
-                "Please use EntityReader to classify the entities and extract their brep models.", GH_ParamAccess.list);
             pManager.AddGenericParameter("MotionInstance", "M", "Motion instance generated in motion solver." +
                 " U could import it to Simulation cell. ", GH_ParamAccess.item);
+            
         }
 
         /// <summary>
@@ -64,24 +60,18 @@ namespace InstantExtension
             bool start = false;
             Brep model = null;
             Vector3d direction = Vector3d.Unset;
-            double energy = 0;
-            double distance = 0;
-            bool addLock = false;
+            double energy=0;
+            double distance=0;
             if (!DA.GetData(0, ref start)) { return; }
             if (start == false) { return; }
             if (!DA.GetData(1, ref model)) { return; }
             if (!DA.GetData(2, ref direction)) { return; }
             if (!DA.GetData(3, ref energy)) { return; }
             if (!DA.GetData(4, ref distance)) { return; }
-            DA.GetData(5, ref addLock);
 
-            HelicalSpring motion = new HelicalSpring(model, energy, distance, direction, addLock);
-            motion.Process();
-            DA.SetDataList(0, motion.GetModel());
-            DA.SetData(1, motion.EntityList);
-            DA.SetData(2, motion);
-
-
+            HelicalSpring motion = new HelicalSpring(model, direction,energy,distance);
+            
+            DA.SetData(0, motion);
         }
 
 

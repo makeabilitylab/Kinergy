@@ -6,3 +6,11 @@
 \\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.csproj.CopyComplete
 \\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.dll
 \\Mac\Home\Desktop\kinetic tool\Kinergy\Code\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\bin\ContinuousLinearMovingByPress.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\bin\ContinuousLinearMovingByPress.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\bin\Kinergy.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\bin\Kinergy.pdb
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.csprojAssemblyReference.cache
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.csproj.CopyComplete
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.dll
+\\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\MotionSolver\ContinuousLinearMovingByPress\ContinuousLinearMovingByPress\obj\Debug\ContinuousLinearMovingByPress.pdb
