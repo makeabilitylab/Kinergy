@@ -13,3 +13,4 @@ C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\Kinergy
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.csproj.CopyComplete
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.pdb
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.csprojAssemblyReference.cache
