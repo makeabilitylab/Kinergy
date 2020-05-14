@@ -36,7 +36,6 @@ namespace Kinergy.Utilities
             System.IO.DirectoryInfo pathInfo = new System.IO.DirectoryInfo(path);
             string newPath = pathInfo.Parent.FullName;
             
-            //Brep Lock_head = FileOperation.SingleBrepFromResourceFile(newPath+"\\Resources\\lockHead.3dm");
             return newPath + "\\Resources";
 
             }

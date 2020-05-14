@@ -43,7 +43,7 @@ namespace KinergyUtilities
         {
             List<Point3d> pts=new List<Point3d>();
             bool start = false;
-            Point3d p = Point3d.Unset;
+            Point3d p;
             if (!DA.GetDataList(0, pts)) { return; }
             if(pts.Count==0)
             { return; }

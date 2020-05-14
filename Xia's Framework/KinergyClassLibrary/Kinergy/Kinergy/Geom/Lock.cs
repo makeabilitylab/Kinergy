@@ -26,14 +26,18 @@ namespace Kinergy.Geom
         /// <param name="LockHeadOrLockBase">True for head and false for base</param>
         /// <param name="stat">Whether the entity is static</param>
         /// <param name="n"></param>
-        public Lock(Brep brep,bool LockHeadOrLockBase, bool stat= false, string n = "") : base(brep, stat, n)
+        public Lock(Brep brep,bool LockHeadOrLockBase, bool stat= false, string n = "") : base(brep, false, n)
         {
             //TODO add lock features to this class
+            if(LockHeadOrLockBase==false)
+                { throw new Exception("Should provide release point for lock base"); }
             headOrBase = LockHeadOrLockBase;
         }
-        public Lock(Brep brep, bool LockHeadOrLockBase, Point3d Release, bool stat = false, string n = "") : base(brep, stat, n)
+        public Lock(Brep brep, bool LockHeadOrLockBase, Point3d Release, bool stat = false, string n = "") : base(brep, false, n)
         {
             //This is base,so LockHeadOrBase should be false
+            if (LockHeadOrLockBase == true)
+            { throw new Exception("Should not provide release point for lock head"); }
             headOrBase = LockHeadOrLockBase;
             releasePosition = Release;
         }
@@ -44,8 +48,9 @@ namespace Kinergy.Geom
 
         protected override void ConductMoveAndUpdateParam(Movement move)
         {
-            base.model.Transform(move.Trans);
-            UpdateBasicParams();
+            /*base.model.Transform(move.Trans);
+            UpdateBasicParams();*/
+            base.ConductMoveAndUpdateParam(move);
         }
         public bool RegisterOtherPart(Lock other)
         {
@@ -100,7 +105,7 @@ namespace Kinergy.Geom
                 return false;
             }
             Locking l = new Locking(this, otherPart);
-            AddConstraint(l);
+            //AddConstraint(l);
             return true;
         }
         public bool Activate()
@@ -127,12 +132,15 @@ namespace Kinergy.Geom
         }
         private void Release()
         {
-            foreach(Constraint c in Constraints)
+            int count = constraints.Count();
+            for (int i= 0; i < count; i++)
             {
-                if(c.GetType()==typeof(Locking))
+                if(constraints[i].GetType()==typeof(Locking))
                 {
-                    Locking l = (Locking)c;
+                    Locking l = (Locking)constraints[i];
                     l.Release();
+                    i -= 1;
+                    count -= 1;
                 }
             }
         }

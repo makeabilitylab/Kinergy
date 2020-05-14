@@ -18,9 +18,8 @@ namespace Kinergy.Motion
     {
         protected List<Entity> entityList;
         protected bool loaded;
-        private bool simulating = false;
         public List<Entity> EntityList { get => entityList;protected set => entityList = value; }
-        public bool Simulating { get => simulating;protected set => simulating = value; }
+        
 
         public Motion()
         {
@@ -36,51 +35,28 @@ namespace Kinergy.Motion
             }
             return models;
         }
-        public void SetLoad(bool load)
-        {
-            if(simulating==false)
-            { 
-                if(load)
-                {
-                    loaded = true;
-                    this.LoadMotion();
-                
-                }
-            }
-        }
-        public void UnLoad()
-        {
-            //Check if all locking relationship is gone
-            bool lockingClear = true;
-            foreach(Entity e in entityList)
-            {
-                if(e.GetType()==typeof(Lock))
-                {
-                    foreach(Constraint c in e.Constraints)
-                    {
-                        if(c.GetType()==typeof(Locking))
-                        { 
-                            lockingClear = false;
-                            break; 
-                        }
-                    }
-                }
-            }
-            //if no locking exist, reset the loaded indicator to false
-            if(lockingClear)
-            {
-                loaded = false;
-            }
-        }
+        
         public virtual bool LoadMotion()
         {
             //to be overritten
             return false;
         }
-        public virtual Movement Simulate(GH_Component simulator, double interval = 20, double precision=0.01)
+        public virtual bool Trigger()
+        {
+            return false;
+        }
+        public virtual Movement Simulate(double interval = 20, double precision=0.01)
         {
             Movement m=null;
             return m;
+        }
+        public virtual void ResetMotion()
+        {
+            //To be overridden. Reset all travel and offset to zero
+            foreach(Entity e in entityList)
+            {
+                e.ResetState();
+            }
         }
     }
 }

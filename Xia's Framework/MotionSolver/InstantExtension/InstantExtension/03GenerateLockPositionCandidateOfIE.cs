@@ -4,7 +4,7 @@ using Kinergy.Motion;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using Kinergy.Utilities;
-namespace InstantExtension
+namespace InstExtension
 {
     public class _03GenerateLockPositionCandidateOfIE : GH_Component
     {
@@ -42,7 +42,7 @@ namespace InstantExtension
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            HelicalSpring motion = null;
+            InstantExtension motion = null;
             Arrow direction = null;
             List<Point3d> pts=new List<Point3d>();
             if (!DA.GetData(0, ref motion)) { return; }

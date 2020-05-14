@@ -61,7 +61,6 @@
     <Compile Include="Geom\Entity.cs" />
     <Compile Include="Geom\Lock.cs" />
     <Compile Include="Geom\Shape.cs" />
-    <Compile Include="Geom\Wheel.cs" />
     <Compile Include="Motion\Motion.cs" />
     <Compile Include="Utilities\Arrow.cs" />
     <Compile Include="Geom\BoxLike.cs" />
@@ -72,7 +71,7 @@
     <Compile Include="Constraints\Fixation.cs" />
     <Compile Include="Geom\Gear.cs" />
     <Compile Include="Generator\GearSet.cs" />
-    <Compile Include="Motion\HelicalSpring.cs" />
+    <Compile Include="Motion\InstantExtension.cs" />
     <Compile Include="Constraints\Hinge.cs" />
     <Compile Include="Constraints\Locking.cs" />
     <Compile Include="Movement.cs" />

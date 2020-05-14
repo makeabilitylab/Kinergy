@@ -44,7 +44,7 @@ namespace KinergyUtilities
         {
             List<Arrow> arrows = new List<Arrow>();
             bool start = false;
-            Arrow p = null;
+            Arrow p;
             if (!DA.GetDataList(0, arrows)) { return; }
             if(arrows.Count==0)
             { return; }

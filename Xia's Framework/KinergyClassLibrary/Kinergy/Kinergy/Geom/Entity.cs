@@ -27,8 +27,8 @@ namespace Kinergy.Geom
         protected Point3d center;
         private bool dfsMark;
         private string name;
-        private Transform rotateBack = Transform.Unset;
-        private Transform offset = Transform.Unset;
+        protected Transform rotateBack = Transform.Identity;
+        protected Transform offset = Transform.Unset;
         public Brep Model 
         { 
             get 
@@ -55,7 +55,7 @@ namespace Kinergy.Geom
             constraints = new List<Constraint>();
             dfsMark = false;
             name = n;
-            offset = Transform.ZeroTransformation;
+            offset = Transform.Identity;
         }
         
         public Entity(Brep m,bool isStatic=false, string n= "")
@@ -66,7 +66,7 @@ namespace Kinergy.Geom
             dfsMark = false;
             name = n;
 
-            offset = Transform.ZeroTransformation;
+            offset = Transform.Identity;
         }
         public virtual bool AddConstraint(Constraint constraint)
         {
@@ -148,13 +148,18 @@ namespace Kinergy.Geom
         }
         public Brep GetModelinWorldCoordinate()
         {
-            Brep m = model.DuplicateBrep();
+            Brep m = Model.DuplicateBrep();
+            //Brep m = model;
             if(rotateBack!=Transform.Unset)
             { m.Transform(rotateBack);}
-            if (Offset != Transform.Unset)
-            { m.Transform(offset); }
+            if (Offset != Transform.ZeroTransformation)
+            { m.Transform(Offset); }
             
             return m;
+        }
+        public virtual void ResetState()
+        {
+            offset = Transform.Identity;
         }
     }
 }

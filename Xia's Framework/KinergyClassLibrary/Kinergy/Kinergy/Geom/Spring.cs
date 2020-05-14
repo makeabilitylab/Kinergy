@@ -42,7 +42,6 @@ namespace Kinergy
             public double Length { get => length; private set => length = value; }
             public int RoundNum { get => roundNum; private set => roundNum = value; }
             public Vector3d Direction { get => direction;private set => direction = value; }
-            public double MaxPressDistance { get => maxPressDistance;private set => maxPressDistance = value; }
 
             /// <summary> Constructor with only start point and end point given.</summary>
             /// <returns> Returns instance with brep generated</returns>
@@ -133,9 +132,9 @@ namespace Kinergy
                 v = v * (v.Length + travel) / v.Length;
                 Plane plane = new Rhino.Geometry.Plane(start, v);
                 Vector3d v1 = plane.XAxis, v2 = plane.YAxis;
-                Transform rotate = Transform.Rotation(v1, v, new Point3d(0, 0, 0));
-                v1.Transform(rotate);
-                v2.Transform(rotate);
+                //Transform rotate = Transform.Rotation(v1, v, new Point3d(0, 0, 0));
+                //v1.Transform(rotate);
+                //v2.Transform(rotate);
                 List<Point3d> pts = new List<Point3d>();
                 for (int i = 0; i <= point_num; i++)
                 {
@@ -225,13 +224,20 @@ namespace Kinergy
                 else { return base.Move(move); }
                 
             }
+            public override void ResetState()
+            {
+                base.ResetState();
+                travel = 0;
+                GenerateSpring();
+            }
             protected override void ConductMoveAndUpdateParam(Movement move)
             {
                 //TODO do the linear scaling
                 if(move.Type==3)
                 {
                     travel += move.MovementValue;
-                    GenerateSpring();
+                    GenerateSpring(); //This might not be the ideal way of simulating since its time-consuming
+                    
                 }
                 else if(move.Type==1)
                 {
@@ -244,11 +250,32 @@ namespace Kinergy
                 deltaRoundNum = deltaN;
                 deltaWireRadius = deltaT;
             }
-            public Movement Activate(double interval,double damp=0.01)
+            public Movement Activate(double interval,double damp=0.05)
             {
-                velocity += -travel * 0.1;//TODO adjust these parameters
-                velocity *= (1 - damp);
-                return new Movement(this, 3, velocity * interval / 1000);
+                velocity += -travel*10 ;//TODO adjust these parameters
+                velocity *= Math.Pow(1 - damp,interval/10);
+                Movement m = new Movement(this, 3, velocity * interval / 1000);
+                if(Math.Abs(velocity)<2 &&Math.Abs(travel)<1)
+                {
+                    m.SetConverge();
+                }
+                return m;
+            }
+            /// <summary>
+            /// This method reverse the spring, switching its start and end.
+            /// </summary>
+            public void Reverse()
+            {
+                //Reverse the start point and end point
+                Point3d t = start;
+                start = end;
+                end = t;
+                Generate();
+                //Reverse the contact position state of all constraints
+                foreach(Fixation f in constraints)
+                {
+                    f.ReverseContactPosition();
+                }
             }
         }
     }

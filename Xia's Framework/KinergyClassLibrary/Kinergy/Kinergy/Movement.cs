@@ -25,7 +25,7 @@ namespace Kinergy
         private double movementValue;
         //private Point3d rotateCenter = Point3d.Unset;
         private Transform trans = Transform.Unset;
-
+        private bool converge=false;
         public Entity Obj { get => obj; private set => obj = value; }
         /// <summary>
         /// 1 means linear movement, 2 means self-rotate . 3 means spring squeezing and 4 means spiral rotating
@@ -35,6 +35,7 @@ namespace Kinergy
         //public Point3d RotateCenter { get => rotateCenter;private set => rotateCenter = value; }
         public Transform Trans { get => trans;private set => trans = value; }
         public double MovementValue { get => movementValue; private set => movementValue = value; }
+        public bool Converge { get => converge;protected set => converge = value; }
 
         /// <summary>
         /// Constructor for linear movement.
@@ -103,6 +104,9 @@ namespace Kinergy
         {
             return obj.Move(this);
         }
-        
+        public void SetConverge()
+        {
+            converge = true;
+        }
     }
 }
