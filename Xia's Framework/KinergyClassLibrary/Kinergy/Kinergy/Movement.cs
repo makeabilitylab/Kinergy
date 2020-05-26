@@ -52,6 +52,7 @@ namespace Kinergy
             obj = Object;
             Type = Tp;
             Trans = m;
+            converge = false;
         }
         /// <summary>
         /// Constructor for self-rotation movement

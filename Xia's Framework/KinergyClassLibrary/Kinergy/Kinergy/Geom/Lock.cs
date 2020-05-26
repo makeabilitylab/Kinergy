@@ -130,6 +130,25 @@ namespace Kinergy.Geom
             }
             return true;
         }
+        public bool ActivateWithoutInteraction()
+        {
+            //First check if this is lock base. only base could generate pointing position
+            if (otherPart == null)
+            {
+                return false;
+            }
+            if (headOrBase == true)
+            {
+                return otherPart.ActivateWithoutInteraction();
+            }
+            if (releasePosition == Point3d.Unset)
+            {
+                return false;
+            }
+            //generate Point at releasePosition and let user select it
+            Release();
+            return true;
+        }
         private void Release()
         {
             int count = constraints.Count();

@@ -17,9 +17,9 @@ namespace Kinergy.Motion
     public class Motion
     {
         protected List<Entity> entityList;
-        protected bool loaded;
+        private bool loaded;
         public List<Entity> EntityList { get => entityList;protected set => entityList = value; }
-        
+        public bool Loaded { get => loaded;protected set => loaded = value; }
 
         public Motion()
         {
@@ -35,14 +35,35 @@ namespace Kinergy.Motion
             }
             return models;
         }
-        
+        public List<Mesh> GetMeshModel()
+        {
+            List<Mesh> models = new List<Mesh>();
+            foreach (Entity e in entityList)
+            {
+                Mesh[] ms = Mesh.CreateFromBrep(e.GetModelinWorldCoordinate(), MeshingParameters.FastRenderMesh);
+                foreach(Mesh m in ms)
+                {
+                    if(m.Faces.Count>0)
+                    {models.Add(m); }
+                }
+            }
+            return models;
+        }
+
         public virtual bool LoadMotion()
         {
             //to be overritten
+            loaded = true;
             return false;
         }
         public virtual bool Trigger()
         {
+            //to be overritten
+            return false;
+        }
+        public virtual bool TriggerWithoutInteraction()
+        {
+            //to be overritten
             return false;
         }
         public virtual Movement Simulate(double interval = 20, double precision=0.01)
@@ -57,6 +78,7 @@ namespace Kinergy.Motion
             {
                 e.ResetState();
             }
+            loaded = false;
         }
     }
 }

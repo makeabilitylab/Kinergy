@@ -62,11 +62,17 @@
     <Compile Include="Geom\Lock.cs" />
     <Compile Include="Geom\Shape.cs" />
     <Compile Include="Motion\Motion.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Utilities\Arrow.cs" />
     <Compile Include="Geom\BoxLike.cs" />
     <Compile Include="Geom\Component.cs" />
     <Compile Include="Motion\ContinuousMovingPress.cs" />
     <Compile Include="Constraints\Engagement.cs" />
+    <Compile Include="Utilities\Convert resource file.cs" />
     <Compile Include="Utilities\FileOperation.cs" />
     <Compile Include="Constraints\Fixation.cs" />
     <Compile Include="Geom\Gear.cs" />
@@ -83,6 +89,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\UserSelection.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="Resources\LockBaseContinuousMovingPress.3dm" />
+    <None Include="Resources\LockBaseInstantExtension.3dm" />
+    <None Include="Resources\LockHeadContinuousMovingPress.3dm" />
+    <None Include="Resources\LockHeadInstantExtension.3dm" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -62,6 +62,7 @@
     <Compile Include="AdjustSpringParameter.cs" />
     <Compile Include="EntityReader.cs" />
     <Compile Include="KinergyUtilitiesInfo.cs" />
+    <Compile Include="MotionLoader.cs" />
     <Compile Include="MotionReader.cs" />
     <Compile Include="MotionSimulator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

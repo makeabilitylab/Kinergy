@@ -39,8 +39,9 @@ namespace KinergyUtilities
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            //pManager.AddGenericParameter("Motion", "M", "The motion to simulate", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Motion", "M", "The motion to simulate", GH_ParamAccess.item);
             pManager.AddGenericParameter("Models", "M", "The models", GH_ParamAccess.list);
+            
         }
         /// <summary>
         /// This is the method that actually does the work.

@@ -427,17 +427,23 @@ namespace Kinergy
                 double lock_radius = 1.5 * scale;
                 
                 double lock_length;
-                
+
                 //directory for test
-                RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantExtension.3dm");
-                Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantExtension.3dm");
-                Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBaseInstantExtension.3dm");
-                Point3d LockBaseReleasePosition = FileOperation.SinglePointFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBaseInstantExtension.3dm");
+                //RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantExtension.3dm");
+                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantExtension.3dm");
+                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBaseInstantExtension.3dm");
+                //Point3d LockBaseReleasePosition = FileOperation.SinglePointFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBaseInstantExtension.3dm");
                 //directory for actual use
-                //RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
-                //Brep LockHead = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHeadInstantExtension.3dm");
-                //Brep LockBase = FileOperation.SingleBrepFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBaseInstantExtension.3dm");
-                //Point3d LockBaseTrigger = FileOperation.SinglePointFromResourceFile(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBaseInstantExtension.3dm");
+                RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHead.3dm");
+                Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockHeadInstantExtension.3dm");
+                Brep LockBase = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBaseInstantExtension.3dm");
+                Point3d LockBaseReleasePosition = FileOperation.SinglePointFromResourceFileDirectory(FileOperation.FindComponentFolderDirectory() + "\\Resources\\LockBaseInstantExtension.3dm");
+                //Recent trial of using resources manager
+                /*RhinoApp.WriteLine("Using Resources Manager to load 3dm files");
+                Brep LockHead = FileOperation.SingleBrepFromResourceFile(Properties.Resources.LockHeadInstantExtension);
+                Brep LockBase = FileOperation.SingleBrepFromResourceFile(Properties.Resources.LockBaseInstantExtension);
+                Point3d LockBaseReleasePosition = FileOperation.SinglePointFromResourceFile(Properties.Resources.LockBaseInstantExtension);*/
+
                 Cylinder rod = new Cylinder();
                 Transform scaler = Transform.Scale(new Point3d(0, 0, 0), scale);
                 LockHead.Transform(scaler);
@@ -526,11 +532,16 @@ namespace Kinergy
                 Movement compression = new Movement(spring, 3, -springLength * distance);
                 compression.Activate();
                 locks[0].SetLocked();
+                Loaded = true;
                 return true;
             }
             public override bool Trigger()
             {
                 return locks[0].Activate();//Create point and wait for selection
+            }
+            public override bool TriggerWithoutInteraction()
+            {
+                return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
             }
             public override Movement Simulate(double interval = 20, double precision=0.01)
             {
