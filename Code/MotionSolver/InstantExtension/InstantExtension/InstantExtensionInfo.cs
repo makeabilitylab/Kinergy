@@ -2,7 +2,7 @@
 using System.Drawing;
 using Grasshopper.Kernel;
 
-namespace InstantExtension
+namespace InstExtension
 {
     public class InstantExtensionInfo : GH_AssemblyInfo
     {

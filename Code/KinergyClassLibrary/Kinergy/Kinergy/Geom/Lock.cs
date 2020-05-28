@@ -26,15 +26,20 @@ namespace Kinergy.Geom
         /// <param name="LockHeadOrLockBase">True for head and false for base</param>
         /// <param name="stat">Whether the entity is static</param>
         /// <param name="n"></param>
-        public Lock(Brep brep,bool LockHeadOrLockBase, bool stat= false, string n = "") : base(brep, stat, n)
+        public Lock(Brep brep,bool LockHeadOrLockBase, bool stat= false, string n = "") : base(brep, false, n)
         {
             //TODO add lock features to this class
+            if(LockHeadOrLockBase==false)
+                { throw new Exception("Should provide release point for lock base"); }
             headOrBase = LockHeadOrLockBase;
         }
-        public Lock(Brep brep, bool LockHeadOrLockBase, Point3d PointingPosition, bool stat = false, string n = "") : base(brep, stat, n)
+        public Lock(Brep brep, bool LockHeadOrLockBase, Point3d Release, bool stat = false, string n = "") : base(brep, false, n)
         {
-            //TODO add lock features to this class
+            //This is base,so LockHeadOrBase should be false
+            if (LockHeadOrLockBase == true)
+            { throw new Exception("Should not provide release point for lock head"); }
             headOrBase = LockHeadOrLockBase;
+            releasePosition = Release;
         }
         public bool HeadOrBase { get => headOrBase;private set => headOrBase = value; }
         public Lock OtherPart { get => otherPart;private set => otherPart = value; }
@@ -43,8 +48,9 @@ namespace Kinergy.Geom
 
         protected override void ConductMoveAndUpdateParam(Movement move)
         {
-            base.model.Transform(move.Trans);
-            UpdateBasicParams();
+            /*base.model.Transform(move.Trans);
+            UpdateBasicParams();*/
+            base.ConductMoveAndUpdateParam(move);
         }
         public bool RegisterOtherPart(Lock other)
         {
@@ -99,7 +105,7 @@ namespace Kinergy.Geom
                 return false;
             }
             Locking l = new Locking(this, otherPart);
-            AddConstraint(l);
+            //AddConstraint(l);
             return true;
         }
         public bool Activate()
@@ -124,14 +130,36 @@ namespace Kinergy.Geom
             }
             return true;
         }
+        public bool ActivateWithoutInteraction()
+        {
+            //First check if this is lock base. only base could generate pointing position
+            if (otherPart == null)
+            {
+                return false;
+            }
+            if (headOrBase == true)
+            {
+                return otherPart.ActivateWithoutInteraction();
+            }
+            if (releasePosition == Point3d.Unset)
+            {
+                return false;
+            }
+            //generate Point at releasePosition and let user select it
+            Release();
+            return true;
+        }
         private void Release()
         {
-            foreach(Constraint c in Constraints)
+            int count = constraints.Count();
+            for (int i= 0; i < count; i++)
             {
-                if(c.GetType()==typeof(Locking))
+                if(constraints[i].GetType()==typeof(Locking))
                 {
-                    Locking l = (Locking)c;
+                    Locking l = (Locking)constraints[i];
                     l.Release();
+                    i -= 1;
+                    count -= 1;
                 }
             }
         }

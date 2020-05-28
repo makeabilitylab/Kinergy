@@ -303,8 +303,8 @@ namespace Kinergy
                 System.IO.DirectoryInfo pathInfo = new System.IO.DirectoryInfo(dir);
                 string newPath = pathInfo.Parent.FullName;
                 //Then read the locker and place it
-                Brep lockHeadBrep = FileOperation.SingleBrepFromResourceFile(newPath + "\\Plug - ins\\Grasshopper\\Components\\KinergyResources\\lockHeadContinuousMovingPress.3dm");
-                Brep lockBaseBrep = FileOperation.SingleBrepFromResourceFile(newPath + "\\Plug - ins\\Grasshopper\\Components\\KinergyResources\\lockBaseContinuousMovingPress.3dm");
+                Brep lockHeadBrep = FileOperation.SingleBrepFromResourceFileDirectory(newPath + "\\Plug - ins\\Grasshopper\\Components\\KinergyResources\\lockHeadContinuousMovingPress.3dm");
+                Brep lockBaseBrep = FileOperation.SingleBrepFromResourceFileDirectory(newPath + "\\Plug - ins\\Grasshopper\\Components\\KinergyResources\\lockBaseContinuousMovingPress.3dm");
                 
                 //directory for test
                 //Brep lockHeadBrep = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\lockHeadContinuousMovingPress.3dm");

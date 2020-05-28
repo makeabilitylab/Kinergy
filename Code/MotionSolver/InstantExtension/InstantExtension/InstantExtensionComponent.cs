@@ -10,7 +10,7 @@ using Kinergy.Motion;
 // folder in Grasshopper.
 // You can use the _GrasshopperDeveloperSettings Rhino command for that.
 
-namespace InstantExtension
+namespace InstExtension
 {
     public class InstantExtensionComponent : GH_Component
     {
@@ -69,7 +69,7 @@ namespace InstantExtension
             if (!DA.GetData(3, ref energy)) { return; }
             if (!DA.GetData(4, ref distance)) { return; }
 
-            HelicalSpring motion = new HelicalSpring(model, direction,energy,distance);
+            InstantExtension motion = new InstantExtension(model, direction,energy,distance);
             
             DA.SetData(0, motion);
         }

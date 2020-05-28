@@ -52,6 +52,11 @@ namespace Kinergy
                 }
                 return false;
             }
+            public void Release()
+            {
+                this.obj1.Constraints.Remove(this);
+                this.obj2.Constraints.Remove(this);
+            }
         }
     }
 }

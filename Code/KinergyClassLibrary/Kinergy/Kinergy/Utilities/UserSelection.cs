@@ -23,6 +23,7 @@ namespace Kinergy.Utilities
             {
                 addedPoints.Add(myDoc.Objects.AddPoint(pt));
             }
+            Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw();
             ObjRef selectedPoint;
             int selection = -1;
             bool success = false;
@@ -57,6 +58,7 @@ namespace Kinergy.Utilities
             {
                 addedCurves.Add(myDoc.Objects.AddCurve(c));
             }
+            Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw();
             ObjRef selectedCurve;
             int selection = -1;
             bool success = false;
