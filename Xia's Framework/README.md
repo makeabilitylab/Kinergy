@@ -9,3 +9,5 @@ utilities是之后要完善的部分，包含了所有辅助工具电池，目�
 如果电池报错说dll找不到或者版本不对，是因为不同电池对kinergy的引用版本不统一，这种情况下打开各个电池的vs项目，
 确保kinergy的引用有效，然后重新生成一次就行了
 现有版本小bug应该不少，我这几天会密集更新
+
+#5月28日更新：为了实现小窗里的simulation，加入了HumanUI for Kinergy项目。这个项目是在HumanUI的基础上更改的，只加入了一个simulation电池，其余功能不变，需要使用的话，建议移除原有的HumanUI文件，然后将HumanUI for Kinergy下的bin路径加入到GrasshopperDeveloperSetting里面。
