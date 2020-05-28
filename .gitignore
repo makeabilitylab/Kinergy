@@ -3,6 +3,8 @@ code/bin/WearablePlugin.pdb
 *.cache
 *.pdb
 Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/db.lock
+
 Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/storage.ide-shm
 Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/storage.ide-wal
 Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/storage.ide-wal
+
