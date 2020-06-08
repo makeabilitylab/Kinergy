@@ -63,6 +63,7 @@
     <Compile Include="Geom\Shape.cs" />
     <Compile Include="Geom\Wheel.cs" />
     <Compile Include="Motion\Motion.cs" />
+    <Compile Include="Motion\Projectile.cs" />
     <Compile Include="Utilities\Arrow.cs" />
     <Compile Include="Geom\BoxLike.cs" />
     <Compile Include="Geom\Component.cs" />

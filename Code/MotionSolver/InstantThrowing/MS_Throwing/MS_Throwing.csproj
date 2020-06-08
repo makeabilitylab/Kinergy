@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{89BCD0CE-808A-4A74-A8BF-B283D73C50E8}</ProjectGuid>
+    <ProjectGuid>{B02E5D8E-1450-41FA-BFD2-73B1E85DE598}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>KinergyUtilities</RootNamespace>
-    <AssemblyName>KinergyUtilities</AssemblyName>
+    <RootNamespace>MS_Throwing</RootNamespace>
+    <AssemblyName>MS_Throwing</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -32,8 +32,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Kinergy">
-      <HintPath>..\..\..\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll</HintPath>
+    <Reference Include="GH_Util">
+      <HintPath>..\..\..\Kinergy\Kinergy\bin\Debug\GH_Util.dll</HintPath>
+    </Reference>
+    <Reference Include="Kinergy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\..\..\..\Program Files\Rhino 6\Plug-ins\Grasshopper\Components\Kinergy.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -59,16 +63,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdjustSpringParameter.cs" />
-    <Compile Include="EntityReader.cs" />
-    <Compile Include="KinergyUtilitiesInfo.cs" />
-    <Compile Include="MotionReader.cs" />
-    <Compile Include="MotionSimulator.cs" />
-    <Compile Include="SetDirectionOnly.cs" />
+    <Compile Include="MSThrowingComponent.cs" />
+    <Compile Include="MS_ThrowingInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SelectDirection.cs" />
-    <Compile Include="SelectPosition.cs" />
-    <Compile Include="SetDirection.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

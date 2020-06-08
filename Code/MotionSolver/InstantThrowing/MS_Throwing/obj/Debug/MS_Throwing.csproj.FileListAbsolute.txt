@@ -1,0 +1,18 @@
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\bin\MS_Throwing.dll
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\bin\MS_Throwing.pdb
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\bin\GH_Util.dll
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\bin\Kinergy.dll
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\bin\Kinergy.pdb
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.csproj.CoreCompileInputs.cache
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.csproj.CopyComplete
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.dll
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.pdb
+E:\winter research\code20200423\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.csprojAssemblyReference.cache
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\bin\MS_Throwing.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\bin\MS_Throwing.pdb
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.csproj.CoreCompileInputs.cache
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.csproj.CopyComplete
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\obj\Debug\MS_Throwing.pdb
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\bin\Kinergy.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\MotionSolver\InstantThrowing\MS_Throwing\bin\Kinergy.pdb

@@ -19,3 +19,10 @@
 \\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CopyComplete
 \\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
 \\Mac\Home\Desktop\kinetic tool\Kinergy-master\Kinergy\Xia's Framework\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.pdb
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\GH_Util.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CoreCompileInputs.cache
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CopyComplete
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb

@@ -14,3 +14,11 @@ C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\Kinergy
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.csprojAssemblyReference.cache
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\bin\KinergyUtilities.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\bin\KinergyUtilities.pdb
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\bin\Kinergy.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\bin\Kinergy.pdb
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.csproj.CoreCompileInputs.cache
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.csproj.CopyComplete
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.dll
+C:\Users\ybliang19970108\Documents\GitHub\KinergyNew\Kinergy\Code\KinergyUtilities\KinergyUtilities\KinergyUtilities\obj\Debug\KinergyUtilities.pdb
