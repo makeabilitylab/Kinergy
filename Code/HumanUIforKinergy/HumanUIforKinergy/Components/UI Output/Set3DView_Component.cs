@@ -63,7 +63,7 @@ namespace HumanUIforKinergy.Components.UI_Output
             ModelVisual3D mv3 = GetModelVisual3D(vp3);
             List<ModelVisual3D> mv3s = GetModels(vp3);
             List<Material> mats = new List<Material>();
-
+            
                   vp3.Children.Clear();
             vp3.Children.Add(new SunLight());
 

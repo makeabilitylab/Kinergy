@@ -73,16 +73,16 @@ namespace Kinergy.Generator
             //Just generate a cylinder(as a Shape) to connect the start of spring to base structure
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
             double r = s.SpringRadius * 1.1;
-            Vector3d springVector = new Vector3d(s.Start) - new Vector3d(s.End);
+            Vector3d springVector = new Vector3d(s.StartPoint) - new Vector3d(s.EndPoint);
 
             var pts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(new List<Brep> { object2.Model.GetBoundingBox(true).ToBrep() }, // brep on which to project
-                   new List<Point3d> { s.Start }, 
+                   new List<Point3d> { s.StartPoint }, 
                    springVector, 
                    myDoc.ModelAbsoluteTolerance);
             if (pts.Count() > 0)
             {
-                double height = new Line(s.Start, pts[0]).Length;
-                Circle baseCircle = new Circle(new Plane(s.Start, springVector), r);
+                double height = new Line(s.StartPoint, pts[0]).Length;
+                Circle baseCircle = new Circle(new Plane(s.StartPoint, springVector), r);
                 Cylinder c = new Cylinder(baseCircle, height);
                 connectingStructure = new Shape(c.ToBrep(true, true));
             }

@@ -14,7 +14,7 @@ using Rhino;
 
 namespace Kinergy.Geom
 {
-    class Shape:Entity
+    public class Shape:Entity
     {
         
         

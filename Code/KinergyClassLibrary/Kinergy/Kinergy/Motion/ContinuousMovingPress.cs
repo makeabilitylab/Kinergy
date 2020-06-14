@@ -238,7 +238,7 @@ namespace Kinergy
                 List<Point3d> candidates = new List<Point3d>();
                 foreach(Point3d p in positionCandidates)
                 {
-                    if((new Vector3d(p)-new Vector3d(springEntity.End))*springEntity.Direction/springEntity.Direction.Length>-springLength*distance-5)
+                    if((new Vector3d(p)-new Vector3d(springEntity.EndPoint))*springEntity.Direction/springEntity.Direction.Length>-springLength*distance-5)
                     {
                         continue; 
                     }
@@ -290,8 +290,8 @@ namespace Kinergy
             private bool ConstructLock()
             {
                 //First build a panel connecting spring end and all other things
-                Plane p = new Plane(springEntity.End, lockDirection,Vector3d.CrossProduct(lockDirection,springEntity.Direction));
-                double xlen = (new Vector3d(mainBodyBox.InnerEmptySpaceBbox.ClosestPoint(lockPosition)) - new Vector3d(springEntity.End)) * lockDirection / lockDirection.Length;
+                Plane p = new Plane(springEntity.EndPoint, lockDirection,Vector3d.CrossProduct(lockDirection,springEntity.Direction));
+                double xlen = (new Vector3d(mainBodyBox.InnerEmptySpaceBbox.ClosestPoint(lockPosition)) - new Vector3d(springEntity.EndPoint)) * lockDirection / lockDirection.Length;
                 Interval x =new Interval(-springRadius,xlen-3);
                 Interval y =new Interval(-springRadius-5,springRadius+5);
                 Interval z =new Interval(0,2);
@@ -310,7 +310,7 @@ namespace Kinergy
                 //Brep lockHeadBrep = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\lockHeadContinuousMovingPress.3dm");
                 //Brep lockBaseBrep = FileOperation.SingleBrepFromResourceFile(FileOperation.FindCurrentFolderResourceDirectory() + "\\lockBaseContinuousMovingPress.3dm");
 
-                Transform move1 = Transform.Translation(new Vector3d(SpringEntity.End)+lockDirection/lockDirection.Length*(xlen-3));
+                Transform move1 = Transform.Translation(new Vector3d(SpringEntity.EndPoint)+lockDirection/lockDirection.Length*(xlen-3));
                 Transform rotate1 = Transform.Rotation(Vector3d.XAxis, -springEntity.Direction, Point3d.Origin);
                 //another rotation here
                 lockHeadBrep.Transform(rotate1);
@@ -333,7 +333,7 @@ namespace Kinergy
             {
                 //No need to select anything
                 //Connect rack to panel or build one if there isn't any.
-                Point3d startPoint = SpringEntity.End - moveDirection / moveDirection.Length * (springRadius + 4);
+                Point3d startPoint = SpringEntity.EndPoint - moveDirection / moveDirection.Length * (springRadius + 4);
                 Point3d endPoint = startPoint - springDirection / springDirection.Length * springLength * distance;//TODO
                 Rack rack = new Rack(startPoint, endPoint, -moveDirection, 3, 1);
                 entityList.Add(rack);

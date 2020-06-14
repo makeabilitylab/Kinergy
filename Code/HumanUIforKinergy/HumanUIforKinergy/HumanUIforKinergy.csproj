@@ -44,8 +44,9 @@
     <Reference Include="HumanUIBaseApp">
       <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\HumanUIBaseApp.dll</HintPath>
     </Reference>
-    <Reference Include="Kinergy">
-      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Kinergy.dll</HintPath>
+    <Reference Include="Kinergy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll</HintPath>
     </Reference>
     <Reference Include="MahApps.Metro">
       <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\MahApps.Metro.dll</HintPath>

@@ -337,6 +337,11 @@ namespace Kinergy
                 }
                 return false;
             }
+            public bool CalculateSkeletonCurved()
+            {
+
+                return true;
+            }
             public bool CutModelForSpring()
             {   
                 BoundingBox box = model.GetBoundingBox(true);

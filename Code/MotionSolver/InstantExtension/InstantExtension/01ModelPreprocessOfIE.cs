@@ -34,6 +34,7 @@ namespace InstExtension
         {
             pManager.AddGenericParameter("Motion", "M", "Motion instance", GH_ParamAccess.item);
             pManager.AddPointParameter("SpringPositionCandidates", "P", "Candidate points of available point position", GH_ParamAccess.list);
+            pManager.AddCurveParameter("ModelSkeleton", "S", "", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -46,11 +47,19 @@ namespace InstExtension
             if (!DA.GetData(0, ref motion)) { return; }
             if(motion==null)
             { return; }
-            motion.CalculateSkeleton();
+            if(motion.Curved)
+            {
+                motion.CalculateCurvedSkeleton();
+            }
+            else
+            {
+                motion.CalculateSkeleton();
+            }
+
             List<Point3d> pts = motion.GetSpringPositionCandidates();
-            
             DA.SetData(0, motion);
             DA.SetDataList(1, pts);
+            DA.SetData(2,motion.Skeleton);
         }
 
         /// <summary>
