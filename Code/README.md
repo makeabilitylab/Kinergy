@@ -2,36 +2,35 @@
 
 ### KinergyMainInterface.gh 
 
-This is the main window interface, including the entries for each kinectic unit. This Grasshopper file shows the entire strucutre for the user inteface.
+> This is the main window interface, including the entries for each kinectic unit. This Grasshopper file shows the entire strucutre for the user inteface.
 
-### [dir] HumanUIforKinergy
+### HumanUIforKinergy direcotry
 
-This folder contains custom Human UI code to support simulation and custom user controls in this project.
+> This folder contains custom Human UI code to support simulation and custom user controls in this project.
 
-### [dir] KinergyClassLibrary
+### KinergyClassLibrary directory
 
-Kinergy library contains namespace "Constraints", "Generator", "Geom", "Motion", "Utilities", and class "Movement". 
-![Image of the namespace and classes in Kinergy]
-(http://lianghe.me/research/kinergy/Kniergy1-1.png)
+> Kinergy library contains namespace "Constraints", "Generator", "Geom", "Motion", "Utilities", and class "Movement". 
+![Image of the namespace and classes in Kinergy](http://lianghe.me/research/kinergy/Kniergy1-1.png)
 
-*The class diagram is under development on https://processon.com/diagraming/5eafd5496376897466a3759f*
+> *The class diagram is under development on https://processon.com/diagraming/5eafd5496376897466a3759f*
 
 
-### [dir] KinergyUtilities
+### KinergyUtilities directory
 
-This directory contains all operations needed in this project. All operations are implemented and used as Grasshopper batteries.
+> This directory contains all operations needed in this project. All operations are implemented and used as Grasshopper batteries.
 
-### [dir] MotionSolver
+### MotionSolver directory
 
-This directory contains all the Grasshopper batteries for all kinetic units. The sub-directories indicate the knietic units. Each kinetic unit has multiple batteries for a complete end-to-end workflow.
+> This directory contains all the Grasshopper batteries for all kinetic units. The sub-directories indicate the knietic units. Each kinetic unit has multiple batteries for a complete end-to-end workflow.
 
-### [dir] Resources
+### Resources directory
 
-This directory contains all the image files and 3D model files for the basic elemnet that are used in this project such as locking mechanisms.
+> This directory contains all the image files and 3D model files for the basic elemnet that are used in this project such as locking mechanisms.
 
-### [dir] Old_Code
+### Old_Code directory
 
-This folder contains all the old code that is not used and reserved as backup of this project.
+> This folder contains all the old code that is not used and reserved as backup of this project.
 
 
 ## Configuration for Developing and Lauching the Project
