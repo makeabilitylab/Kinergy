@@ -11,7 +11,7 @@
 ### KinergyClassLibrary directory
 
 > Kinergy library contains namespace "Constraints", "Generator", "Geom", "Motion", "Utilities", and class "Movement". 
-![Image of the namespace and classes in Kinergy](http://lianghe.me/research/kinergy/Kniergy1-1.png)
+![Image of the namespace and classes in Kinergy](../DevDocuments/KinergyClassDiagram1.png)
 
 > *The class diagram is under development on https://processon.com/diagraming/5eafd5496376897466a3759f*
 
