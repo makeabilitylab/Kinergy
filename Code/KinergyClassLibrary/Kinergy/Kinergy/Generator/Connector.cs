@@ -10,8 +10,7 @@ using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Geom;
-using Kinergy.Constraints;
-
+using Kinergy.Relationship;
 namespace Kinergy.Generator
 {
     /// <summary>
@@ -38,10 +37,10 @@ namespace Kinergy.Generator
         {
             //First do a type check
             
-            if(object1.GetType()==typeof(Spring))
+            if(object1.GetType()==typeof(Helix))
             {
-                Spring s = (Spring)object1;
-                GenerateConnectorForSpring(s);
+                Helix s = (Helix)object1;
+                GenerateConnectorForHelix(s);
             }
             else if(object1.GetType() == typeof(Gear))
             {
@@ -68,21 +67,21 @@ namespace Kinergy.Generator
                 throw new Exception("Invalid parameter type passed to connector."); 
             }
         }
-        private void GenerateConnectorForSpring(Spring s)
+        private void GenerateConnectorForHelix(Helix s)
         {
-            //Just generate a cylinder(as a Shape) to connect the start of spring to base structure
+            //Just generate a cylinder(as a Shape) to connect the start of Helix to base structure
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
             double r = s.SpringRadius * 1.1;
-            Vector3d springVector = new Vector3d(s.StartPoint) - new Vector3d(s.EndPoint);
+            Vector3d HelixVector = new Vector3d(s.StartPoint) - new Vector3d(s.EndPoint);
 
             var pts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(new List<Brep> { object2.Model.GetBoundingBox(true).ToBrep() }, // brep on which to project
                    new List<Point3d> { s.StartPoint }, 
-                   springVector, 
+                   HelixVector, 
                    myDoc.ModelAbsoluteTolerance);
             if (pts.Count() > 0)
             {
                 double height = new Line(s.StartPoint, pts[0]).Length;
-                Circle baseCircle = new Circle(new Plane(s.StartPoint, springVector), r);
+                Circle baseCircle = new Circle(new Plane(s.StartPoint, HelixVector), r);
                 Cylinder c = new Cylinder(baseCircle, height);
                 connectingStructure = new Shape(c.ToBrep(true, true));
             }

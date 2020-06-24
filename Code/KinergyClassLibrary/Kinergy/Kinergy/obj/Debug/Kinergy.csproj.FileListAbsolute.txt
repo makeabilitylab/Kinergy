@@ -39,3 +39,13 @@
 \\Mac\Home\Desktop\kinetic_tool\Kinergy-master\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CopyComplete
 \\Mac\Home\Desktop\kinetic_tool\Kinergy-master\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
 \\Mac\Home\Desktop\kinetic_tool\Kinergy-master\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csprojAssemblyReference.cache
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.Properties.Resources.resources
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.GenerateResource.cache
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CoreCompileInputs.cache
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.pdb
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\GH_Util.dll
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.csproj.CopyComplete
+C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb
