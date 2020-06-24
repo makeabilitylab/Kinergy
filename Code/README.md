@@ -22,3 +22,7 @@ utilities是之后要完善的部分，包含了所有辅助工具电池，目�
 
 
 #5月28日更新：为了实现小窗里的simulation，加入了HumanUI for Kinergy项目。这个项目是在HumanUI的基础上更改的，只加入了一个simulation电池，其余功能不变，需要使用的话，建议移除原有的HumanUI文件，然后将HumanUI for Kinergy下的bin路径加入到GrasshopperDeveloperSetting里面。
+
+#6月17日更新：按照Liang的建议对数个命名进行修改
+
+#6月24日更新：针对弯曲模型的InstantExtension已经完成。另外，由于原先多个独立的项目之间存在类的声明不互通的情况，因此将原先的HumanUI for Kinergy，MotionSolver以及KinergyUtilities三个项目进行了合并，归到KinergyApp文件夹下。原有的三个项目文件夹丢到old code里面进行留档。目前代码分为KinergyApp和KinergyClassLibrary两个项目，减少了每次修改之后生成操作的次数。
