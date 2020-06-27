@@ -8,3 +8,13 @@ C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\
 C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.CopyComplete
 C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
 C:\Users\60213\Desktop\Kinergy-xia\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.pdb
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\GH_Util.dll
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csprojAssemblyReference.cache
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.Properties.Resources.resources
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.GenerateResource.cache
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.CoreCompileInputs.cache
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.CopyComplete
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
+C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb

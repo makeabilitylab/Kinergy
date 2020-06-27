@@ -35,11 +35,11 @@ namespace InstExtension
         {
             pManager.AddBooleanParameter("Start", "S", "Whether to start calculating", GH_ParamAccess.item);
             pManager.AddBrepParameter("Model", "M", "Model to process", GH_ParamAccess.item);
-            pManager.AddVectorParameter("SpringDirection", "SD", "Direction of spring", GH_ParamAccess.item);
+            pManager.AddVectorParameter("MotionDirection", "MD", "Direction of Motion", GH_ParamAccess.item);
             pManager.AddBooleanParameter("CurvedModel", "CM", "If the model should be calculated as curved shape", GH_ParamAccess.item);
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
             pManager.AddNumberParameter("Distance", "D", "Proportion of spring that's able to be compressed", GH_ParamAccess.item);
-            pManager[2].Optional = true;
+            
         }
 
         /// <summary>
@@ -48,7 +48,6 @@ namespace InstExtension
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("InstantExtentionInstance", "IE", "Motion instance generated in motion solver.", GH_ParamAccess.item);
-            
         }
 
         /// <summary>
@@ -66,24 +65,13 @@ namespace InstExtension
             bool curved = false;
             if (!DA.GetData(0, ref start)) { return; }
             if (start == false) { return; }
-            
+            if (!DA.GetData(2, ref direction)) { return; }
             if (!DA.GetData(3, ref curved)) { return; }
             if (!DA.GetData(4, ref energy)) { return; }
             if (!DA.GetData(5, ref distance)) { return; }
-            if(curved)
-            {
-                if (!DA.GetData(1, ref model)) { return; }
-                InstantExtension motion = new InstantExtension(model,energy, distance);
-                DA.SetData(0, motion);
-            }
-            else
-            {
-                if (!DA.GetData(1, ref model)) { return; }
-                if (!DA.GetData(2, ref direction)) { return; }
-                InstantExtension motion = new InstantExtension(model, direction, energy, distance);
-                DA.SetData(0, motion);
-            }
-            
+            if (!DA.GetData(1, ref model)) { return; }
+            InstantExtension motion = new InstantExtension(model,curved,direction,energy, distance);
+            DA.SetData(0, motion);
             
         }
 

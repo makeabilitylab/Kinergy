@@ -41,8 +41,8 @@ namespace Kinergy.KineticUnit
 
         //The calculated geometry and parameters
         Vector3d skeletonVector;//start to end;
-        private Transform xrotate;
-        private Transform xrotateBack;
+        //private Transform xrotate;
+        //private Transform xrotateBack;
         private double springRadius = 0;
         private double wireRadius = 0;
         private double springLength = 0;
@@ -63,30 +63,20 @@ namespace Kinergy.KineticUnit
         /// <summary> Default constructor without basic input parameter </summary>
         /// <returns> Returns empty instance</returns>
 
-        public InstantExtension(Brep Model, Vector3d Direction, double Energy, double Distance)
+        public InstantExtension(Brep Model, bool Curved ,Vector3d Direction, double Energy, double Distance)
         {
             model = Model;
             energy = Energy;
             distance = Distance;
             direction = Direction;
-
-            xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);
-            xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
+            curved = Curved;
+            //xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);//Deprecated. Too ambiguous and indirect.
+            //xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
             modelCut = new List<Shape>();
             myDoc = RhinoDoc.ActiveDoc;
             locks = new List<Lock>();
         }
-        public InstantExtension(Brep Model, double Energy, double Distance)
-        {
-            model = Model;
-            energy = Energy;
-            distance = Distance;
-            curved = true;
-            
-            modelCut = new List<Shape>();
-            myDoc = RhinoDoc.ActiveDoc;
-            locks = new List<Lock>();
-        }
+        
         /// <summary> Call this method to  </summary>
         /// <returns> Returns bool value showing whether all processes go well</returns>
         public bool Process()
@@ -95,7 +85,7 @@ namespace Kinergy.KineticUnit
             RhinoApp.WriteLine(path3);
             RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory());
 
-            if (CalculateSkeleton() == false)
+            if (CalculateStraightSkeleton() == false)
             { throw new Exception("Unable to process this model,please provide valid model and vector"); }
 
             if (SetSpringPosition() == false)
@@ -163,6 +153,15 @@ namespace Kinergy.KineticUnit
         public List<Point3d> GetSpringPositionCandidates()
         {
             List<Point3d> points = new List<Point3d>();
+            if(curved)
+            {
+                for (int i = 0; i <= 20; i++)
+                {
+                    Vector3d d = GeometryMethods.AverageTangent(skeleton, skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20);
+                    if (Math.Abs(d * direction / d.Length / direction.Length) > 0.8)
+                    { points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20)); }
+                }
+            }
             for (int i = 0; i <= 20; i++)
             {
                 points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20));
@@ -319,12 +318,12 @@ namespace Kinergy.KineticUnit
         }
         public List<Arrow> GetLockDirectionCandidates()
         {
-            if(direction!=Vector3d.Unset)
+            if(curved==false)
             {
                 Vector3d v1 = direction;
                 Vector3d v2 = -v1;
-                Point3d p1 = springPosition + v1 * (springLength / 2 + 5);
-                Point3d p2 = springPosition - v1 * (springLength / 2 + 5);
+                Point3d p1 = springPosition + v1 * (springLength / 2 + 5)/v1.Length;
+                Point3d p2 = springPosition - v1 * (springLength / 2 + 5)/v1.Length;
                 Arrow a1 = new Arrow(v1, p1);
                 Arrow a2 = new Arrow(v2, p2);
                 return new List<Arrow> { a1, a2 };
@@ -343,8 +342,10 @@ namespace Kinergy.KineticUnit
             }
             
         }
-        public bool CalculateSkeleton()
+        public bool CalculateStraightSkeleton()
         {
+            Transform xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);//Deprecated. Too ambiguous and indirect.
+            Transform xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
             //here skeleton is calculated using bbox. Spring parameters are now determined by shape and ratio of bbox. energy and distance havn't been adopted.
             model.Transform(xrotate);
             BoundingBox box = model.GetBoundingBox(true);
@@ -438,13 +439,13 @@ namespace Kinergy.KineticUnit
             {
                 Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
                 Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
-                spring = new Helix(skeleton, springStart, springEnd, springRadius, wireRadius, roundNum, distance);
+                spring = new Helix(skeleton, springStart, springEnd, springRadius, wireRadius, roundNum, distance,energy);
             }
             else
             {
                 Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
                 Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
-                spring = new Helix(startPoint, endPoint, springRadius, wireRadius, roundNum, distance);
+                spring = new Helix(startPoint, endPoint, springRadius, wireRadius, roundNum, distance,energy);
             }
             EntityList.Add(spring);
             if (spring.Model != null)
@@ -566,7 +567,7 @@ namespace Kinergy.KineticUnit
                 lock_length = skeleton.GetLength() * (springEnd - springStart);
                 lock_length += skeleton.GetLength() * (springStart - lockT);
                 lock_length -= skeleton.GetLength() * (springEnd - springStart) * distance;
-                Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength())) - new Vector3d(skeleton.PointAtNormalizedLength(springEnd+0.03));
+                Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()-0.001)) - new Vector3d(skeleton.PointAtNormalizedLength(springEnd+0.03));
                 Circle c = new Circle(new Plane(skeleton.PointAtNormalizedLength(springEnd+0.03),normal), lock_radius);
                 //Curve rail= skeleton.ToNurbsCurve(new Interval(springEnd-lock_length/skeleton.GetLength(), springEnd));//Check if other type of t is needed here
                 //Curve rail = skeleton.ToNurbsCurve(new Interval(skeleton.Domain.ParameterAt(springEnd - lock_length / skeleton.GetLength()), skeleton.Domain.ParameterAt(springEnd)));
@@ -619,7 +620,7 @@ namespace Kinergy.KineticUnit
                 lock_length += skeleton.GetLength() * (lockT - springEnd);
                 lock_length -= skeleton.GetLength() * (springEnd - springStart) * distance;
                 //Circle c = new Circle(new Plane(skeleton.PointAtNormalizedLength(springStart), skeletonVector), lock_radius);
-                Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength())) - new Vector3d(skeleton.PointAtNormalizedLength(springStart-0.03));
+                Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()+0.001)) - new Vector3d(skeleton.PointAtNormalizedLength(springStart-0.03));
                 Circle c = new Circle(new Plane(skeleton.PointAtNormalizedLength(springStart-0.03), normal), lock_radius);
                 rod = new Cylinder(c, normal.Length);
                 //Curve rail = skeleton.ToNurbsCurve(new Interval(skeleton.Domain.ParameterAt( springStart),skeleton.Domain.ParameterAt( springStart + lock_length / skeleton.GetLength())));
@@ -700,7 +701,11 @@ namespace Kinergy.KineticUnit
         }
         public override bool LoadKineticUnit()
         {
-            Movement compression = new Movement(spring, 3, -springLength * distance);
+            Movement compression;
+            if (lockT < springStart)
+            { compression = new Movement(spring, 3, -springLength * distance); }
+            else
+            { compression = new Movement(spring, 3, springLength * distance);  }
             spring.SetMovement(compression);
             compression.Activate();
             locks[0].SetLocked();

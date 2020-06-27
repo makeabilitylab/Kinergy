@@ -29,6 +29,7 @@ namespace HumanUIforKinergy.Components.UI_Output
             pManager.AddGenericParameter("3D View", "V", "The 3D view to adopt", GH_ParamAccess.item);
             pManager.AddGenericParameter("KineticUnit to simulate", "KU", "The kinetic unit to simulate in the viewport", GH_ParamAccess.item);
             pManager.AddColourParameter("Mesh Colors", "C", "The color with which to display the mesh.", GH_ParamAccess.list);
+            pManager.AddBooleanParameter("Start", "S", "Start simulation", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Load", "L", "Set this to true to release the motion and see the simulation", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Release", "R", "Set this to true to release the motion and see the simulation", GH_ParamAccess.item);
             
@@ -48,6 +49,7 @@ namespace HumanUIforKinergy.Components.UI_Output
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             object o = null;
+            bool start = false;
             Grasshopper.Kernel.Types.IGH_Goo k = null;
             KineticUnit m = null;
             List<Mesh> models;
@@ -56,11 +58,15 @@ namespace HumanUIforKinergy.Components.UI_Output
             List<System.Drawing.Color> cols = new List<System.Drawing.Color>();
             if (!DA.GetData<object>("3D View", ref o)) return;
             //if(!DA.GetData(1, ref m)) return;
+            DA.GetData(3, ref start);
+            if(start==false)
+            { return; }
             DA.GetData(1, ref k);
             k.CastTo(out m);
             DA.GetDataList("Mesh Colors", cols);
-            DA.GetData(3, ref load);
-            DA.GetData(4, ref release);
+            
+            DA.GetData(4, ref load);
+            DA.GetData(5, ref release);
 
             HelixViewport3D vp3 = HUI_Util.GetUIElement<HelixViewport3D>(o);
             ModelVisual3D mv3 = GetModelVisual3D(vp3);

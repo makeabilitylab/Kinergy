@@ -35,6 +35,7 @@ namespace InstExtension
             pManager.AddGenericParameter("Kinetic Unit", "KU", "Kinetic Unit instance of IE", GH_ParamAccess.item);
             pManager.AddGenericParameter("LockDirectionCandidates", "DC", "Available directions of lock as arrows. Discard this if you don't need lock", GH_ParamAccess.list);
             pManager.AddGenericParameter("Spring", "S", "spring entity", GH_ParamAccess.item);
+            pManager.AddCurveParameter("SpringSkeleton", "SS", "the base curve of spring", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -59,6 +60,7 @@ namespace InstExtension
             DA.SetData(0, motion);
             DA.SetDataList(1, directionCandidates);
             DA.SetData(2, motion.Spring);
+            DA.SetData(3, motion.Spring.BaseCurve);
         }
 
         /// <summary>
