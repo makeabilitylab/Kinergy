@@ -26,3 +26,5 @@ utilities是之后要完善的部分，包含了所有辅助工具电池，目�
 #6月17日更新：按照Liang的建议对数个命名进行修改
 
 #6月24日更新：针对弯曲模型的InstantExtension已经完成。另外，由于原先多个独立的项目之间存在类的声明不互通的情况，因此将原先的HumanUI for Kinergy，MotionSolver以及KinergyUtilities三个项目进行了合并，归到KinergyApp文件夹下。原有的三个项目文件夹丢到old code里面进行留档。目前代码分为KinergyApp和KinergyClassLibrary两个项目，减少了每次修改之后生成操作的次数。
+
+#6月27日更新：解决了一些bug，并且整理了IE的简易ui界面。目前yawen的parameter mapping工作已经整合到了helix类的fix parameter方法中，但是还需要一些debug
