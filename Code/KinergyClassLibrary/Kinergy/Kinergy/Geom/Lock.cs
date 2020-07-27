@@ -9,7 +9,7 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
-using Kinergy.Constraints;
+using Kinergy.Relationship;
 
 namespace Kinergy.Geom
 {
@@ -67,7 +67,7 @@ namespace Kinergy.Geom
             }
             return false;
         }
-        public override bool AddConstraint(Constraint constraint)
+        public override bool AddConstraint(Relationship.Relationship constraint)
         {
             if(constraint.GetType()==typeof(Locking))
             {

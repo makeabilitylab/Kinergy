@@ -1,0 +1,408 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{0C5D2B3B-C306-4507-A278-B12E562F886C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HumanUIforKinergy</RootNamespace>
+    <AssemblyName>HumanUIforKinergy</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="De.TorstenMandelkow.MetroChart">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\De.TorstenMandelkow.MetroChart.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\HelixToolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\HelixToolkit.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="HumanUIBaseApp">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\HumanUIBaseApp.dll</HintPath>
+    </Reference>
+    <Reference Include="Kinergy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll</HintPath>
+    </Reference>
+    <Reference Include="MahApps.Metro">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\MahApps.Metro.dll</HintPath>
+    </Reference>
+    <Reference Include="Markdown.Xaml">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Markdown.Xaml.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Windows.Interactivity">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\System.Windows.Interactivity.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="RhinoCommon">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\Rhino 6\System\rhinocommon.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Grasshopper">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\Rhino 6\Plug-ins\Grasshopper\Grasshopper.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="GH_IO">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\Rhino 6\Plug-ins\Grasshopper\GH_IO.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
+    <Reference Include="Xceed.Wpf.AvalonDock">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Xceed.Wpf.AvalonDock.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Aero">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Xceed.Wpf.AvalonDock.Themes.Aero.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Metro">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Xceed.Wpf.AvalonDock.Themes.Metro.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.VS2010">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Xceed.Wpf.AvalonDock.Themes.VS2010.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.DataGrid">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Xceed.Wpf.DataGrid.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.Toolkit">
+      <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\Xceed.Wpf.Toolkit.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="HumanUIforKinergy\Components\Testing - Troubleshooting\ElemFromGuid_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateBorder_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateExpander_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateGrid_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateScrollViewer_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateSimpleGrid_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateStack_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateViewBox_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateWrapPanel_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Containers\TabContainer_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\Create3DView_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateBrowser_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateButton_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateCheckBox_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateCheckList_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateColorPicker_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateDataTable_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateFilePicker_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateGradientEditor_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateGraphMapper_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateImage_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateLabel_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateListBox_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateMDSlider_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateMultiShape_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateObjectsFromXaml_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreatePullDown_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateRadioButton_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateRangeSlider.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateRhinoCmdButton_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateRhinoPickButton.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateSeparator_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateShape_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateSlider_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateTextBlock_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateTextBox_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateToggle_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateTooltip_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\CreateTrueOnlyButton.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\Create_MarkdownViewer_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Elements\Create_TEMPLATE_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Graphs\CreateChart_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Graphs\CreateMultiChart_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Graphs\SetChart_Appearance.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Graphs\SetChart_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Graphs\SetMultiChart_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\AddElements_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\AdjustElementAppearance_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\AdjustElementPositioning_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\CaptureWindow_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\CreateTransparentWindow_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\GetElementProperties_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\GetScreenDimensions_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\HideShowElement_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\LaunchWindow_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\MakeChildWindow_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\RestoreElementState_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\SaveElementState_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\SetElementProperty_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\SetWindowProperties_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\ValueListener_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Main\WindowStatus_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\AddElementsToShape_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\KineticUnitSimulatorForHumanUI_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\Set3DViewProperties_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\Set3DView_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\Set3DView_Textured_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetBrowser_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetButton_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetCheckBox_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetChecklist_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetColorPicker_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetDataTable_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetExpander_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetImage_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetLabel_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetList_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetMdSlider_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetShapes_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetShape_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetSlider_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetTabs_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetTextBlock_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\SetTextBox_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Components\UI Output\Set_TEMPLATE_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\3DViewModel.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\ChartModel.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\ClickableShapeGrid.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\FilePicker.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\GradientHandle.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\GraphMapperElement.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\HUI_Gradient.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\HUI_GradientEditor.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\HUI_RhPickButton.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\MarkdownViewer.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\MDSliderElement.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\SliderEntryTextBox.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\StateSet_Goo.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\TrueOnlyButton.cs" />
+    <Compile Include="HumanUIforKinergy\Custom Types\UIElement_Goo.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\AdjustElementAppearance_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CaptureWindow_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\ContainerContents_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateButton_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateFilePicker_Component_Deprecated.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateGradientEditor_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateGrid_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreatePullDown_Component_ALSO_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreatePullDown_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateRadioButton_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateSimpleGrid_Component_ALSO_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateSimpleGrid_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateSlider_Component_ALSO_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateSlider_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\CreateTextBox_Component_Deprecated.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\FilterUIElements_Component.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\LaunchWindow_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\RestoreElementState_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\SetGraph_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\SetTabs_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\SetWindowProperties_Component_ALSO_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\SetWindowProperties_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\TabContainer_Component_ALSO_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\TabContainer_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\Deprecated\ValueListener_Component_DEPRECATED.cs" />
+    <Compile Include="HumanUIforKinergy\HUI_PriorityLoad.cs" />
+    <Compile Include="HumanUIforKinergy\HUI_Util.cs" />
+    <Compile Include="HumanUIforKinergy\HumanUIInfo.cs" />
+    <Compile Include="KinergyUtilities\CalculateSkeletonOfBrep.cs" />
+    <Compile Include="KinergyUtilities\EntityReader.cs" />
+    <Compile Include="KinergyUtilities\KinergyUtilitiesInfo.cs" />
+    <Compile Include="KinergyUtilities\KineticUnitLoader.cs" />
+    <Compile Include="KinergyUtilities\KineticUnitReader.cs" />
+    <Compile Include="KinergyUtilities\KineticUnitSimulator.cs" />
+    <Compile Include="KinergyUtilities\SelectDirection.cs" />
+    <Compile Include="KinergyUtilities\SelectPosition.cs" />
+    <Compile Include="KinergyUtilities\SetDirection.cs" />
+    <Compile Include="KineticUnits\InstantExtension\01ModelPreprocessOfIE.cs" />
+    <Compile Include="KineticUnits\InstantExtension\02ConstructSpringOfIE.cs" />
+    <Compile Include="KineticUnits\InstantExtension\03GenerateLockPositionCandidateOfIE.cs" />
+    <Compile Include="KineticUnits\InstantExtension\04ConstructLockOfIE.cs" />
+    <Compile Include="KinergyUtilities\CalculateSkeletonOfMesh.cs" />
+    <Compile Include="KineticUnits\InstantExtension\InstantExtension.cs" />
+    <Compile Include="KineticUnits\InstantExtension\InstantExtensionComponent.cs" />
+    <Compile Include="KineticUnits\InstantExtension\Utilities.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\UpgradeSliderComponent.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_AdjustElementAppearance.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_CreatePulldownComponent.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_GridComponent.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_RestoreStateComponent.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_SetTabs.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_SetWindowPropertiesComponent.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_TextBoxComponent.cs" />
+    <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_ValueListener.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="HumanUIforKinergy\Icon-16.png" />
+    <EmbeddedResource Include="Resources\AddElements.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\AddElementsToShapes.png" />
+    <EmbeddedResource Include="Resources\AdjustElementAppearance.png" />
+    <EmbeddedResource Include="Resources\AdjustPositioning.png" />
+    <EmbeddedResource Include="Resources\captureWindow.png" />
+    <EmbeddedResource Include="Resources\ChartAppearance.png" />
+    <EmbeddedResource Include="Resources\ColorPicker.png" />
+    <EmbeddedResource Include="Resources\ContainerContents.png" />
+    <EmbeddedResource Include="Resources\Create3dView.png" />
+    <EmbeddedResource Include="Resources\CreateBorder.png" />
+    <EmbeddedResource Include="Resources\createBrowser.png" />
+    <EmbeddedResource Include="Resources\CreateButton.png" />
+    <EmbeddedResource Include="Resources\CreateChart.png" />
+    <EmbeddedResource Include="Resources\CreateCheckbox.png" />
+    <EmbeddedResource Include="Resources\createChecklist.png" />
+    <EmbeddedResource Include="Resources\createGrid.png" />
+    <EmbeddedResource Include="Resources\CreateImage.png" />
+    <EmbeddedResource Include="Resources\CreateLabel.png" />
+    <EmbeddedResource Include="Resources\CreateListBox.png" />
+    <EmbeddedResource Include="Resources\CreateMDSlider.png" />
+    <EmbeddedResource Include="Resources\CreateMultiChart.png" />
+    <EmbeddedResource Include="Resources\CreateObjectsFromXaml.png" />
+    <EmbeddedResource Include="Resources\CreatePieGraph.png" />
+    <EmbeddedResource Include="Resources\CreatePullDown.png" />
+    <EmbeddedResource Include="Resources\CreateRadioButton.png" />
+    <EmbeddedResource Include="Resources\CreateRangeSlider.png" />
+    <EmbeddedResource Include="Resources\CreateRhinoButton.png" />
+    <EmbeddedResource Include="Resources\CreateSeparator.png" />
+    <EmbeddedResource Include="Resources\createShape.png" />
+    <EmbeddedResource Include="Resources\CreateShapes.png" />
+    <EmbeddedResource Include="Resources\CreateSlider.png" />
+    <EmbeddedResource Include="Resources\CreateStack.png" />
+    <EmbeddedResource Include="Resources\CreateTextBlock.png" />
+    <EmbeddedResource Include="Resources\CreateTextBox.png" />
+    <EmbeddedResource Include="Resources\createToggle.png" />
+    <EmbeddedResource Include="Resources\CreateTooltip.png" />
+    <EmbeddedResource Include="Resources\CreateTrueButton.png" />
+    <EmbeddedResource Include="Resources\CreateViewBox.png" />
+    <EmbeddedResource Include="Resources\CreateWrapPanel.png" />
+    <EmbeddedResource Include="Resources\DataTable.png" />
+    <EmbeddedResource Include="Resources\Expander.png" />
+    <EmbeddedResource Include="Resources\FilePicker.png" />
+    <EmbeddedResource Include="Resources\FilterElements.png" />
+    <EmbeddedResource Include="Resources\GetProps.png" />
+    <EmbeddedResource Include="Resources\GradientEditor.png" />
+    <EmbeddedResource Include="Resources\GraphMapper.png" />
+    <EmbeddedResource Include="Resources\HideShowElement.png" />
+    <EmbeddedResource Include="Resources\Icon-16.png" />
+    <EmbeddedResource Include="Resources\Icon-24.png" />
+    <EmbeddedResource Include="Resources\Icon-Full.jpg" />
+    <EmbeddedResource Include="Resources\Icon-Med.jpg" />
+    <EmbeddedResource Include="Resources\Icon-sm.png" />
+    <EmbeddedResource Include="Resources\Icon-xs.png" />
+    <Content Include="Resources\Icon.svg" />
+    <EmbeddedResource Include="Resources\LaunchWindow.png" />
+    <EmbeddedResource Include="Resources\LaunchWindow_Transparent.png" />
+    <EmbeddedResource Include="Resources\MakeChildWindow.png" />
+    <EmbeddedResource Include="Resources\MarkdownViewer.png" />
+    <EmbeddedResource Include="Resources\RestoreState.png" />
+    <EmbeddedResource Include="Resources\SaveState.png" />
+    <EmbeddedResource Include="Resources\screenDimensions.png" />
+    <EmbeddedResource Include="Resources\ScrollViewer.png" />
+    <EmbeddedResource Include="Resources\Set3dView.png" />
+    <EmbeddedResource Include="Resources\set3dViewProps.png" />
+    <EmbeddedResource Include="Resources\Set3dView_textured.png" />
+    <EmbeddedResource Include="Resources\setBrowser.png" />
+    <EmbeddedResource Include="Resources\SetButton.png" />
+    <EmbeddedResource Include="Resources\SetChart.png" />
+    <EmbeddedResource Include="Resources\SetCheckbox.png" />
+    <EmbeddedResource Include="Resources\SetCheckList.png" />
+    <EmbeddedResource Include="Resources\SetColorPicker.png" />
+    <EmbeddedResource Include="Resources\SetDataTable.png" />
+    <EmbeddedResource Include="Resources\setExpander.png" />
+    <EmbeddedResource Include="Resources\SetImage.png" />
+    <EmbeddedResource Include="Resources\SetLabel.png" />
+    <EmbeddedResource Include="Resources\SetList.png" />
+    <EmbeddedResource Include="Resources\SetMDSlider.png" />
+    <EmbeddedResource Include="Resources\SetMultiChart.png" />
+    <EmbeddedResource Include="Resources\SetProp.png" />
+    <EmbeddedResource Include="Resources\SetShape.png" />
+    <EmbeddedResource Include="Resources\SetShapes.png" />
+    <EmbeddedResource Include="Resources\SetSlider.png" />
+    <EmbeddedResource Include="Resources\SetTab.png" />
+    <EmbeddedResource Include="Resources\SetTextBlock.png" />
+    <EmbeddedResource Include="Resources\SetTextBox.png" />
+    <EmbeddedResource Include="Resources\SetWindowProperties.png" />
+    <EmbeddedResource Include="Resources\simpleGrid.png" />
+    <EmbeddedResource Include="Resources\TabControl.png" />
+    <EmbeddedResource Include="Resources\ValueListener.png" />
+    <EmbeddedResource Include="Resources\WindowStatus.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HumanUIforKinergy\app.config" />
+    <None Include="HumanUIforKinergy\HumanUIBaseApp.csproj" />
+    <None Include="HumanUIforKinergy\packages.config" />
+    <None Include="Resources\Icon.ai" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="HumanUIforKinergy\Styles.Default.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="KineticUnits\ContinuousMovingByPress\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PostBuildEvent>Copy "$(TargetPath)" "$(TargetDir)$(ProjectName).gha"
+Erase "$(TargetPath)"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <FallbackCulture>en-US</FallbackCulture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <StartProgram>C:\Program Files\Rhino 6\System\Rhino.exe</StartProgram>
+    <StartArguments>
+    </StartArguments>
+    <StartAction>Program</StartAction>
+  </PropertyGroup>
+</Project>

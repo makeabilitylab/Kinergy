@@ -33,7 +33,7 @@ namespace Kinergy
         public int Type { get => type;private set => type = value; }
         
         //public Point3d RotateCenter { get => rotateCenter;private set => rotateCenter = value; }
-        public Transform Trans { get => trans;private set => trans = value; }
+        public Transform Trans { get => trans;set => trans = value; }
         public double MovementValue { get => movementValue; private set => movementValue = value; }
         public bool Converge { get => converge;protected set => converge = value; }
 
@@ -83,7 +83,7 @@ namespace Kinergy
             }
             else if(Tp==3)
             {
-                if (Object.GetType() != typeof(Spring))
+                if (Object.GetType() != typeof(Helix))
                 { throw new Exception("Movement of type3 only support springs."); }
                 obj = Object;
                 Type = Tp;
@@ -109,5 +109,6 @@ namespace Kinergy
         {
             converge = true;
         }
+
     }
 }

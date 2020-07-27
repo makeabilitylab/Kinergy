@@ -11,7 +11,7 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
-using Kinergy.Constraints;
+using Kinergy.Relationship;
 
 namespace Kinergy.Geom
 {
@@ -22,7 +22,7 @@ namespace Kinergy.Geom
     {
         protected Brep model;
         protected bool staticEntity = false;
-        protected List<Constraint> constraints;
+        protected List<Relationship.Relationship> constraints;
         protected BoundingBox bbox;
         protected Point3d center;
         private bool dfsMark;
@@ -46,13 +46,13 @@ namespace Kinergy.Geom
         public bool DfsMark { get => dfsMark;protected set => dfsMark = value; }
         public string Name { get => name;}
         public  Transform RotateBack { get => rotateBack;protected set => rotateBack = value; }
-        public List<Constraint> Constraints { get => constraints;protected set => constraints = value; }
+        public List<Relationship.Relationship> Constraints { get => constraints;protected set => constraints = value; }
         public Transform Offset { get => offset;protected set => offset = value; }
 
         public Entity(bool isStatic = false,string n="")
         { 
             staticEntity = isStatic;
-            constraints = new List<Constraint>();
+            constraints = new List<Relationship.Relationship>();
             dfsMark = false;
             name = n;
             offset = Transform.Identity;
@@ -62,13 +62,13 @@ namespace Kinergy.Geom
         {
             model = m;
             staticEntity = isStatic;
-            constraints = new List<Constraint>();
+            constraints = new List<Relationship.Relationship>();
             dfsMark = false;
             name = n;
 
             offset = Transform.Identity;
         }
-        public virtual bool AddConstraint(Constraint constraint)
+        public virtual bool AddConstraint(Relationship.Relationship constraint)
         {
             if(constraint.IsValid() && constraint.Include(this))
             {
@@ -95,7 +95,7 @@ namespace Kinergy.Geom
             dfsMark = true;
             bool CanIMove = true;
             //Then move all other constraints to know if this movement can be operated
-            foreach(Constraint c in constraints)
+            foreach(Relationship.Relationship c in constraints)
             {
                 
                 if(c.TheOtherEntity(this).DfsMark==true)//Skip the already visited component to avoid cycle triggering.
