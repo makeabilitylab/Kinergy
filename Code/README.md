@@ -1,30 +1,40 @@
-# This directory contains all Grasshopper files
+# Kinergy Codebase
 
-# "Main Interface.gh" is to create main window interface. Different child window interface should first be developed in different folders. When the child window interface is ready, you can add the child window grasshopper code to "Main Interface.gh".
+### KinergyMainInterface.gh 
 
-# Within each folder, it should contain the following files:
-(1)Grasshopper files: Please name the test Grasshopper files as the following format: <Motion name>_<developer's initials>_test_<version #>.gh # Example: Intermediate_ContinuousMoving_Rotate_YL_test_V1.gh
-(2)Library: It contains all the components that you developed yourself in visual studio. If it's your first time to create your own component in visual studio, you can visit #https://developer.rhino3d.com/guides/grasshopper/installing-tools-windows/
-#https://developer.rhino3d.com/guides/grasshopper/your-first-component-windows/
+> This is the main window interface, including the entries for each kinectic unit. This Grasshopper file shows the entire strucutre for the user inteface.
 
+### HumanUIforKinergy direcotry
 
-这个文件夹里是新框架目前的所有代码，分别是类库，motion solver和utilities。
-其中motion solver包含了两个已经初步写完的motion，分别是InstantExtension和ContinuousLinearMovingByPress，他们各自都引用了Kinergy类库。
-utilities是之后要完善的部分，包含了所有辅助工具电池，目前只写了一个EntityReader,之后simulation的电池也会写在这里面。
+> This folder contains custom Human UI code to support simulation and custom user controls in this project.
 
-如果需要加载电池，只需要将每个项目的bin文件夹里的gha文件拷贝到 Program Files\Rhino 6\Plug-ins\Grasshopper\Components文件夹里，
-另外再拷贝Kinergy.dll(只要引用的都是用同一个版本的类库，各个项目文件夹里的dll就都是一样的，有一份就行)，以及KinergyResources文件夹到上面的路径
-之后启动grasshopper，就能看到电池了
+### KinergyClassLibrary directory
 
-如果电池报错说dll找不到或者版本不对，是因为不同电池对kinergy的引用版本不统一，这种情况下打开各个电池的vs项目，
-确保kinergy的引用有效，然后重新生成一次就行了
-现有版本小bug应该不少，我这几天会密集更新
+> Kinergy library contains namespace "Constraints", "Generator", "Geom", "Motion", "Utilities", and class "Movement". 
+![Image of the namespace and classes in Kinergy](../DevDocuments/KinergyClassDiagram1.png)
+
+> *The class diagram is under development on https://processon.com/diagraming/5eafd5496376897466a3759f*
 
 
-#5月28日更新：为了实现小窗里的simulation，加入了HumanUI for Kinergy项目。这个项目是在HumanUI的基础上更改的，只加入了一个simulation电池，其余功能不变，需要使用的话，建议移除原有的HumanUI文件，然后将HumanUI for Kinergy下的bin路径加入到GrasshopperDeveloperSetting里面。
+### KinergyUtilities directory
 
-#6月17日更新：按照Liang的建议对数个命名进行修改
+> This directory contains all operations needed in this project. All operations are implemented and used as Grasshopper batteries.
 
-#6月24日更新：针对弯曲模型的InstantExtension已经完成。另外，由于原先多个独立的项目之间存在类的声明不互通的情况，因此将原先的HumanUI for Kinergy，MotionSolver以及KinergyUtilities三个项目进行了合并，归到KinergyApp文件夹下。原有的三个项目文件夹丢到old code里面进行留档。目前代码分为KinergyApp和KinergyClassLibrary两个项目，减少了每次修改之后生成操作的次数。
+### MotionSolver directory
 
-#6月27日更新：解决了一些bug，并且整理了IE的简易ui界面。目前yawen的parameter mapping工作已经整合到了helix类的fix parameter方法中，但是还需要一些debug
+> This directory contains all the Grasshopper batteries for all kinetic units. The sub-directories indicate the knietic units. Each kinetic unit has multiple batteries for a complete end-to-end workflow.
+
+### Resources directory
+
+> This directory contains all the image files and 3D model files for the basic elemnet that are used in this project such as locking mechanisms.
+
+### Old_Code directory
+
+> This folder contains all the old code that is not used and reserved as backup of this project.
+
+
+## Configuration for Developing and Lauching the Project
+1. Copy and paste the subdirectory and fiels from the directory "Resources" to "Program Files\Rhino 6\Plug-ins\Grasshopper\Components\Resources\" (you have to create the directory "Resources" for the first time)
+1. Copy and paste the compiled *.gha files under the "bin" directory for each project that is used in this project to "Program Files\Rhino 6\Plug-ins\Grasshopper\Components\" (replace the old ones if those files already exist)
+1. Copy and paste "Kinergy.dll" (only need to copy and paste one file) to "Program Files\Rhino 6\Plug-ins\Grasshopper\Components\"
+1. In GrasshopperDeveloperSetting, add "Code\HumanUIforKinergy\HumanUIforKinergy\bin\"
