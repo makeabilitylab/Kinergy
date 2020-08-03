@@ -25,9 +25,8 @@ namespace Kinergy.Geom
         protected override void ConductMoveAndUpdateParam(Movement move)
         {
             offset = Transform.Multiply(offset, move.Trans);
-            
         }
-        public void SetModel(Brep m)
+        public override void SetModel(Brep m)
         {
             model = m;
         }

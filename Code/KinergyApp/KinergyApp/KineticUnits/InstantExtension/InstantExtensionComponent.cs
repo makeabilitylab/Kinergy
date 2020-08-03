@@ -10,7 +10,7 @@ using Kinergy.KineticUnit;
 // folder in Grasshopper.
 // You can use the _GrasshopperDeveloperSettings Rhino command for that.
 
-namespace InstExtension
+namespace KinergyInstExtension
 {
     public class InstantExtensionComponent : GH_Component
     {

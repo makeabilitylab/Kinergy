@@ -106,6 +106,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\SpiralSpring\SpiralSpringComponent.cs" />
     <Compile Include="HumanUIforKinergy\Components\Testing - Troubleshooting\ElemFromGuid_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateBorder_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateExpander_Component.cs" />
@@ -236,13 +237,15 @@
     <Compile Include="HumanUIforKinergy\HumanUIInfo.cs" />
     <Compile Include="KinergyUtilities\CalculateSkeletonOfBrep.cs" />
     <Compile Include="KinergyUtilities\EntityReader.cs" />
-    <Compile Include="KinergyUtilities\KinergyUtilitiesInfo.cs" />
     <Compile Include="KinergyUtilities\KineticUnitLoader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitReader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitSimulator.cs" />
+    <Compile Include="KinergyUtilities\Get3InnerBox.cs" />
+    <Compile Include="KinergyUtilities\ModelPreprocess.cs" />
     <Compile Include="KinergyUtilities\SelectDirection.cs" />
     <Compile Include="KinergyUtilities\SelectPosition.cs" />
     <Compile Include="KinergyUtilities\SetDirection.cs" />
+    <Compile Include="Components\CamAndFollower\CamAndFollowerComponent.cs" />
     <Compile Include="KineticUnits\InstantExtension\01ModelPreprocessOfIE.cs" />
     <Compile Include="KineticUnits\InstantExtension\02ConstructSpringOfIE.cs" />
     <Compile Include="KineticUnits\InstantExtension\03GenerateLockPositionCandidateOfIE.cs" />
@@ -251,6 +254,10 @@
     <Compile Include="KineticUnits\InstantExtension\InstantExtension.cs" />
     <Compile Include="KineticUnits\InstantExtension\InstantExtensionComponent.cs" />
     <Compile Include="KineticUnits\InstantExtension\Utilities.cs" />
+    <Compile Include="KineticUnits\InstantTwisting\01ConstructKineticComponents_IT.cs" />
+    <Compile Include="KineticUnits\InstantTwisting\02SettingLock_IT.cs" />
+    <Compile Include="KineticUnits\InstantTwisting\03EndEffector_IT.cs" />
+    <Compile Include="KineticUnits\InstantTwisting\InstantTwisting.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\UpgradeSliderComponent.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_AdjustElementAppearance.cs" />

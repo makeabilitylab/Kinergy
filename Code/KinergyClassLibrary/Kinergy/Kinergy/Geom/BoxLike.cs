@@ -11,6 +11,8 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
+using Rhino.Geometry.Intersect;
+using Kinergy.Utilities;
 
 namespace Kinergy
 {
@@ -26,12 +28,15 @@ namespace Kinergy
             private bool validity;
             private Brep innerEmptySpaceBoxBrep=null;
             private BoundingBox innerEmptySpaceBbox;
+            private Cylinder innerEmptyCylinder;
             private Point3d centerPoint;
-
+            private Curve skeleton;
             public Vector3d Direction { get => direction; private set => direction = value; }
-            public bool Validity { get => validity; private set => validity = value; }
+            //public bool Validity { get => validity; private set => validity = value; }
             public Brep InnerEmptySpaceBoxBrep { get => innerEmptySpaceBoxBrep;private set => innerEmptySpaceBoxBrep = value; }
             public BoundingBox InnerEmptySpaceBbox { get => innerEmptySpaceBbox;private set => innerEmptySpaceBbox = value; }
+            public Cylinder InnerEmptyCylinder { get => innerEmptyCylinder;private  set => innerEmptyCylinder = value; }
+            public Curve Skeleton { get => skeleton;private  set => skeleton = value; }
 
             /// <summary>
             /// Static function checking if a brep model is a legal box-like shape
@@ -45,13 +50,30 @@ namespace Kinergy
                 
                 return true;
             }
-            public BoxLike(Brep M,bool IsStatic=false):base(M,IsStatic)
+            public BoxLike(Brep M,Vector3d d,bool IsStatic=false):base(M,IsStatic)
             {
-                model = M;
-                validity = CheckBox(Model, Direction);
+                model = M.DuplicateBrep();
+                direction = d;
+                Transform rotateB = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
+                Transform rotateX = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);
+                model.Transform(rotateX);
+                base.RotateBack = rotateB;
                 bbox = model.GetBoundingBox(true);
                 centerPoint = bbox.Center;
-                validity = CheckBox(M,Vector3d.XAxis);
+                CalculateSkeleton();
+            }
+            public BoxLike(Brep M,  bool IsStatic = false) : base(M, IsStatic)
+            {
+                model = M.DuplicateBrep();
+                direction = Vector3d.XAxis;
+                bbox = model.GetBoundingBox(true);
+                centerPoint = bbox.Center;
+                CalculateSkeleton();
+            }
+            private void CalculateSkeleton()
+            {
+                Point3d a = bbox.PointAt(0, 0.5, 0.5), b = bbox.PointAt(1, 0.5, 0.5);
+                skeleton = new Line(a, b).ToNurbsCurve();
             }
             public List<Vector3d> GetSurroundingDirections(Vector3d direction)
             {
@@ -245,11 +267,14 @@ namespace Kinergy
             /// Calculate the maximum inner space box with newton method. Note that the spanning iteration starts from center.
             /// </summary>
             /// <returns></returns>
-            public bool GetInnerEmptySpaceBox(double precision=0.01)
+            public bool GetInnerEmptySpaceBox(double initX=0.5,double initY=0.5,double initZ=0.5,double precision=0.02)
             {
+                if (model.IsSolid && !model.IsPointInside(bbox.PointAt(initX, initY, initZ), RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, true))
+                    return false;
                 List<double> steps = new List<double>();
                 List<double> scales = new List<double>();
                 Curve[] crv;
+                Point3d[] pts;
                 for (int i = 0; i < 6; i++) { steps.Add(1);scales.Add(0.001); }
                 do
                 {
@@ -259,45 +284,38 @@ namespace Kinergy
                         { continue; }
                         else 
                         {
-                            int counter = 0;
-                            do
+
+                            steps[i] *= 0.5;
+                            scales[i] += steps[i];
+                            
+                            if (scales[i] > 1)
                             {
-                                steps[i] *= 0.5;
-                                if (counter == 0)
-                                { 
-                                    scales[i] += steps[i] ; 
-                                }
-                                else
-                                { 
-                                    scales[i] -= steps[i];
-                                }
-                                if(scales[i]>1)
-                                { 
-                                    scales[i] = 1; 
-                                }
-                                counter++;
-                                string body = string.Format("The inner empty space box searching method run at {0},this scale is{1}",i,scales[i]);
-                                RhinoApp.WriteLine(body);
-                                if (scales.Min()<0)
-                                { return false; }
-                                Rhino.Geometry.Intersect.Intersection.BrepBrep(model, ConstructCenterBox(scales[0], scales[1], scales[2], scales[3], scales[4], scales[5]),
-                            precision, out crv, out _);
-                            } while ( crv.Count()>0 && steps[i]>=precision);
+                                scales[i] = 1;
+                            }
+                            string body = string.Format("The inner empty space box searching method run at {0},this scale is{1}", i, scales[i]);
+                            RhinoApp.WriteLine(body);
+                            if (scales.Min() < 0)
+                            { return false; }
+                            Rhino.Geometry.Intersect.Intersection.BrepBrep(model, ConstructCenterBox(scales[0], scales[1], scales[2], scales[3], scales[4], scales[5], initX, initY, initZ),
+                        precision, out crv, out pts);
+                            if (crv.Length>0 || pts.Length>0)
+                                scales[i] -= steps[i];
                         }
                     }
                     
                 } while (steps.Max()>precision);
-                if(scales.Min()<=precision)
-                { return false; }
-                InnerEmptySpaceBoxBrep=ConstructCenterBox(scales[0], scales[1], scales[2], scales[3], scales[4], scales[5]);
+                /*Rhino.Geometry.Intersect.Intersection.BrepBrep(model, ConstructCenterBox(scales[0], scales[1], scales[2], scales[3], scales[4], scales[5], initX, initY, initZ),precision, out crv, out _);
+                if (crv.Length > 0)
+                    return false;*/
+                InnerEmptySpaceBoxBrep =ConstructCenterBox(scales[0], scales[1], scales[2], scales[3], scales[4], scales[5], initX, initY, initZ);
                 InnerEmptySpaceBbox = InnerEmptySpaceBoxBrep.GetBoundingBox(true);
                 return true;
                 
             }
-            private Brep ConstructCenterBox(double xp,double xm,double yp,double ym,double zp,double zm)
+            private Brep ConstructCenterBox(double xp,double xm,double yp,double ym,double zp,double zm,double initX=0.5,double initY=0.5,double initZ=0.5)
             {
                 double X, Y, Z;
-                Point3d p = bbox.PointAt(0.5,0.5,0.5);
+                Point3d p = bbox.PointAt(initX,initY,initZ);
                 X = bbox.Max.X - bbox.Min.X;
                 Y = bbox.Max.Y - bbox.Min.Y;
                 Z = bbox.Max.Z - bbox.Min.Z;
@@ -307,7 +325,63 @@ namespace Kinergy
                 Box newBox = new Box(new Plane(p, Vector3d.ZAxis), xInterval, yInterval, zInterval);
                 return newBox.ToBrep();
             }
+            public bool GetInnerEmptySpaceCylinder(double precision = 0.02)
+            {
+                double x = bbox.Max.X - bbox.Min.X, y = bbox.Max.Y - bbox.Min.Y, z = bbox.Max.Z - bbox.Min.Z;
+                double maxRadius = Math.Max(y, z) / 2;
+                //For simplicity, just use centerpoint of section
+                Plane p = new Plane(bbox.PointAt(0.5, 0.5, 0.5), direction);
+                Curve[] crvs;
+                Intersection.BrepPlane(model, p, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out crvs, out _);
+                Point3d centerPoint = GeometryMethods.ComputeCurveCentroid(crvs[0]);
+                List<double> steps = new List<double>();
+                List<double> scales = new List<double>();
+                Curve[] crv;
+                Point3d[] pts;
+                for (int i = 0; i < 3; i++) { steps.Add(1); scales.Add(0.001); }//0 for length max,and 1 for length min,2 for radius
+                do
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (steps[i] < precision)
+                        { continue; }
+                        else
+                        {
+
+                            steps[i] *= 0.5;
+                            scales[i] += steps[i];
+
+                            if (scales[i] > 1)
+                            {
+                                scales[i] = 1;
+                            }
+                            string body = string.Format("The inner empty space box searching method run at {0},this scale is{1}", i, scales[i]);
+                            RhinoApp.WriteLine(body);
+                            if (scales.Min() < 0)
+                            { return false; }
+                            Rhino.Geometry.Intersect.Intersection.BrepBrep(model, ConstructInnerCylinder(scales[0]*x/2,scales[1] * x / 2, scales[2]*maxRadius, centerPoint).ToBrep(true,true),
+                        precision, out crv, out pts);
+                            if (crv.Length > 0 || pts.Length > 0)
+                                scales[i] -= steps[i];
+                        }
+                    }
+
+                } while (steps.Max() > precision);
+                innerEmptyCylinder = ConstructInnerCylinder(scales[0] * x / 2, scales[1] * x / 2, scales[2] * maxRadius, centerPoint);
+                return true;
+
+            }
             
+            private Cylinder ConstructInnerCylinder(double len_max,double len_min, double rad,Point3d center)
+            {
+                Point3d p = center;
+                Plane pl = new Plane(p, direction);
+                Circle c = new Circle(pl, rad);
+                c.Transform(Transform.Translation(-direction / direction.Length * len_min));
+                Cylinder cl = new Cylinder(c, len_min + len_max);
+                
+                return cl;
+            }
             public override bool CreateRoundHoleOnSurface(Point3d p, double r)
             {
                 Point3d p1 = bbox.ClosestPoint(p);

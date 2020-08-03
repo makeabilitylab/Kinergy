@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Rhino;
 using Rhino.Geometry;
+using Rhino.Geometry.Collections;
+using Rhino.Geometry.Intersect;
+
 namespace Kinergy.Utilities
 {
     public class GeometryMethods
@@ -54,6 +58,26 @@ namespace Kinergy.Utilities
             c.MakeClosed(0.001);
             return c;
         }
+        public static Curve Capsule(Plane basePlane,double radius,double length,Vector3d mainDirection)
+        {
+            mainDirection.Unitize();
+            mainDirection = mainDirection - mainDirection * basePlane.Normal*basePlane.Normal;
+            mainDirection.Unitize();
+            //A capsule is formed with 2 semicircles and 2 lines
+            Circle c1 = new Circle(basePlane, radius);
+            Circle c2 = new Circle(basePlane, radius);
+            Transform t = Transform.Translation(mainDirection * length);
+            Vector3d x = mainDirection;
+            Vector3d y = new Plane(basePlane.Origin, basePlane.Normal, x).Normal;
+            Point3d cornerA = basePlane.Origin + y * radius / 2;
+            Point3d cornerB = basePlane.Origin - y * radius / 2 + x * length;
+            Rectangle3d s = new Rectangle3d(basePlane, cornerA, cornerB);
+            Curve square= s.ToNurbsCurve();
+            List<Curve> crvs = new List<Curve>();
+            crvs.Add(c1.ToNurbsCurve()); crvs.Add(c2.ToNurbsCurve()); crvs.Add(square);
+            Curve capsule = Curve.CreateBooleanUnion(crvs,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            return capsule;
+        }
         public static Vector3d AverageTangent(Curve c, double pos, double span = 0.05)
         {
             double start = Math.Min(1, pos + span);
@@ -62,6 +86,23 @@ namespace Kinergy.Utilities
             Point3d pt2 = c.PointAtNormalizedLength(end);
             Vector3d tangent = new Vector3d(pt1) - new Vector3d(pt2);
             return tangent;
+        }
+        public static bool IfBrepsIntersect(Brep b1,Brep b2)
+        {
+            Curve[] crvs;
+            Point3d[] pts;
+            Intersection.BrepBrep(b1, b2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out crvs, out pts);
+            return !(crvs.Length == 0) && (pts.Length == 0);
+        }
+        public static Point3d ComputeCurveCentroid(Curve crv)
+        {
+            Point3d p = Point3d.Origin;
+            for(double i=0;i<=1;i+=0.01)
+            {
+                p += new Vector3d(crv.PointAtNormalizedLength(i));
+            }
+            p /= 101;
+            return p;
         }
     }
 }

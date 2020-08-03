@@ -162,10 +162,14 @@ namespace Kinergy.KineticUnit
                     { points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20)); }
                 }
             }
-            for (int i = 0; i <= 20; i++)
+            else
             {
-                points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20));
+                for (int i = 0; i <= 20; i++)
+                {
+                    points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20));
+                }
             }
+            
             return points;
         }
         public bool SetLockDirection()

@@ -36,7 +36,7 @@ namespace Kinergy.Geom
             protected set 
             {
                 model = value;
-                UpdateBasicParams(); 
+                //UpdateBasicParams(); 
             } 
         }
         public Point3d Center { get => center; protected set => center = value; }
@@ -103,6 +103,8 @@ namespace Kinergy.Geom
                 if (c.Move(move) == false)
                 { 
                     CanIMove = false;
+                    string body = string.Format("A movement on {0} typed {1} with value {2} is stopped by {3} to {4}", this.GetType(), move.Type, move.MovementValue, c.GetType(), c.TheOtherEntity(this).GetType());
+                    Rhino.RhinoApp.WriteLine(body);
                     break;
                 }
             }
@@ -116,8 +118,19 @@ namespace Kinergy.Geom
         protected virtual void ConductMoveAndUpdateParam(Movement move)
         {
             //This method would be overridden by different kinds of entity.Here constraints dosen't matter, just move the model by changing offset and rotate!
-            
-            offset = Transform.Multiply(offset, move.Trans);
+            bool valid = true ;
+            if (!offset.IsValid)
+            { 
+                Rhino.RhinoApp.WriteLine("Invalid trans is passed");
+                valid = false;
+            }
+            Transform tr =new Transform(offset);
+            offset = Transform.Multiply(tr, move.Trans);
+            if(!offset.IsValid && valid)
+            {
+                Rhino.RhinoApp.WriteLine("Invalid trans is caused");
+                throw new Exception("Invalid trans is caused");
+            }
             
         }
         public void UpdateBasicParams()
@@ -152,14 +165,20 @@ namespace Kinergy.Geom
             //Brep m = model;
             if(rotateBack!=Transform.Unset)
             { m.Transform(rotateBack);}
-            if (Offset != Transform.ZeroTransformation)
-            { m.Transform(Offset); }
+            //if (Offset != Transform.ZeroTransformation)
+            //{
+                m.Transform(offset);
+           // }
             
             return m;
         }
         public virtual void ResetState()
         {
             offset = Transform.Identity;
+        }
+        public virtual void SetModel(Brep m)
+        {
+            model = m;
         }
     }
 }

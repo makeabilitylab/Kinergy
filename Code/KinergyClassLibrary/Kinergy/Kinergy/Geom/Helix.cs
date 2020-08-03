@@ -195,7 +195,7 @@ namespace Kinergy
                     WireRadius = WireRadius0;
                     RoundNum = RoundNum0;
                 }
-
+                WireRadius = WireRadius /3;//TODO adjust this by applying Yawen's debugging.
             }
             private void GenerateSpring()
             {

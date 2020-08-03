@@ -69,7 +69,18 @@ namespace Kinergy
                     Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue);
                     return transmittedMovement.Activate();
                 }
-                if(move.Type==3)
+                if (move.Type == 2 && base.TheOtherEntity(move.Obj).GetType() == typeof(Spiral))
+                {
+                    Spiral s = (Spiral)base.TheOtherEntity(move.Obj);
+                    Movement transmittedMovement = new Movement(s, 4, move.MovementValue);
+                    return transmittedMovement.Activate();
+                }
+                if(move.Type == 2)
+                {
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue,move.Trans);
+                    return transmittedMovement.Activate();
+                }
+                if (move.Type==3)
                 {
                     if(contactPosition==0)
                     {
@@ -106,9 +117,9 @@ namespace Kinergy
                     else if (contactPosition == 2)
                     {
                         Spiral s = (Spiral)move.Obj;
-                        //Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 1, Transform.Translation(s.Direction / s.Direction.Length * move.MovementValue));
-                        //return transmittedMovement.Activate();
-                        throw new NotImplementedException();
+                        Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2,move.MovementValue, move.Trans );
+                        return transmittedMovement.Activate();
+                        //throw new NotImplementedException();
                     }
                     else
                     {

@@ -22,7 +22,7 @@ namespace Kinergy
         //Define a physical movement, including linear and rotating movements.
         private Entity obj;
         private int type;//1 means linear movement, 2 means self-rotate . 3 means spring squeezing and 4 means spiral rotating
-        private double movementValue;
+        private double movementValue=0;
         //private Point3d rotateCenter = Point3d.Unset;
         private Transform trans = Transform.Unset;
         private bool converge=false;
@@ -45,14 +45,18 @@ namespace Kinergy
         /// <param name="m">Transform</param>
         public Movement(Entity Object, int Tp,Transform m)
         {
-            if(Tp==2)
-            { throw new Exception("Please use the other constructor for self-rotation"); }
-            if(Tp!=1)
-            { throw new Exception("Movement of this type hasn't been implemented."); }
             obj = Object;
             Type = Tp;
             Trans = m;
             converge = false;
+        }
+        public Movement(Entity Object, int Tp,double Value, Transform m)
+        {
+            obj = Object;
+            Type = Tp;
+            Trans = m;
+            converge = false;
+            movementValue = Value;
         }
         /// <summary>
         /// Constructor for self-rotation movement
@@ -63,8 +67,12 @@ namespace Kinergy
         public Movement(Entity Object,int Tp,double value)
         {
             if (Tp == 1)
-            { throw new Exception("Please use the other constructor for linear movement"); }
-            if (Tp == 2)
+            {
+                obj = Object;
+                Type = Tp;
+                movementValue = value;
+            }
+            else if (Tp == 2)
             {
                 if (Object.GetType() != typeof(Gear))
                 {
@@ -94,8 +102,10 @@ namespace Kinergy
                 if (Object.GetType() != typeof(Spiral))
                 { throw new Exception("Movement of type4 only support spirals."); }
                 obj = Object;
+                Spiral s = (Spiral)obj;
                 Type = Tp;
                 movementValue = value;
+                trans = Transform.Rotation(-value, s.Direction, s.CenterPoint);
             }
             else
             {throw new Exception("Movement of this type hasn't been implemented."); }
@@ -103,6 +113,8 @@ namespace Kinergy
         
         public bool Activate()
         {
+            string body = string.Format("A movement on {0} typed {1} with value {2} is called in movement", this.Obj.GetType(),this.type,this.MovementValue);
+            Rhino.RhinoApp.WriteLine(body);
             return obj.Move(this);
         }
         public void SetConverge()
