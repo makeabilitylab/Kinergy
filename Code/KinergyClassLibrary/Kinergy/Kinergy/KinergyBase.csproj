@@ -58,7 +58,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Generator\Connector.cs" />
+    <Compile Include="Geom\Cam.cs" />
     <Compile Include="Geom\Entity.cs" />
+    <Compile Include="Geom\Follower.cs" />
     <Compile Include="Geom\Lock.cs" />
     <Compile Include="Geom\Shape.cs" />
     <Compile Include="KineticUnit\KineticUnit.cs" />

@@ -161,11 +161,11 @@ namespace Kinergy
                     mainBodyBox.InnerEmptySpaceBbox.Max.X, mainBodyBox.InnerEmptySpaceBbox.Max.Y, mainBodyBox.InnerEmptySpaceBbox.Max.Z);
                 RhinoApp.WriteLine(body);
                 entityList.Add(mainBodyBox);
-                if(addWheel)
+                /*if(addWheel)
                 {
                     axleEntity = new RodLike(axleBrep, false, "axle");
                     entityList.Add(axleEntity);
-                }
+                }*/
                 return true;
             }
             private bool CalculateSpringParameter()

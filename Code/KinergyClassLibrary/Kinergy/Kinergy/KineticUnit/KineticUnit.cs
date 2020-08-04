@@ -26,7 +26,7 @@ namespace Kinergy.KineticUnit
             entityList = new List<Entity>();
             loaded = false;
         }
-        public List<Brep> GetModel()
+        public virtual List<Brep> GetModel()
         {
             List<Brep> models = new List<Brep>();
             foreach(Entity e in entityList)

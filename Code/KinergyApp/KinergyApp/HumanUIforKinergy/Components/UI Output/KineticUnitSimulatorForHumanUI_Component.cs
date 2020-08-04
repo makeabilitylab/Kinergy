@@ -84,7 +84,7 @@ namespace HumanUIforKinergy.Components.UI_Output
                 vp3.Children.Add(mv3);
 
                 //vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
-                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 0.5, b.Center.Z);
+                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 1.5, b.Center.Z);
                 vp3.Camera.LookDirection = new Vector3D(0,1,0);
                 return;
             }
@@ -97,7 +97,7 @@ namespace HumanUIforKinergy.Components.UI_Output
             //iterate the simulation loop. Update the view every frame
             m.TriggerWithoutInteraction();
             int times = 0;
-            int interval = 60;
+            int interval = 100;
             Movement move;
             do
             {
