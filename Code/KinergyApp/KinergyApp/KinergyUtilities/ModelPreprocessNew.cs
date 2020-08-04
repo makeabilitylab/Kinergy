@@ -8,13 +8,22 @@ using Rhino.DocObjects;
 using Rhino;
 using Rhino.Commands;
 using MahApps.Metro.Controls;
+using System.Linq;
+using Kinergy.Utilities;
 
 namespace KinergyUtilities
 {
-    public class ModelPreprocess : GH_Component
+    public class ModelPreprocessNew : GH_Component
     {
+        Brep model = null;
+        Vector3d v = Vector3d.Unset;
         double t1, t2;
         Guid guid1, guid2;
+        Guid arrowX1 = Guid.Empty, arrowX2 = Guid.Empty, arrowY1 = Guid.Empty,
+             arrowY2 = Guid.Empty, arrowZ1 = Guid.Empty, arrowZ2 = Guid.Empty;
+        Curve arrowCurveX1=null, arrowCurveX2 = null, arrowCurveY1 = null, 
+            arrowCurveY2 = null, arrowCurveZ1 = null, arrowCurveZ2 = null;
+        bool generated = false;
         Plane pl1, pl2;
         PlaneSurface s1, s2;
         bool finished;
@@ -24,10 +33,10 @@ namespace KinergyUtilities
         /// <summary>
         /// Initializes a new instance of the ModelPreprocess class.
         /// </summary>
-        public ModelPreprocess()
+        public ModelPreprocessNew()
           : base("ModelPreprocess", "MP",
               "Preprocess model with given direction to generate 2 surfaces. User move the surfaces in rhino interface to partition model and generate region of interest",
-              "Kinergy", "Utilities")
+              "Category", "Subcategory")
         {
         }
 
@@ -37,7 +46,7 @@ namespace KinergyUtilities
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddBrepParameter("Brep", "B", "The brep model to preprocess", GH_ParamAccess.item);
-            pManager.AddVectorParameter("Direction", "D", "The main direction of model.", GH_ParamAccess.item);
+            
             pManager.AddIntegerParameter("Inner space type", "T", "The type of inner space, 1 for box and 2 for cylinder. Currently we only support these 2 types", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Restart", "R", "Turn this true to restart", GH_ParamAccess.item);
         }
@@ -60,44 +69,45 @@ namespace KinergyUtilities
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            t1 = 0.25;
-            t2 = 0.75;
+            t1 = 0;
+            t2 = 1;
             finished = false;
-            Brep m = null;
             bool restart = false;
             int type = 0;
-            if (!DA.GetData(0, ref m))
+            if (!DA.GetData(0, ref model))
                 return;
-            Vector3d v = Vector3d.Unset;
-            if (!DA.GetData(1, ref v))
-                return;
-            if (!DA.GetData(2, ref type))
+            Vector3d v = Vector3d.XAxis;
+            
+            if (!DA.GetData(1, ref type))
                 return;
             if (type != 1 && type != 2)
                 throw new Exception("Invalid type value! Currently we only support 1 and 2.");
-            if (!DA.GetData(3, ref restart))
+            if (!DA.GetData(2, ref restart))
                 return;
             if (restart)
                 return;
-            DA.SetData(4, v);
-            //Generate 2 planes and record their guids.
-            BoxLike b = new BoxLike(m, v);
-            BoundingBox box = b.Bbox;
-            Interval yInterval = new Interval(-(box.Max.Y-box.Min.Y)*0.6, (box.Max.Y - box.Min.Y) * 0.6), zInterval = new Interval(-(box.Max.Z-box.Min.Z)*0.6, (box.Max.Z - box.Min.Z) * 0.6);
-            box.Transform(b.RotateBack);
-            /*Point3d start = box.PointAt(0, 0.5, 0.5);
-            Point3d end = box.PointAt(1, 0.5, 0.5);*/ //this doesn't work!
 
-            skeleton = b.Skeleton;
-            skeleton.Transform(b.RotateBack);
-            DA.SetData(3, skeleton);
-            skeletonVec = new Vector3d(skeleton.PointAtEnd) - new Vector3d(skeleton.PointAtStart);
-            pl1 = new Plane(skeleton.PointAtNormalizedLength(t1), v);
-            pl2 = new Plane(skeleton.PointAtNormalizedLength(t2), v);
-            s1 =  new PlaneSurface(pl1, yInterval, zInterval);
-            s2 = new PlaneSurface(pl2, yInterval, zInterval);
-            guid1 = RhinoDoc.ActiveDoc.Objects.Add(s1);
-            guid2 = RhinoDoc.ActiveDoc.Objects.Add(s2);
+            //Generate 6 arrows and record their guids.
+            BoundingBox box = model.GetBoundingBox(true);
+            box.Transform(Transform.Scale(box.Center, 3));
+            Arrow ax1 = new Arrow(new Vector3d(1, 1, 0), box.PointAt(1, 0, 0.5));
+            Arrow ax2 = new Arrow(new Vector3d(-1, 1, 0), box.PointAt(0, 0, 0.5));
+            Arrow ay1 = new Arrow(new Vector3d(0, 1, 1), box.PointAt(0.5, 1, 0));
+            Arrow ay2 = new Arrow(new Vector3d(0, -1, 1), box.PointAt(0.5, 0, 0));
+            Arrow az1 = new Arrow(new Vector3d(-1,0, 1), box.PointAt(1, 0.5, 1));
+            Arrow az2 = new Arrow(new Vector3d(-1, 0,-1), box.PointAt(1, 0.5, 0));
+            arrowCurveX1 = ax1.ArrowCurve;
+            arrowCurveX2 = ax2.ArrowCurve;
+            arrowCurveY1 = ay1.ArrowCurve;
+            arrowCurveY2 = ay2.ArrowCurve;
+            arrowCurveZ1 = az1.ArrowCurve;
+            arrowCurveZ2 = ax2.ArrowCurve;
+            arrowX1 = RhinoDoc.ActiveDoc.Objects.Add(arrowCurveX1);
+            arrowX2 = RhinoDoc.ActiveDoc.Objects.Add(arrowCurveX2);
+            arrowY1 = RhinoDoc.ActiveDoc.Objects.Add(arrowCurveY1);
+            arrowY2 = RhinoDoc.ActiveDoc.Objects.Add(arrowCurveY2);
+            arrowZ1 = RhinoDoc.ActiveDoc.Objects.Add(arrowCurveZ1);
+            arrowZ2 = RhinoDoc.ActiveDoc.Objects.Add(arrowCurveZ2);
             //Construct and activate command.
             Rhino.Input.Custom.GetPoint gp = new Rhino.Input.Custom.GetPoint();
             gp.SetCommandPrompt("Click and drag partition plane to adjust their position. Press enter to confirm and move on.");
@@ -109,17 +119,26 @@ namespace KinergyUtilities
             Rhino.Input.GetResult r;
             do
             {
+                if (!generated)
+                    GeneratePlanes();
                 r = gp.Get(true);
+
             } while (r != Rhino.Input.GetResult.Nothing);
             RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
             RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(arrowX1, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(arrowX2, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(arrowY1, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(arrowY2, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(arrowZ1, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(arrowZ2, true);
             Plane p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
             //p1Reverse.ExtendThroughBox(box, out _, out _);
             Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
             //p2Reverse.ExtendThroughBox(box, out _, out _);
             /*Brep[] Cut_Brep1 = m.Trim(pl1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
             Brep Brep1 = Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);*/
-            Brep[] Cut_Brep1rest = m.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            Brep[] Cut_Brep1rest = model.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
             Brep BrepRest=null;
             try
             {
@@ -127,7 +146,7 @@ namespace KinergyUtilities
             }
             catch
             {
-                BrepRest = m;
+                BrepRest = model;
             }
             Brep[] Cut_Brep2 =BrepRest.Trim(pl2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
             Brep Brep2 = null;
@@ -149,7 +168,7 @@ namespace KinergyUtilities
             Brep Brep3 = Cut_Brep3[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
             Rhino.Input.Custom.GetPoint ctrl_first_pt_sel = new Rhino.Input.Custom.GetPoint();*/
 
-            b = new BoxLike(Brep2, v);
+            BoxLike b = new BoxLike(Brep2, v);
             double volumn = 0;
             BoundingBox result1 = BoundingBox.Empty;
             Cylinder result2 = Cylinder.Unset;
@@ -185,7 +204,7 @@ namespace KinergyUtilities
             else
                 throw new Exception("Invalid type");
             DA.SetData(0, Brep2);
-            
+            DA.SetData(3, skeleton);
         }
 
         /// <summary>
@@ -208,6 +227,31 @@ namespace KinergyUtilities
         {
             get { return new Guid("9ce8cadb-159b-4369-8778-3f3698f86e55"); }
         }
+        private void GeneratePlanes()
+        {
+            generated = true;
+            //Delete these before generating new ones
+            RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
+            RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
+            
+            BoxLike b = new BoxLike(model, v);
+            BoundingBox box = b.Bbox;
+            Interval yInterval = new Interval(-(box.Max.Y - box.Min.Y) * 0.6, (box.Max.Y - box.Min.Y) * 0.6), zInterval = new Interval(-(box.Max.Z - box.Min.Z) * 0.6, (box.Max.Z - box.Min.Z) * 0.6);
+            box.Transform(b.RotateBack);
+            /*Point3d start = box.PointAt(0, 0.5, 0.5);
+            Point3d end = box.PointAt(1, 0.5, 0.5);*/ //this doesn't work!
+
+            skeleton = b.Skeleton;
+            skeleton.Transform(b.RotateBack);
+            skeletonVec = new Vector3d(skeleton.PointAtEnd) - new Vector3d(skeleton.PointAtStart);
+            pl1 = new Plane(skeleton.PointAtNormalizedLength(t1), v);
+            pl2 = new Plane(skeleton.PointAtNormalizedLength(t2), v);
+            s1 = new PlaneSurface(pl1, yInterval, zInterval);
+            s2 = new PlaneSurface(pl2, yInterval, zInterval);
+            guid1 = RhinoDoc.ActiveDoc.Objects.Add(s1);
+            guid2 = RhinoDoc.ActiveDoc.Objects.Add(s2);
+            
+        }
         private void Gp_SelectionMouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             //在这个函数里，e.Point是当前的鼠标所在的位置的对应的Rhino里的3D的点  
@@ -217,15 +261,57 @@ namespace KinergyUtilities
             {
                 var p = e.Point;
                 double dis1 =Math.Abs( pl1.DistanceTo(p)), dis2 =Math.Abs( pl2.DistanceTo(p));
-                if (dis1 < dis2 && dis1 < 5)
+                double disX1 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveX1, p);
+                double disX2 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveX2, p);
+                double disY1 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveY1, p);
+                double disY2 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveY2, p);
+                double disZ1 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveZ1, p);
+                double disZ2 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveZ2, p);
+                List<double> distances = new List<double> { dis1, dis2, disX1, disX2, disY1, disY2, disZ1, disZ2 };
+                double min = distances.Min();
+                if (min > 5)
+                { return; }
+                else if (min == dis1)
                     selected = guid1;
-                else if (dis1 > dis2 && dis2 < 5)
+                else if (min == dis2)
                     selected = guid2;
+                else if (min == disX1)
+                { 
+                    v.Transform(Transform.Rotation(Math.PI / 8, Vector3d.ZAxis, Point3d.Origin));
+                    generated = false;
+                }
+                else if (min == disX2)
+                {
+                    v.Transform(Transform.Rotation(-Math.PI / 8, Vector3d.ZAxis, Point3d.Origin));
+                    generated = false;
+                }
+                else if (min == disY1)
+                {
+                    v.Transform(Transform.Rotation(Math.PI / 8, Vector3d.XAxis, Point3d.Origin));
+                    generated = false;
+                }
+                else if (min == disY2)
+                {
+                    v.Transform(Transform.Rotation(-Math.PI / 8, Vector3d.XAxis, Point3d.Origin));
+                    generated = false;
+                }
+                else if (min == disZ1)
+                {
+                    v.Transform(Transform.Rotation(Math.PI / 8, Vector3d.YAxis, Point3d.Origin));
+                    generated = false;
+                }
+                else if (min == disZ2)
+                {
+                    v.Transform(Transform.Rotation(-Math.PI / 8, Vector3d.YAxis, Point3d.Origin));
+                    generated = false;
+                }
             }
             
         }
         private void Gp_SelectionMouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
+            if (selected == Guid.Empty)
+                return;
             //在这个函数里，e.Point是当前的鼠标所在的位置的对应的Rhino里的3D的点  
             double t = 0,tn=0;
             skeleton.ClosestPoint(e.Point, out t);

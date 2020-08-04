@@ -242,6 +242,9 @@
     <Compile Include="KinergyUtilities\KineticUnitSimulator.cs" />
     <Compile Include="KinergyUtilities\Get3InnerBox.cs" />
     <Compile Include="KinergyUtilities\ModelPreprocess.cs" />
+    <Compile Include="KinergyUtilities\ModelPreprocessNew2.cs" />
+    <Compile Include="KinergyUtilities\ModelPreprocessNew3.cs" />
+    <Compile Include="KinergyUtilities\ModelPreprocessWithoutInputDirection.cs" />
     <Compile Include="KinergyUtilities\SelectDirection.cs" />
     <Compile Include="KinergyUtilities\SelectPosition.cs" />
     <Compile Include="KinergyUtilities\SetDirection.cs" />
