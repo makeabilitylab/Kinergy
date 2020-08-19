@@ -30,7 +30,7 @@ namespace HumanUIforKinergy.KinergyUtilities
         /// Initializes a new instance of the ModelPreprocessNew3 class.
         /// </summary>
         public RegionSelection()
-          : base("ModelPreprocessNew3", "Nickname",
+          : base("RegionSelection", "RegionSelection",
               "Description",
               "Kinergy", "Utilities")
         {
@@ -105,7 +105,7 @@ namespace HumanUIforKinergy.KinergyUtilities
             {
                 v = Vector3d.XAxis;
                 Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
-                gp1.SetCommandPrompt("Press QW, AS, or ZX to rotate the partition planes around X, Y, or Z axis (CW and CCW). Press enter to confirm and move on.");
+                gp1.SetCommandPrompt("Press AS, ZX, or QW to rotate the partition planes around X, Y, or Z axis (CW and CCW). Press enter to confirm and move on.");
                 gp1.AcceptNothing(true);
                 Rhino.Input.GetResult r1;
                 OperatingArrow = true;
