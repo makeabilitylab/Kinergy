@@ -104,5 +104,12 @@ namespace Kinergy.Utilities
             p /= 101;
             return p;
         }
+        public static double CurveDistanceToPoint(Curve c,Point3d p)
+        {
+            double t = 0;
+            c.ClosestPoint(p,out t);
+            Point3d p1 = c.PointAt(t);
+            return p1.DistanceTo(p);
+        }
     }
 }
