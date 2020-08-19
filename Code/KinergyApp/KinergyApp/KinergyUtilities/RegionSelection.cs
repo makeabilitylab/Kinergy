@@ -54,8 +54,9 @@ namespace HumanUIforKinergy.KinergyUtilities
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddBrepParameter("ModelRegionOfInterest", "M", "", GH_ParamAccess.item);
-            pManager.AddBrepParameter("InnerBox", "B", "The biggest inner box generated", GH_ParamAccess.item);
-            pManager.AddGeometryParameter("InnerCylinder", "C", "The biggest inner cylinder generated", GH_ParamAccess.item);
+            //pManager.AddBrepParameter("InnerBox", "B", "The biggest inner box generated", GH_ParamAccess.item);
+            //pManager.AddGeometryParameter("InnerCylinder", "C", "The biggest inner cylinder generated", GH_ParamAccess.item);
+            pManager.AddGeometryParameter("InnerCavity", "C", "The biggest inner cavity generated", GH_ParamAccess.item);
             pManager.AddCurveParameter("Skeleton", "S", "", GH_ParamAccess.item);
             pManager.AddVectorParameter("Direction", "D", "The main direction of model.", GH_ParamAccess.item);
         }
@@ -96,6 +97,7 @@ namespace HumanUIforKinergy.KinergyUtilities
                 return;
             
             BoundingBox box = model.GetBoundingBox(true);
+            box.Inflate(-2.0);
             box.Transform(Transform.Scale(box.Center, 2));
             arrowScale = box.Diagonal.Length / 100;
             center = box.Center;
@@ -103,7 +105,7 @@ namespace HumanUIforKinergy.KinergyUtilities
             {
                 v = Vector3d.XAxis;
                 Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
-                gp1.SetCommandPrompt("Press QWASZX to rotate the arrow. Press enter to confirm and move on.");
+                gp1.SetCommandPrompt("Press QW, AS, or ZX to rotate the partition planes around X, Y, or Z axis (CW and CCW). Press enter to confirm and move on.");
                 gp1.AcceptNothing(true);
                 Rhino.Input.GetResult r1;
                 OperatingArrow = true;
@@ -119,7 +121,7 @@ namespace HumanUIforKinergy.KinergyUtilities
             if(v!=Vector3d.Unset && selectRegion)
             {
                 Rhino.Input.Custom.GetPoint gp2 = new Rhino.Input.Custom.GetPoint();
-                gp2.SetCommandPrompt("Click and drag partition plane to adjust their position. Press enter to confirm and move on.");
+                gp2.SetCommandPrompt("Click and drag the partition plane to adjust their position. Press enter to confirm and move on.");
                 gp2.MouseDown += Gp_SelectionMouseDown;
                 gp2.MouseMove += Gp_SelectionMouseMove;
 
@@ -183,6 +185,8 @@ namespace HumanUIforKinergy.KinergyUtilities
                 double volumn = 0;
                 Brep result1 = null;
                 Cylinder result2 = Cylinder.Unset;
+                Brep b2 = null;
+                double v_box = 0.0, v_cylinder = 0.0;
                 //if (type == 1)
                 //{
 
@@ -197,7 +201,8 @@ namespace HumanUIforKinergy.KinergyUtilities
                                 volumn = bbox.Volume;
                                 result1 = b.InnerEmptySpaceBoxBrep;
                                 result1.Transform(b.RotateBack);
-                                DA.SetData(1, result1);
+                                v_box = result1.GetVolume();
+                                // DA.SetData(1, result1);
                             }
                         }
                     }
@@ -206,21 +211,27 @@ namespace HumanUIforKinergy.KinergyUtilities
                 //{
 
                 // Calculate the volume of the inner cylinder 
-                if (b.GetInnerEmptySpaceCylinder())
-                    {
+                    if (b.GetInnerEmptySpaceCylinder()){
                         Cylinder c = b.InnerEmptyCylinder;
                         //result2 = c.ToBrep(true,true);
                         result2 = c;
-                        Brep b2 = result2.ToBrep(true, true);
+                        b2 = result2.ToBrep(true, true);
                         b2.Transform(b.RotateBack);
-                        DA.SetData(2, b2);
+                        v_cylinder = b2.GetVolume();
+                        //DA.SetData(2, b2);
                     }
                 //}
+                //else
+                //    throw new Exception("Invalid type");
+
+                if (v_box >= v_cylinder)
+                    DA.SetData(1, result1);
                 else
-                    throw new Exception("Invalid type");
+                    DA.SetData(1, b2);
+
                 DA.SetData(0, Brep2);
-                DA.SetData(3, skeleton);
-                DA.SetData(4, v);
+                DA.SetData(2, skeleton);
+                DA.SetData(3, v);
             }
             
         }
