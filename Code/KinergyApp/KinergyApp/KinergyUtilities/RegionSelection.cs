@@ -9,7 +9,7 @@ using Kinergy.Utilities;
 
 namespace HumanUIforKinergy.KinergyUtilities
 {
-    public class ModelPreprocessNew3 : GH_Component
+    public class RegionSelection : GH_Component
     {
         Brep model = null;
         Vector3d v = Vector3d.Unset;
@@ -29,7 +29,7 @@ namespace HumanUIforKinergy.KinergyUtilities
         /// <summary>
         /// Initializes a new instance of the ModelPreprocessNew3 class.
         /// </summary>
-        public ModelPreprocessNew3()
+        public RegionSelection()
           : base("ModelPreprocessNew3", "Nickname",
               "Description",
               "Kinergy", "Utilities")
@@ -42,7 +42,7 @@ namespace HumanUIforKinergy.KinergyUtilities
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddBrepParameter("Brep", "B", "The brep model to preprocess", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Inner space type", "T", "The type of inner space, 1 for box and 2 for cylinder. Currently we only support these 2 types", GH_ParamAccess.item);
+            //pManager.AddIntegerParameter("Inner space type", "T", "The type of inner space, 1 for box and 2 for cylinder. Currently we only support these 2 types", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Restart", "R", "Turn this true to restart", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Select Direction", "SD", "Start selecting main direction", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Select Region", "SR", "Start selecting region of interest", GH_ParamAccess.item);
@@ -71,15 +71,15 @@ namespace HumanUIforKinergy.KinergyUtilities
             t2 = 1;
             PlaneGenerated = false;
             bool restart = false;
-            int type = 0;
+            //int type = 0;
             if (!DA.GetData(0, ref model))
                 return;
 
-            if (!DA.GetData(1, ref type))
-                return;
-            if (type != 1 && type != 2)
-                throw new Exception("Invalid type value! Currently we only support 1 and 2.");
-            if (!DA.GetData(2, ref restart))
+            //if (!DA.GetData(1, ref type))
+            //    return;
+            //if (type != 1 && type != 2)
+            //    throw new Exception("Invalid type value! Currently we only support 1 and 2.");
+            if (!DA.GetData(1, ref restart))
                 return;
             if (restart)
             {
@@ -90,9 +90,9 @@ namespace HumanUIforKinergy.KinergyUtilities
                 return;
             }
             bool selectDirection = false,selectRegion=false;
-            if (!DA.GetData(3, ref selectDirection))
+            if (!DA.GetData(2, ref selectDirection))
                 return;
-            if (!DA.GetData(4, ref selectRegion))
+            if (!DA.GetData(3, ref selectRegion))
                 return;
             
             BoundingBox box = model.GetBoundingBox(true);
@@ -183,8 +183,10 @@ namespace HumanUIforKinergy.KinergyUtilities
                 double volumn = 0;
                 Brep result1 = null;
                 Cylinder result2 = Cylinder.Unset;
-                if (type == 1)
-                {
+                //if (type == 1)
+                //{
+
+                // Calculate the volume of the inner box
                     for (double i = 0.2; i <= 0.8; i += 0.1)
                     {
                         if (b.GetInnerEmptySpaceBox(i))
@@ -199,10 +201,12 @@ namespace HumanUIforKinergy.KinergyUtilities
                             }
                         }
                     }
-                }
-                else if (type == 2)
-                {
-                    if (b.GetInnerEmptySpaceCylinder())
+                //}
+                //else if (type == 2)
+                //{
+
+                // Calculate the volume of the inner cylinder 
+                if (b.GetInnerEmptySpaceCylinder())
                     {
                         Cylinder c = b.InnerEmptyCylinder;
                         //result2 = c.ToBrep(true,true);
@@ -211,7 +215,7 @@ namespace HumanUIforKinergy.KinergyUtilities
                         b2.Transform(b.RotateBack);
                         DA.SetData(2, b2);
                     }
-                }
+                //}
                 else
                     throw new Exception("Invalid type");
                 DA.SetData(0, Brep2);
