@@ -14,7 +14,7 @@ using Rhino;
 using Kinergy.Geom;
 using Kinergy.Generator;
 using Kinergy.Utilities;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 
 namespace Kinergy
 {

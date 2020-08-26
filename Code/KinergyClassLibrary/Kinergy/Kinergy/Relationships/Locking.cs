@@ -14,7 +14,7 @@ using Rhino;
 using Kinergy.Geom;
 namespace Kinergy
 {
-    namespace Relationship
+    namespace Relationships
     { 
         public class Locking:Relationship
         {

@@ -170,7 +170,7 @@ namespace Kinergy.Geom
                 follower.Follow();
             }
         }
-        public override bool AddConstraint(Relationship.Relationship constraint)
+        public override bool AddConstraint(Relationships.Relationship constraint)
         {
             return base.AddConstraint(constraint);
         }

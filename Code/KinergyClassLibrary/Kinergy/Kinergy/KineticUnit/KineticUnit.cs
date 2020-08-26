@@ -10,7 +10,7 @@ using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Geom;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 using Grasshopper.Kernel;
 namespace Kinergy.KineticUnit
 {
@@ -51,7 +51,7 @@ namespace Kinergy.KineticUnit
         }
         public BoundingBox GetKineticUnitBoundingBox()
         {
-            double minX = 1000000000, minY = 1000000000, minZ = 1000000000, maxX = -1000000000, maxY = -1000000000, maxZ = -1000000000;
+            double minX = double.MaxValue, minY = double.MaxValue, minZ = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue, maxZ = double.MinValue;
             if(entityList.Count==0)
             {
                 return BoundingBox.Empty;
@@ -97,6 +97,23 @@ namespace Kinergy.KineticUnit
                 e.ResetState();
             }
             loaded = false;
+        }
+        public bool RemoveEntity(Entity e)
+        {
+            if (entityList.Contains(e))
+            {
+                entityList.Remove(e);
+                int Count = e.Constraints.Count;
+                for (int i = 0; i < Count; i++)
+                {
+                    e.Constraints[i].Release();
+                    Count--;
+                    i--;
+                }
+                return true;
+            }
+            else
+                return false;
         }
     }
 }

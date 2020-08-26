@@ -69,21 +69,21 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Relationships\Engagement.cs" />
+    <Compile Include="Relationships\Fixation.cs" />
+    <Compile Include="Relationships\Hinge.cs" />
+    <Compile Include="Relationships\Locking.cs" />
+    <Compile Include="Relationships\Relationship.cs" />
     <Compile Include="Utilities\Arrow.cs" />
     <Compile Include="Geom\BoxLike.cs" />
     <Compile Include="Geom\Component.cs" />
     <Compile Include="KineticUnit\ContinuousMovingPress.cs" />
-    <Compile Include="Relationship\Engagement.cs" />
     <Compile Include="Utilities\Convert resource file.cs" />
     <Compile Include="Utilities\FileOperation.cs" />
-    <Compile Include="Relationship\Fixation.cs" />
     <Compile Include="Geom\Gear.cs" />
     <Compile Include="Generator\GearSet.cs" />
-    <Compile Include="Relationship\Hinge.cs" />
-    <Compile Include="Relationship\Locking.cs" />
     <Compile Include="Movement.cs" />
     <Compile Include="Geom\Rack.cs" />
-    <Compile Include="Relationship\Relationship.cs" />
     <Compile Include="Geom\RodLike.cs" />
     <Compile Include="Geom\Spiral.cs" />
     <Compile Include="Geom\Helix.cs" />

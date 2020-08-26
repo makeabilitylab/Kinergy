@@ -57,28 +57,37 @@ namespace Kinergy.Geom
                 endPoint = Point2;
                 //The type2 follower is formed with an capsule and a rod
                 double distance = new Line(c.CenterPoint, midPoint).Length;
-                double radius = distance - c.RadiusMax;
-                if (radius < 0)
+                double radius = rodRadius*1.5;
+                if (radius <= 0)
                 { throw new Exception("Invalid midPoint position! Too close to cam!"); }
-                Curve capsule = Utilities.GeometryMethods.Capsule(new Plane(midPoint, c.Normal), radius, radius, new Plane(midPoint, c.Normal, new Vector3d(midPoint) - new Vector3d(c.CenterPoint)).Normal);
+                /*Curve capsule = Utilities.GeometryMethods.Capsule(new Plane(midPoint, c.Normal), radius, radius, new Plane(midPoint, c.Normal, new Vector3d(midPoint) - new Vector3d(c.CenterPoint)).Normal);
                 Point3d start = midPoint - c.Normal / c.Normal.Length * thick / 2;
                 Point3d end = midPoint + c.Normal / c.Normal.Length * thick / 2;
                 capsule.Transform(Transform.Translation(-c.Normal / c.Normal.Length * thick / 2));
                 Curve rail = new Line(start, end).ToNurbsCurve();
-                Brep capsulePart = Brep.CreateFromSweep(rail, capsule, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-
+                Brep capsulePart = Brep.CreateFromSweep(rail, capsule, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];*/
+                Circle circle1 = new Circle(new Plane(midPoint, c.Normal), radius);
+                Cylinder cylinder = new Cylinder(circle1);
+                cylinder.Height1 = -rodRadius;
+                cylinder.Height2 = rodRadius;
+                Brep cylinderPart = cylinder.ToBrep(true, true);
                 Plane rodBasePlane = new Plane(midPoint, new Vector3d(endPoint) - new Vector3d(midPoint));
-                Circle circle = new Circle(rodBasePlane, rodRadius);
-                Brep rod = new Cylinder(circle, (new Vector3d(endPoint) - new Vector3d(midPoint)).Length).ToBrep(true, true);
-                base.model = Brep.CreateBooleanUnion(new List<Brep> { rod, capsulePart }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                Circle circle2 = new Circle(rodBasePlane, rodRadius);
+                Brep rod = new Cylinder(circle2, (new Vector3d(endPoint) - new Vector3d(midPoint)).Length).ToBrep(true, true);
+                //base.model = Brep.CreateBooleanUnion(new List<Brep> { rod, capsulePart }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                Brep b = new Brep();
+                b.Append(rod);
+                //b.Append(capsulePart);
+                b.Append(cylinderPart);
+                base.model = b;
                 //Tell the step rotation value. Make sure that rotation of strp rotation make the follower closer to cam.
                 Vector3d capsuleDirection = new Plane(midPoint, cam.Normal, new Vector3d(midPoint) - new Vector3d(cam.CenterPoint)).Normal;
                 Vector3d approachDirection = new Vector3d(cam.CenterPoint) - new Vector3d(midPoint);
                 capsuleDirection.Rotate(0.1, cam.Normal);
                 if (capsuleDirection * approachDirection > 0)
-                { stepRotation = 0.1 * Math.PI / 180; }
+                { stepRotation = 1 * Math.PI / 180; }
                 else
-                { stepRotation = -0.1 * Math.PI / 180; }
+                { stepRotation = -1 * Math.PI / 180; }
                 Follow();
             }
             
@@ -115,28 +124,37 @@ namespace Kinergy.Geom
                 endPoint = Point2;
                 //The type2 follower is formed with an capsule and a rod
                 double distance = new Line(c.CenterPoint, midPoint).Length;
-                double radius = distance - c.RadiusMax;
+                double radius = rodRadius*1.5;
                 if (radius < 0)
                 { throw new Exception("Invalid midPoint position! Too close to cam!"); }
-                Curve capsule = Utilities.GeometryMethods.Capsule(new Plane(midPoint, c.Normal), radius, radius, new Plane(midPoint, c.Normal, new Vector3d(midPoint) - new Vector3d(c.CenterPoint)).Normal);
+                /*Curve capsule = Utilities.GeometryMethods.Capsule(new Plane(midPoint, c.Normal), radius, radius, new Plane(midPoint, c.Normal, new Vector3d(midPoint) - new Vector3d(c.CenterPoint)).Normal);
                 Point3d start = midPoint - c.Normal / c.Normal.Length * thick / 2;
                 Point3d end = midPoint + c.Normal / c.Normal.Length * thick / 2;
                 capsule.Transform(Transform.Translation(-c.Normal / c.Normal.Length * thick / 2));
                 Curve rail = new Line(start, end).ToNurbsCurve();
-                Brep capsulePart = Brep.CreateFromSweep(rail, capsule, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-
+                Brep capsulePart = Brep.CreateFromSweep(rail, capsule, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];*/
+                Circle circle1 = new Circle(new Plane(midPoint, c.Normal), radius);
+                Cylinder cylinder = new Cylinder(circle1);
+                cylinder.Height1 = -rodRadius;
+                cylinder.Height2 = rodRadius;
+                Brep cylinderPart = cylinder.ToBrep(true, true);
                 Plane rodBasePlane = new Plane(midPoint, new Vector3d(endPoint) - new Vector3d(midPoint));
-                Circle circle = new Circle(rodBasePlane, rodRadius);
-                Brep rod = new Cylinder(circle, (new Vector3d(endPoint) - new Vector3d(midPoint)).Length).ToBrep(true, true);
-                base.model = Brep.CreateBooleanUnion(new List<Brep> { rod, capsulePart }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                Circle circle2 = new Circle(rodBasePlane, rodRadius);
+                Brep rod = new Cylinder(circle2, (new Vector3d(endPoint) - new Vector3d(midPoint)).Length).ToBrep(true, true);
+                //base.model = Brep.CreateBooleanUnion(new List<Brep> { rod, capsulePart }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                Brep b = new Brep();
+                b.Append(rod);
+                //b.Append(capsulePart);
+                b.Append(cylinderPart);
+                base.model = b;
                 //Tell the step rotation value. Make sure that rotation of strp rotation make the follower closer to cam.
                 Vector3d capsuleDirection = new Plane(midPoint, cam.Normal, new Vector3d(midPoint) - new Vector3d(cam.CenterPoint)).Normal;
                 Vector3d approachDirection = new Vector3d(cam.CenterPoint) - new Vector3d(midPoint);
                 capsuleDirection.Rotate(0.1, cam.Normal);
                 if (capsuleDirection * approachDirection > 0)
-                { stepRotation = 0.1 * Math.PI / 180; }
+                { stepRotation = 1 * Math.PI / 180; }
                 else
-                { stepRotation = -0.1 * Math.PI / 180; }
+                { stepRotation = -1 * Math.PI / 180; }
                 Follow();
             }
 
@@ -202,12 +220,12 @@ namespace Kinergy.Geom
                     int counter = 0;
                     do
                     {
-                        Transform m = Transform.Rotation(-stepRotation,cam.Normal, midPoint);
+                        Transform m = Transform.Rotation(-stepRotation,cam.Normal, endPoint);
                         moveValue -= step;
                         f.Transform(m);
                         intersect = Utilities.GeometryMethods.IfBrepsIntersect(f, cam.GetModelinWorldCoordinate());
                         counter++;
-                        if (counter > 200)
+                        if (counter > 400)
                         { throw new Exception("Follower failed to contact cam. Please check their positions."); }
                     } while (intersect);
                     Move(new Movement(this, 2, moveValue));
@@ -218,18 +236,18 @@ namespace Kinergy.Geom
                     int counter = 0;
                     do
                     {
-                        Transform m = Transform.Rotation(stepRotation, cam.Normal, midPoint);
-                        moveValue += step;
+                        Transform m = Transform.Rotation(stepRotation, cam.Normal, endPoint);
+                        moveValue += stepRotation;
                         f.Transform(m);
                         intersect = Utilities.GeometryMethods.IfBrepsIntersect(f, cam.GetModelinWorldCoordinate());
                         counter++;
-                        if (counter > 200)
+                        if (counter > 400)
                         { throw new Exception("Follower failed to contact cam. Please check their positions."); }
                     } while (!intersect);
                     Move(new Movement(this, 2, moveValue));
+                    //Move(new Movement(this, 2, 0));
                 }
             }
-            
             else
             {
                 throw new Exception("Invalid follower type!");
@@ -252,8 +270,9 @@ namespace Kinergy.Geom
             else if(move.Type==2)
             {
                 travel += move.MovementValue;
-                travel = travel % 360;
-                base.offset = Transform.Multiply(base.offset, Transform.Rotation(move.MovementValue, cam.Normal, midPoint));
+                travel = travel % (Math.PI*2);
+                base.offset = Transform.Multiply(base.offset, Transform.Rotation(move.MovementValue, cam.Normal, endPoint));
+                //base.offset = Transform.Rotation(travel, cam.Normal, endPoint);
                 //TODO propagate this movement?
                 return true;
             }

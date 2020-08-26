@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Kinergy.Geom;
 namespace Kinergy
 {
-    namespace Relationship
+    namespace Relationships
     { 
         public class Relationship
         {

@@ -14,7 +14,7 @@ using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Utilities;
 using Kinergy.Geom;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 using Kinergy.KineticUnit;
 using Kinergy;
 using System.Diagnostics;

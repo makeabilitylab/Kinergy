@@ -111,5 +111,61 @@ namespace Kinergy.Utilities
             Point3d p1 = c.PointAt(t);
             return p1.DistanceTo(p);
         }
+        public static bool IfCylinderBrepIsEqual(Brep a,Brep b,Vector3d direction)
+        {
+            Brep a1 = a.DuplicateBrep(), b1 = b.DuplicateBrep();
+            a1.Transform(Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin));
+            b1.Transform(Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin));
+            BoundingBox box1 = a1.GetBoundingBox(true);
+            BoundingBox box2 = b1.GetBoundingBox(true);
+            if (box1.Center.DistanceTo(box2.Center) < 0.01 && (box1.Diagonal - box2.Diagonal).Length < 0.01)
+                return true;
+            else
+                return false;
+        }
+        public static bool IfCylinderIsEqual(Cylinder a, Cylinder b)
+        {
+            if ((a.Axis - b.Axis).Length < 0.01 && Math.Abs(a.Radius - b.Radius) < 0.01 && a.BasePlane.Origin.DistanceTo(b.BasePlane.Origin) < 0.01)
+                return true;
+            else
+                return false;
+        }
+        public static bool IfBoxIsEqual(BoundingBox a, BoundingBox b)
+        {
+            if (a.Center.DistanceTo(b.Center) < 0.01 && (a.Diagonal - b.Diagonal).Length < 0.01)
+                return true;
+            else
+                return false;
+        }
+        /// <summary>
+        /// Util function for telling if two box brep is equal. Beware that this function works only when a and b are 2 box brep with same direction!
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public static bool IfBoxBrepIsEqual(Brep a,Brep b)
+        {
+            Brep a1 = a.DuplicateBrep(), b1 = b.DuplicateBrep();
+            BoundingBox box1 = a1.GetBoundingBox(true);
+            BoundingBox box2 = b1.GetBoundingBox(true);
+            if (box1.Center.DistanceTo(box2.Center) < 0.01 && (box1.Diagonal - box2.Diagonal).Length < 0.01)
+                return true;
+            else
+                return false;
+        }
+        public static Cylinder GetCylinder(Brep c, Vector3d d)
+        {
+            Brep m = c.DuplicateBrep();
+            m.Transform(Transform.Rotation(d, Vector3d.XAxis, Point3d.Origin));
+            BoundingBox b = m.GetBoundingBox(true);
+            double r = (b.Max.Y - b.Min.Y) / 2;
+            double l = b.Max.X - b.Min.X;
+            Point3d startPoint = b.PointAt(0, 0.5, 0.5);
+            startPoint.Transform(Transform.Rotation(Vector3d.XAxis, d, Point3d.Origin));
+            Plane p = new Plane(startPoint, d);
+            Circle circle = new Circle(p, r);
+            Cylinder cylinder = new Cylinder(circle, l);
+            return cylinder;
+        }
     }
 }

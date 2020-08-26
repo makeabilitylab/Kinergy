@@ -9,7 +9,7 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 
 namespace Kinergy.Geom
 {
@@ -101,7 +101,7 @@ namespace Kinergy.Geom
             }
             return false;
         }
-        public override bool AddConstraint(Relationship.Relationship constraint)
+        public override bool AddConstraint(Relationships.Relationship constraint)
         {
             if(constraint.GetType()==typeof(Locking))
             {
@@ -229,7 +229,7 @@ namespace Kinergy.Geom
             DfsMark = true;
             bool CanIMove = true;
             //Then move all other constraints to know if this movement can be operated
-            foreach (Relationship.Relationship c in constraints)
+            foreach (Relationships.Relationship c in constraints)
             {
                 
                 if (c.TheOtherEntity(this).DfsMark == true)//Skip the already visited component to avoid cycle triggering.

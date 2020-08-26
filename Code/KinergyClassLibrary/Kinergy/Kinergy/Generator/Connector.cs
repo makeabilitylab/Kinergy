@@ -10,7 +10,7 @@ using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Geom;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 namespace Kinergy.Generator
 {
     /// <summary>

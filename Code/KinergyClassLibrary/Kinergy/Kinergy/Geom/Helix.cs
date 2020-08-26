@@ -11,7 +11,7 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 
 namespace Kinergy
 {
@@ -341,7 +341,7 @@ namespace Kinergy
                     DfsMark = true;
                     bool CanIMove = true;
                     //Then move all other constraints to know if this movement can be operated
-                    foreach (Relationship.Relationship c in constraints)
+                    foreach (Relationships.Relationship c in constraints)
                     {
                         if (c.TheOtherEntity(this).DfsMark == true)//Skip the already visited component to avoid cycle triggering.
                         { continue; }

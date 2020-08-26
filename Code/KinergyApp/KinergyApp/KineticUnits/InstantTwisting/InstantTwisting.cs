@@ -14,7 +14,7 @@ using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Utilities;
 using Kinergy.Geom;
-using Kinergy.Relationship;
+using Kinergy.Relationships;
 using Kinergy.KineticUnit;
 using Kinergy;
 using System.Diagnostics;
@@ -29,7 +29,7 @@ namespace Kinergy.KineticUnit
         Cylinder innerCylinderForComponents;
         Vector3d direction;
         //Parameters given by user
-        double energy, maxDegree;
+        double strength, maxDegree;
         Vector3d knobDirection=Vector3d.Unset;
         Brep endEffectorModel;
         Point3d LockPosition;
@@ -53,8 +53,8 @@ namespace Kinergy.KineticUnit
         {
             model = InputModel;
             direction = mainDirection;
-            innerCylinderForComponents = GetCylinder(innerCylinder,mainDirection);
-            energy = KineticStrength;
+            innerCylinderForComponents = Kinergy.Utilities.GeometryMethods.GetCylinder(innerCylinder,mainDirection);
+            strength = KineticStrength;
             maxDegree = MaxLoadingDegree;
             GenerateSpiralAndAxis();
             entityList.Add(new Shape(model));
@@ -110,13 +110,13 @@ namespace Kinergy.KineticUnit
             spiralInnerRadius = Math.Max(2, innerCylinderForComponents.Radius * 0.1);
             axisRadius = spiralInnerRadius;
             roundNum = (int)Math.Ceiling(maxDegree / 360 / (spiralOuterRadius - spiralInnerRadius) * (2 * spiralOuterRadius + 4 * spiralInnerRadius));
-            spiralX = (spiralOuterRadius - spiralInnerRadius) / roundNum * 0.4 * Math.Pow(energy, 0.25);
-            spiralY= spiralX * Math.Pow(energy, 0.25)*3;
+            spiralX = (spiralOuterRadius - spiralInnerRadius) / roundNum * 0.4 * Math.Pow(strength, 0.25);
+            spiralY= spiralX * Math.Pow(strength, 0.25)*3;
             spiralY = Math.Min(innerCylinderForComponents.TotalHeight, spiralY);
         }
         public void AdjustParameter(double KineticStrength, double MaxLoadingDegree)
         {
-            energy = KineticStrength;
+            strength = KineticStrength;
             maxDegree = MaxLoadingDegree;
             GenerateSpiralAndAxis();
         }
@@ -140,24 +140,25 @@ namespace Kinergy.KineticUnit
             List<Point3d> lockPosCandidates = new List<Point3d>();
             BoxLike b = new BoxLike(model, direction);
             BoundingBox box = b.Bbox,targetBox=BoundingBox.Unset;
-
+            Brep targetBoxBrep = null;
             //First tell the knob direction and get the target box
             if (knobDirection * direction > 0)
                 targetBox = new BoundingBox(box.PointAt(0.85, 0, 0), box.PointAt(1, 1, 1));
             else
                 targetBox = new BoundingBox(box.PointAt(0, 0, 0), box.PointAt(0.15, 1, 1));
-            targetBox.Transform(b.RotateBack);
-            box.Transform(b.RotateBack);
+            targetBoxBrep = targetBox.ToBrep();
+            targetBoxBrep.Transform(b.RotateBack);
             for (double i= 0;i<= 1;i+=0.05)
             {
                 for (double j = 0; j <= 1; j += 0.05)
                 {
                     Line l = new Line(box.PointAt(0, i, j), box.PointAt(1, i, j));
+                    l.Transform(b.RotateBack);
                     Point3d[] pts;
                     Intersection.CurveBrep(l.ToNurbsCurve(), model, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out _, out pts);
                     foreach(Point3d pt in pts)
                     {
-                        if (targetBox.Contains(pt)&&pt.DistanceTo(targetBox.Center)>axisRadius*2)
+                        if (targetBoxBrep.IsPointInside(pt,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,true)&&pt.DistanceTo(targetBox.Center)>axisRadius*2)
                             lockPosCandidates.Add(pt+knobDirection*3);
                     }
                 }
@@ -192,7 +193,7 @@ namespace Kinergy.KineticUnit
             Brep b = EEM.DuplicateBrep();
             b.Transform(rotateX);
             BoundingBox bbox = b.GetBoundingBox(true);
-            bbox.Transform(rotateBack);
+            //bbox.Transform(rotateBack);
             b.Transform(rotateBack);
             List<Point3d> candidates = new List<Point3d>();
             for (double i = 0; i <= 1; i += 0.05)
@@ -200,6 +201,7 @@ namespace Kinergy.KineticUnit
                 for (double j = 0; j <= 1; j += 0.05)
                 {
                     Line l = new Line(bbox.PointAt(0, i, j), bbox.PointAt(1, i, j));
+                    l.Transform(rotateBack);
                     Point3d[] pts;
                     Intersection.CurveBrep(l.ToNurbsCurve(), b, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out _, out pts);
                     foreach (Point3d pt in pts)
@@ -238,20 +240,7 @@ namespace Kinergy.KineticUnit
                 models.Add(endEffector.GetModelinWorldCoordinate());
             return models;
         }
-        private Cylinder GetCylinder(Brep c,Vector3d d)
-        {
-            Brep m = c.DuplicateBrep();
-            m.Transform(Transform.Rotation(d, Vector3d.XAxis,Point3d.Origin));
-            BoundingBox b=m.GetBoundingBox(true);
-            double r = (b.Max.Y - b.Min.Y)/2;
-            double l = b.Max.X - b.Min.X;
-            Point3d startPoint = b.PointAt(0, 0.5, 0.5);
-            startPoint.Transform(Transform.Rotation(Vector3d.XAxis, d, Point3d.Origin));
-            Plane p = new Plane(startPoint, d);
-            Circle circle = new Circle(p, r);
-            Cylinder cylinder = new Cylinder(circle, l);
-            return cylinder;
-        }
+        
         public override bool LoadKineticUnit()
         {
             //Movement twist=new Movement(centerAxis,2,maxDegree/180*Math.PI,Transform.Rotation(maxDegree / 180 * Math.PI,centerAxis.Direction,centerAxis.Center));

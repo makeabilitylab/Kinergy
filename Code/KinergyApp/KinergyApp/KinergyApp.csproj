@@ -261,6 +261,8 @@
     <Compile Include="KineticUnits\InstantTwisting\02SettingLock_IT.cs" />
     <Compile Include="KineticUnits\InstantTwisting\03EndEffector_IT.cs" />
     <Compile Include="KineticUnits\InstantTwisting\InstantTwisting.cs" />
+    <Compile Include="KineticUnits\Twist_Continuous_Trans\Twist_Continuous_Trans.cs" />
+    <Compile Include="KineticUnits\Twist_Continuous_Trans\Twist_Continuous_Trans_Component.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\UpgradeSliderComponent.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_AdjustElementAppearance.cs" />

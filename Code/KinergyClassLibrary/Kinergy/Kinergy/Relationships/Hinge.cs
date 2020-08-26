@@ -14,7 +14,7 @@ using Rhino;
 using Kinergy.Geom;
 using Kinergy.Utilities;
 
-namespace Kinergy.Relationship
+namespace Kinergy.Relationships
 {
     public class Hinge:Relationship
     {

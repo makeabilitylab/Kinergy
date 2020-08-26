@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Kinergy.Geom;
-using Kinergy.KineticUnit;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
@@ -32,7 +31,7 @@ namespace Kinergy.Components.CamAndFollower
             pManager.AddNumberParameter("Minimal Radius of Cam", "Rmin", "The minimal value of cam radius.", GH_ParamAccess.item);
             pManager.AddNumberParameter("Maximum Radius of Cam", "Rmax", "The maximal value of cam radius.", GH_ParamAccess.item);
             pManager.AddNumberParameter("Rod Radius of Follower", "Rrod", "The radius of Follower rod.", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Initial position of Cam", "IP", "The initial position of cam, in degree 0-360.", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Position of Cam", "IP", "The initial position of cam, in degree 0-360.", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -68,7 +67,7 @@ namespace Kinergy.Components.CamAndFollower
             if (!DA.GetData(8, ref degree)) { return; }
             Cam c = new Cam(type1, r1, r2, p.Origin, p.Normal, p.XAxis,1,rr,degree);
             Follower f = new Follower(type2, c, p1, p2, rr, rr*2);
-            f.Follow();
+            //f.Follow();
             DA.SetData(0, c);
             DA.SetData(0, f);
             Transform t1 = c.Offset;
