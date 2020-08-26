@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Rhino.DocObjects;
 using System.IO;
-namespace InstExtension
+namespace InstTranslation
 {
     public class Utilities
     {

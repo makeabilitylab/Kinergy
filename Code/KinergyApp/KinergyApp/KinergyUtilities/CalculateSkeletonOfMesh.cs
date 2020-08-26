@@ -57,9 +57,9 @@ namespace KinergyUtilities
                 Guid mybrepguid = Guid.Empty;
                 string layername = "new_layer";
                 // layer to bake the objects to
-                InstExtension.Utilities.create_layer(layername);
+                InstTranslation.Utilities.create_layer(layername);
                 //create a directory to store the stl files
-                InstExtension.Utilities.create_dir(dir);
+                InstTranslation.Utilities.create_dir(dir);
                 var doc = Rhino.RhinoDoc.ActiveDoc;
 
                 //declare the objects attributes

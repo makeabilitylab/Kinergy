@@ -21,7 +21,7 @@ using System.Diagnostics;
 
 namespace Kinergy.KineticUnit
 {
-    public class InstantExtension : KineticUnit
+    public class InstantTranslation : KineticUnit
     {
         //The initial inputs
         private Brep model;
@@ -63,7 +63,7 @@ namespace Kinergy.KineticUnit
         /// <summary> Default constructor without basic input parameter </summary>
         /// <returns> Returns empty instance</returns>
 
-        public InstantExtension(Brep Model, bool Curved ,Vector3d Direction, double Energy, double Distance)
+        public InstantTranslation(Brep Model, bool Curved ,Vector3d Direction, double Energy, double Distance)
         {
             model = Model;
             energy = Energy;
@@ -743,9 +743,9 @@ namespace Kinergy.KineticUnit
             Guid mybrepguid =Guid.Empty;
             string layername = "new_layer";
             // layer to bake the objects to
-            InstExtension.Utilities.create_layer(layername);
+            InstTranslation.Utilities.create_layer(layername);
             //create a directory to store the stl files
-            InstExtension.Utilities.create_dir(dir);
+            InstTranslation.Utilities.create_dir(dir);
             var doc = Rhino.RhinoDoc.ActiveDoc;
 
             //declare the objects attributes

@@ -4,15 +4,16 @@ using System.Collections.Generic;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using Kinergy.KineticUnit;
+using Kinergy.Utilities;
 
 // In order to load the result of this wizard, you will also need to
 // add the output bin/ folder of this project to the list of loaded
 // folder in Grasshopper.
 // You can use the _GrasshopperDeveloperSettings Rhino command for that.
 
-namespace KinergyInstExtension
+namespace InstTranslation
 {
-    public class InstantExtensionComponent : GH_Component
+    public class InstantTranslationComponent : GH_Component
     {
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -21,10 +22,10 @@ namespace KinergyInstExtension
         /// Subcategory the panel. If you use non-existing tab or panel names, 
         /// new tabs/panels will automatically be created.
         /// </summary>
-        public InstantExtensionComponent()
-          : base("InstantExtension", "IE",
-              "Solve instant extension motion",
-              "Kinergy", "InstantExtension")
+        public InstantTranslationComponent()
+          : base("InstantTranslation", "IT",
+              "Solve instant translation motion",
+              "Kinergy", "InstantTranslation")
         {
         }
 
@@ -47,7 +48,8 @@ namespace KinergyInstExtension
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("InstantExtentionInstance", "IE", "Motion instance generated in motion solver.", GH_ParamAccess.item);
+            pManager.AddGenericParameter("InstantTranslationKineticUnit", "KU", "Motion instance generated in motion solver.", GH_ParamAccess.item);
+            pManager.AddGenericParameter("LockDirectionCandidates", "DC", "Available directions of lock as arrows. Discard this if you don't need lock", GH_ParamAccess.list);
         }
 
         /// <summary>
@@ -70,9 +72,39 @@ namespace KinergyInstExtension
             if (!DA.GetData(4, ref energy)) { return; }
             if (!DA.GetData(5, ref distance)) { return; }
             if (!DA.GetData(1, ref model)) { return; }
-            InstantExtension motion = new InstantExtension(model,curved,direction,energy, distance);
+
+            // Step 1: Create an instance of InstantTranslation class
+            InstantTranslation motion = new InstantTranslation(model,curved,direction,energy, distance);
+
+            #region Step 2: Find the position of the helical spring
+            List<Point3d> pts = motion.GetSpringPositionCandidates();
+            double sp_X = 0, sp_Y = 0, sp_Z = 0;
+            foreach(Point3d pt in pts)
+            {
+                sp_X += sp_X + pt.X;
+                sp_Y += sp_Y + pt.Y;
+                sp_Z += sp_Z + pt.Z;
+            }
+
+            sp_X = sp_X / pts.Count;
+            sp_Y = sp_Y / pts.Count;
+            sp_Z = sp_Z / pts.Count;
+
+            Point3d springPos = new Point3d(sp_X, sp_Y, sp_Z);
+            #endregion
+
+            #region Step 3: Construct the spring based on the input energy and distance
+            motion.SetSpringPosition(springPos);
+            motion.CutModelForSpring();
+            motion.ConstructSpring();
+
+            // Generate the arrows but reserved for the end-effector step to confirm the lock position
+            List<Arrow> lockDirCandidates;
+            lockDirCandidates = motion.GetLockDirectionCandidates();
+            #endregion
+
             DA.SetData(0, motion);
-            
+            DA.SetData(1, lockDirCandidates);
         }
 
 

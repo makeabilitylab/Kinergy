@@ -4,7 +4,7 @@ using Kinergy.KineticUnit;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
-namespace InstExtension
+namespace InstTranslation
 {
     public class _04ConstructLockOfIE : GH_Component
     {
@@ -42,7 +42,7 @@ namespace InstExtension
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            InstantExtension motion = null;
+            InstantTranslation motion = null;
             Point3d position = Point3d.Unset;
             if (!DA.GetData(0, ref motion)) { return; }
             if (motion == null)

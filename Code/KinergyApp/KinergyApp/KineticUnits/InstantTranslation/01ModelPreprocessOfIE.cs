@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using Kinergy.KineticUnit;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
-using Kinergy.Utilities;
-namespace InstExtension
+
+namespace InstTranslation
 {
-    public class _03GenerateLockPositionCandidateOfIE : GH_Component
+    public class _01ModelPreprocessOfIE : GH_Component
     {
         /// <summary>
-        /// Initializes a new instance of the _03GenerateLockPositionCandidateOfIE class.
+        /// Initializes a new instance of the _01ModelPreprocessOfIE class.
         /// </summary>
-        public _03GenerateLockPositionCandidateOfIE()
-          : base("_03GenerateLockPositionCandidateOfIE", "Nickname",
+        public _01ModelPreprocessOfIE()
+          : base("_01ModelPreprocessOfIE", "PreprocessIE",
               "Description",
               "Kinergy", "InstantExtension")
         {
@@ -23,8 +23,8 @@ namespace InstExtension
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddScriptVariableParameter("Kinetic Unit", "KU", "Kinetic Unit instance of IE motion", GH_ParamAccess.item);
-            pManager.AddScriptVariableParameter("LockDirection", "D", "Arrow of selected lock direction", GH_ParamAccess.item);
+            pManager.AddScriptVariableParameter("Kinetic Unit", "KU", "Kinetic Unit instance", GH_ParamAccess.item);
+            
         }
 
         /// <summary>
@@ -32,8 +32,9 @@ namespace InstExtension
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Kinetic Unit", "KU", "Motion instance of IE", GH_ParamAccess.item);
-            pManager.AddPointParameter("LockPositionCandidates", "L", "Available point positions of lock", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Kinetic Unit", "KU", "Motion instance", GH_ParamAccess.item);
+            pManager.AddPointParameter("SpringPositionCandidates", "P", "Candidate points of available point position", GH_ParamAccess.list);
+            pManager.AddCurveParameter("ModelSkeleton", "S", "", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -42,18 +43,23 @@ namespace InstExtension
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            InstantExtension motion = null;
-            Arrow direction = null;
-            List<Point3d> pts=new List<Point3d>();
+            InstantTranslation motion = null;
             if (!DA.GetData(0, ref motion)) { return; }
-            if (motion == null)
+            if(motion==null)
             { return; }
-            if (!DA.GetData(1, ref direction)) { return; }
-            motion.SetLockDirection(direction);
-            pts=motion.GetLockPositionCandidates();
+            if(motion.Curved)
+            {
+                motion.CalculateCurvedSkeleton();
+            }
+            else
+            {
+                motion.CalculateStraightSkeleton();
+            }
+
+            List<Point3d> pts = motion.GetSpringPositionCandidates();
             DA.SetData(0, motion);
-            DA.SetDataList(1,pts);
-            
+            DA.SetDataList(1, pts);
+            DA.SetData(2,motion.Skeleton);
         }
 
         /// <summary>
@@ -74,7 +80,7 @@ namespace InstExtension
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("25996350-a448-4352-9a83-42472bffe6a2"); }
+            get { return new Guid("490db32e-60bf-42ed-b97c-0b1f4265ef93"); }
         }
     }
 }

@@ -6,6 +6,8 @@ using Rhino;
 using Rhino.Geometry;
 using System.Linq;
 using Kinergy.Utilities;
+using Rhino.DocObjects;
+using Rhino.Input;
 
 namespace HumanUIforKinergy.KinergyUtilities
 {
@@ -41,7 +43,7 @@ namespace HumanUIforKinergy.KinergyUtilities
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddBrepParameter("Brep", "B", "The brep model to preprocess", GH_ParamAccess.item);
+            //pManager.AddBrepParameter("Brep", "B", "The brep model to preprocess", GH_ParamAccess.item);
             //pManager.AddIntegerParameter("Inner space type", "T", "The type of inner space, 1 for box and 2 for cylinder. Currently we only support these 2 types", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Restart", "R", "Turn this true to restart", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Select Direction", "SD", "Start selecting main direction", GH_ParamAccess.item);
@@ -59,6 +61,7 @@ namespace HumanUIforKinergy.KinergyUtilities
             pManager.AddGeometryParameter("InnerCavity", "C", "The biggest inner cavity generated", GH_ParamAccess.item);
             pManager.AddCurveParameter("Skeleton", "S", "", GH_ParamAccess.item);
             pManager.AddVectorParameter("Direction", "D", "The main direction of model.", GH_ParamAccess.item);
+            pManager.AddVectorParameter("Brep", "Brep", "The selected brep.", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -73,16 +76,17 @@ namespace HumanUIforKinergy.KinergyUtilities
             PlaneGenerated = false;
             bool restart = false;
             //int type = 0;
-            if (!DA.GetData(0, ref model))
-                return;
+            //if (!DA.GetData(0, ref model))
+            //    return;
 
             //if (!DA.GetData(1, ref type))
             //    return;
             //if (type != 1 && type != 2)
             //    throw new Exception("Invalid type value! Currently we only support 1 and 2.");
-            if (!DA.GetData(1, ref restart))
+
+            if (!DA.GetData(0, ref restart))
                 return;
-            if (restart)
+            if (restart == false)
             {
                 v = Vector3d.Unset;
                 t1 = 0;
@@ -90,107 +94,125 @@ namespace HumanUIforKinergy.KinergyUtilities
                 PlaneSelected = false;
                 return;
             }
-            bool selectDirection = false,selectRegion=false;
-            if (!DA.GetData(2, ref selectDirection))
-                return;
-            if (!DA.GetData(3, ref selectRegion))
-                return;
-            
-            BoundingBox box = model.GetBoundingBox(true);
-            box.Inflate(-2.0);
-            box.Transform(Transform.Scale(box.Center, 2));
-            arrowScale = box.Diagonal.Length / 100;
-            center = box.Center;
-            if(v==Vector3d.Unset&&selectDirection)
+
+            ObjRef objSel_ref;
+            Guid selObjId = Guid.Empty;
+            var rc = RhinoGet.GetOneObject("Select a surface or polysurface", false, ObjectType.AnyObject, out objSel_ref);
+            if (rc == Rhino.Commands.Result.Success)
             {
-                v = Vector3d.XAxis;
-                Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
-                gp1.SetCommandPrompt("Press AS, ZX, or QW to rotate the partition planes around X, Y, or Z axis (CW and CCW). Press enter to confirm and move on.");
-                gp1.AcceptNothing(true);
-                Rhino.Input.GetResult r1;
-                OperatingArrow = true;
-                do
-                {
-                    if (!ArrowGenerated)
-                        GenerateArrow();
-                    r1 = gp1.Get(true);
+                // select a brep
+                selObjId = objSel_ref.ObjectId;
+                ObjRef currObj = new ObjRef(selObjId);
 
-                } while (r1 != Rhino.Input.GetResult.Nothing);
-                OperatingArrow = false;
-            }
-            if(v!=Vector3d.Unset && selectRegion)
-            {
-                Rhino.Input.Custom.GetPoint gp2 = new Rhino.Input.Custom.GetPoint();
-                gp2.SetCommandPrompt("Click and drag the partition plane to adjust their position. Press enter to confirm and move on.");
-                gp2.MouseDown += Gp_SelectionMouseDown;
-                gp2.MouseMove += Gp_SelectionMouseMove;
+                model = currObj.Brep();
 
-                //gp.DynamicDraw += Gp_SelectionDynamicDraw;
-                //gp.AcceptEnterWhenDone(true);
-                gp2.AcceptNothing(true);
-                Rhino.Input.GetResult r2;
-                do
-                {
-                    if (!PlaneGenerated)
-                        GeneratePlanes();
-                    r2 = gp2.Get(true);
+                bool selectDirection = false, selectRegion = false;
 
-                } while (r2 != Rhino.Input.GetResult.Nothing);
-                PlaneSelected = true;
-            }
-            RhinoDoc.ActiveDoc.Objects.Delete(ArrowCurve, true);
-            RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
-            RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
-            PlaneGenerated = false;
-            ArrowGenerated = false;
-            if(v!=Vector3d.Unset && PlaneSelected)
-            {
-                Plane p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
-                //p1Reverse.ExtendThroughBox(box, out _, out _);
-                Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
-                //p2Reverse.ExtendThroughBox(box, out _, out _);
-                /*Brep[] Cut_Brep1 = m.Trim(pl1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                Brep Brep1 = Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);*/
-                Brep[] Cut_Brep1rest = model.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                Brep BrepRest = null;
-                try
-                {
-                    BrepRest = Cut_Brep1rest[0];
-                }
-                catch
-                {
-                    BrepRest = model;
-                }
-                Brep[] Cut_Brep2 = BrepRest.Trim(pl2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                Brep Brep2 = null;
-                try
-                {
-                    Brep2 = Cut_Brep2[0];
-                }
-                catch
-                {
-                    Brep2 = BrepRest;
-                }
-                try
-                {
-                    Brep2 = Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                }
-                catch
-                { }
-                /*Brep[] Cut_Brep3 = Cut_Brep1rest[0].Trim(p2Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                Brep Brep3 = Cut_Brep3[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                Rhino.Input.Custom.GetPoint ctrl_first_pt_sel = new Rhino.Input.Custom.GetPoint();*/
+                if (!DA.GetData(2, ref selectDirection))
+                    return;
+                if (!DA.GetData(3, ref selectRegion))
+                    return;
 
-                BoxLike b = new BoxLike(Brep2, v);
-                double volumn = 0;
-                Brep result1 = null;
-                Cylinder result2 = Cylinder.Unset;
-                Brep b2 = null;
-                double v_box = 0.0, v_cylinder = 0.0;
-                //if (type == 1)
-                //{
+                // get the inner cavity of the selected brep
+                BoundingBox box = model.GetBoundingBox(true);
+                box.Inflate(-2.0);
+                box.Transform(Transform.Scale(box.Center, 2));
+                arrowScale = box.Diagonal.Length / 100;
+                center = box.Center;
 
-                // Calculate the volume of the inner box
+                if (v == Vector3d.Unset && selectDirection)
+                {
+                    v = Vector3d.XAxis;
+                    Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
+                    gp1.SetCommandPrompt("Press AS, ZX, or QW to rotate the partition planes around X, Y, or Z axis (CW and CCW). Press enter to continue.");
+                    gp1.AcceptNothing(true);
+                    Rhino.Input.GetResult r1;
+                    OperatingArrow = true;
+                    do
+                    {
+                        if (!ArrowGenerated)
+                            GenerateArrow();
+                        r1 = gp1.Get(true);
+
+                    } while (r1 != Rhino.Input.GetResult.Nothing);
+                    OperatingArrow = false;
+                }
+
+                if (v != Vector3d.Unset && selectRegion)
+                {
+                    Rhino.Input.Custom.GetPoint gp2 = new Rhino.Input.Custom.GetPoint();
+                    gp2.SetCommandPrompt("Click and drag the partition plane to adjust their position. Press enter to confirm and move on.");
+                    gp2.MouseDown += Gp_SelectionMouseDown;
+                    gp2.MouseMove += Gp_SelectionMouseMove;
+
+                    //gp.DynamicDraw += Gp_SelectionDynamicDraw;
+                    //gp.AcceptEnterWhenDone(true);
+                    gp2.AcceptNothing(true);
+                    Rhino.Input.GetResult r2;
+                    do
+                    {
+                        if (!PlaneGenerated)
+                            GeneratePlanes();
+                        r2 = gp2.Get(true);
+
+                    } while (r2 != Rhino.Input.GetResult.Nothing);
+                    PlaneSelected = true;
+                }
+
+                RhinoDoc.ActiveDoc.Objects.Delete(ArrowCurve, true);
+                RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
+                RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
+                PlaneGenerated = false;
+                ArrowGenerated = false;
+
+                if (v != Vector3d.Unset && PlaneSelected)
+                {
+                    Plane p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
+                    //p1Reverse.ExtendThroughBox(box, out _, out _);
+                    Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+                    //p2Reverse.ExtendThroughBox(box, out _, out _);
+                    /*Brep[] Cut_Brep1 = m.Trim(pl1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    Brep Brep1 = Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);*/
+                    Brep[] Cut_Brep1rest = model.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    Brep BrepRest = null;
+                    try
+                    {
+                        BrepRest = Cut_Brep1rest[0];
+                    }
+                    catch
+                    {
+                        BrepRest = model;
+                    }
+                    Brep[] Cut_Brep2 = BrepRest.Trim(pl2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    Brep Brep2 = null;
+                    try
+                    {
+                        Brep2 = Cut_Brep2[0];
+                    }
+                    catch
+                    {
+                        Brep2 = BrepRest;
+                    }
+                    try
+                    {
+                        Brep2 = Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    }
+                    catch
+                    { }
+                    /*Brep[] Cut_Brep3 = Cut_Brep1rest[0].Trim(p2Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    Brep Brep3 = Cut_Brep3[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    Rhino.Input.Custom.GetPoint ctrl_first_pt_sel = new Rhino.Input.Custom.GetPoint();*/
+
+                    BoxLike b = new BoxLike(Brep2, v);
+                    double volumn = 0;
+                    Brep result1 = null;
+                    Cylinder result2 = Cylinder.Unset;
+                    Brep b2 = null;
+                    double v_box = 0.0, v_cylinder = 0.0;
+                    //if (type == 1)
+                    //{
+
+                    // Calculate the volume of the inner box
                     for (double i = 0.2; i <= 0.8; i += 0.1)
                     {
                         if (b.GetInnerEmptySpaceBox(i))
@@ -206,12 +228,13 @@ namespace HumanUIforKinergy.KinergyUtilities
                             }
                         }
                     }
-                //}
-                //else if (type == 2)
-                //{
+                    //}
+                    //else if (type == 2)
+                    //{
 
-                // Calculate the volume of the inner cylinder 
-                    if (b.GetInnerEmptySpaceCylinder()){
+                    // Calculate the volume of the inner cylinder 
+                    if (b.GetInnerEmptySpaceCylinder())
+                    {
                         Cylinder c = b.InnerEmptyCylinder;
                         //result2 = c.ToBrep(true,true);
                         result2 = c;
@@ -220,18 +243,21 @@ namespace HumanUIforKinergy.KinergyUtilities
                         v_cylinder = b2.GetVolume();
                         //DA.SetData(2, b2);
                     }
-                //}
-                //else
-                //    throw new Exception("Invalid type");
+                    //}
+                    //else
+                    //    throw new Exception("Invalid type");
 
-                if (v_box >= v_cylinder)
-                    DA.SetData(1, result1);
-                else
-                    DA.SetData(1, b2);
+                    if (v_box >= v_cylinder)
+                        DA.SetData(1, result1);
+                    else
+                        DA.SetData(1, b2);
 
-                DA.SetData(0, Brep2);
-                DA.SetData(2, skeleton);
-                DA.SetData(3, v);
+                    DA.SetData(0, Brep2);
+                    DA.SetData(2, skeleton);
+                    DA.SetData(3, v);
+                    DA.SetData(4, model);
+                }
+
             }
             
         }

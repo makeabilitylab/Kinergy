@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using Kinergy.KineticUnit;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
-
-namespace InstExtension
+using Kinergy.Utilities;
+namespace InstTranslation
 {
-    public class _01ModelPreprocessOfIE : GH_Component
+    public class _02ConstructSpringOfIE : GH_Component
     {
         /// <summary>
-        /// Initializes a new instance of the _01ModelPreprocessOfIE class.
+        /// Initializes a new instance of the _02ConstructSpringOfIE class.
         /// </summary>
-        public _01ModelPreprocessOfIE()
-          : base("_01ModelPreprocessOfIE", "PreprocessIE",
-              "Description",
+        public _02ConstructSpringOfIE()
+          : base("_02ConstructSpringOfIE", "ConstructSpring",
+              "Construct spring for IE motion",
               "Kinergy", "InstantExtension")
         {
         }
@@ -23,8 +23,8 @@ namespace InstExtension
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddScriptVariableParameter("Kinetic Unit", "KU", "Kinetic Unit instance", GH_ParamAccess.item);
-            
+            pManager.AddScriptVariableParameter("KineticUnit", "KU", "Kinetic Unit instance of IE motion", GH_ParamAccess.item);
+            pManager.AddPointParameter("SpringPosition", "P", "Position of spring", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -32,9 +32,10 @@ namespace InstExtension
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Kinetic Unit", "KU", "Motion instance", GH_ParamAccess.item);
-            pManager.AddPointParameter("SpringPositionCandidates", "P", "Candidate points of available point position", GH_ParamAccess.list);
-            pManager.AddCurveParameter("ModelSkeleton", "S", "", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Kinetic Unit", "KU", "Kinetic Unit instance of IE", GH_ParamAccess.item);
+            pManager.AddGenericParameter("LockDirectionCandidates", "DC", "Available directions of lock as arrows. Discard this if you don't need lock", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Spring", "S", "spring entity", GH_ParamAccess.item);
+            pManager.AddCurveParameter("SpringSkeleton", "SS", "the base curve of spring", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -43,23 +44,23 @@ namespace InstExtension
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            InstantExtension motion = null;
+            InstantTranslation motion = null;
+            Point3d pos = Point3d.Unset;
             if (!DA.GetData(0, ref motion)) { return; }
+            if (!DA.GetData(1, ref pos)) { return; }
             if(motion==null)
             { return; }
-            if(motion.Curved)
-            {
-                motion.CalculateCurvedSkeleton();
-            }
-            else
-            {
-                motion.CalculateStraightSkeleton();
-            }
-
-            List<Point3d> pts = motion.GetSpringPositionCandidates();
+            if(pos==Point3d.Unset)
+            { return; }
+            motion.SetSpringPosition(pos);
+            motion.CutModelForSpring();
+            motion.ConstructSpring();
+            List<Arrow> directionCandidates;
+            directionCandidates = motion.GetLockDirectionCandidates();
             DA.SetData(0, motion);
-            DA.SetDataList(1, pts);
-            DA.SetData(2,motion.Skeleton);
+            DA.SetDataList(1, directionCandidates);
+            DA.SetData(2, motion.Spring);
+            DA.SetData(3, motion.Spring.BaseCurve);
         }
 
         /// <summary>
@@ -80,7 +81,7 @@ namespace InstExtension
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("490db32e-60bf-42ed-b97c-0b1f4265ef93"); }
+            get { return new Guid("a2ce1f14-7b44-4e94-ac27-8f5f97ef23da"); }
         }
     }
 }

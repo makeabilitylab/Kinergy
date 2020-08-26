@@ -4,16 +4,16 @@ using Kinergy.KineticUnit;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using Kinergy.Utilities;
-namespace InstExtension
+namespace InstTranslation
 {
-    public class _02ConstructSpringOfIE : GH_Component
+    public class _03GenerateLockPositionCandidateOfIE : GH_Component
     {
         /// <summary>
-        /// Initializes a new instance of the _02ConstructSpringOfIE class.
+        /// Initializes a new instance of the _03GenerateLockPositionCandidateOfIE class.
         /// </summary>
-        public _02ConstructSpringOfIE()
-          : base("_02ConstructSpringOfIE", "ConstructSpring",
-              "Construct spring for IE motion",
+        public _03GenerateLockPositionCandidateOfIE()
+          : base("_03GenerateLockPositionCandidateOfIE", "Nickname",
+              "Description",
               "Kinergy", "InstantExtension")
         {
         }
@@ -23,8 +23,8 @@ namespace InstExtension
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddScriptVariableParameter("KineticUnit", "KU", "Kinetic Unit instance of IE motion", GH_ParamAccess.item);
-            pManager.AddPointParameter("SpringPosition", "P", "Position of spring", GH_ParamAccess.item);
+            pManager.AddScriptVariableParameter("Kinetic Unit", "KU", "Kinetic Unit instance of IE motion", GH_ParamAccess.item);
+            pManager.AddScriptVariableParameter("LockDirection", "D", "Arrow of selected lock direction", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -32,10 +32,8 @@ namespace InstExtension
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Kinetic Unit", "KU", "Kinetic Unit instance of IE", GH_ParamAccess.item);
-            pManager.AddGenericParameter("LockDirectionCandidates", "DC", "Available directions of lock as arrows. Discard this if you don't need lock", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Spring", "S", "spring entity", GH_ParamAccess.item);
-            pManager.AddCurveParameter("SpringSkeleton", "SS", "the base curve of spring", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Kinetic Unit", "KU", "Motion instance of IE", GH_ParamAccess.item);
+            pManager.AddPointParameter("LockPositionCandidates", "L", "Available point positions of lock", GH_ParamAccess.list);
         }
 
         /// <summary>
@@ -44,23 +42,18 @@ namespace InstExtension
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            InstantExtension motion = null;
-            Point3d pos = Point3d.Unset;
+            InstantTranslation motion = null;
+            Arrow direction = null;
+            List<Point3d> pts=new List<Point3d>();
             if (!DA.GetData(0, ref motion)) { return; }
-            if (!DA.GetData(1, ref pos)) { return; }
-            if(motion==null)
+            if (motion == null)
             { return; }
-            if(pos==Point3d.Unset)
-            { return; }
-            motion.SetSpringPosition(pos);
-            motion.CutModelForSpring();
-            motion.ConstructSpring();
-            List<Arrow> directionCandidates;
-            directionCandidates = motion.GetLockDirectionCandidates();
+            if (!DA.GetData(1, ref direction)) { return; }
+            motion.SetLockDirection(direction);
+            pts=motion.GetLockPositionCandidates();
             DA.SetData(0, motion);
-            DA.SetDataList(1, directionCandidates);
-            DA.SetData(2, motion.Spring);
-            DA.SetData(3, motion.Spring.BaseCurve);
+            DA.SetDataList(1,pts);
+            
         }
 
         /// <summary>
@@ -81,7 +74,7 @@ namespace InstExtension
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("a2ce1f14-7b44-4e94-ac27-8f5f97ef23da"); }
+            get { return new Guid("25996350-a448-4352-9a83-42472bffe6a2"); }
         }
     }
 }
