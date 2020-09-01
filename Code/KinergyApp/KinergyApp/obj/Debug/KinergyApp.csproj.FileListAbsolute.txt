@@ -42,13 +42,16 @@ C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bi
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\Kinergy.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\MetroFramework.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\MetroFramework.Fonts.dll
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\Kinergy.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy\Styles.Default.baml
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy_MarkupCompile.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.g.resources
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.ProcessingWin.resources
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.Properties.Resources.resources
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.GenerateResource.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CoreCompileInputs.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
-C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\Kinergy.pdb

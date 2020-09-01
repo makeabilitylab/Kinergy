@@ -50,7 +50,7 @@ namespace InstTranslation
             if (!DA.GetData(1, ref position)) { return; }
             motion.SetLockPosition(position);
             motion.CutModelForLock();
-            motion.ConstructLock();
+            motion.ConstructLock(1);
             DA.SetData(0,(KineticUnit) motion);
             DA.SetDataList(1, motion.GetModel());
         }

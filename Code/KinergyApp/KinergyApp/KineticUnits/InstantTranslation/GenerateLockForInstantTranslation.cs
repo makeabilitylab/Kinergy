@@ -85,18 +85,10 @@ namespace InstTranslation
             #endregion
 
             #region Construct the lock based on the set position and type
-            if(lockPos == 1)
-            {
-                // Construct the lock inside the body
-                motion.SetLockPosition(p);  // is this step redundant?
-                motion.CutModelForLock();
-                motion.ConstructLock();
-            }
-            else
-            {
-                // Construct the lock outside the body
-
-            }
+            motion.SetLockPosition(p);  // is this step redundant?
+            motion.CutModelForLock();
+            motion.ConstructLock(lockPos);  // lockPos=1: inside; lockPos=2: outside
+            
             #endregion
 
             DA.SetData(0, (KineticUnit)motion);

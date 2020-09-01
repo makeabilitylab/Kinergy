@@ -85,7 +85,7 @@ namespace Kinergy.KineticUnit
             RhinoApp.WriteLine(path3);
             RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory());
 
-            if (CalculateStraightSkeleton() == false)
+            if (CalculateStraightSkeleton(0,1,model) == false)
             { throw new Exception("Unable to process this model,please provide valid model and vector"); }
 
             if (SetSpringPosition() == false)
@@ -111,7 +111,7 @@ namespace Kinergy.KineticUnit
                 if (CutModelForLock() == false)
                 { throw new Exception("Failed to select cut holes for lock."); }
 
-                if (ConstructLock() == false)
+                if (ConstructLock(1) == false)
                 { throw new Exception("Failed to build lock structure."); }
             }
             return true;
@@ -144,7 +144,7 @@ namespace Kinergy.KineticUnit
             double T = 0;
             skeleton.ClosestPoint(springPosition, out T,0.5);
             springT = skeleton.Domain.NormalizedParameterAt(T);
-            springLength= GetSectionRadius(springT) / 7.5 * 25;
+            // springLength= GetSectionRadius(springT) / 7.5 * 25;
             springStart = springT - springLength / 2 / skeleton.GetLength();
             springEnd = springT + springLength / 2 / skeleton.GetLength();
 
@@ -346,23 +346,29 @@ namespace Kinergy.KineticUnit
             }
             
         }
-        public bool CalculateStraightSkeleton()
+        public bool CalculateStraightSkeleton(double t1, double t2, Brep selectedModel)
         {
             Transform xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);//Deprecated. Too ambiguous and indirect.
             Transform xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
             //here skeleton is calculated using bbox. Spring parameters are now determined by shape and ratio of bbox. energy and distance havn't been adopted.
             model.Transform(xrotate);
+            selectedModel.Transform(xrotate);
             BoundingBox box = model.GetBoundingBox(true);
+            BoundingBox box_sel = selectedModel.GetBoundingBox(true);
             model.Transform(xrotateBack);
+            selectedModel.Transform(xrotateBack);
             Point3d p1 = new Point3d(box.Min.X, (box.Min.Y + box.Max.Y) / 2, (box.Min.Z + box.Max.Z) / 2), p2 = new Point3d(box.Max.X, (box.Min.Y + box.Max.Y) / 2, (box.Min.Z + box.Max.Z) / 2);
             Line l = new Line(p1, p2);
-            springRadius = Math.Min(box.Max.Y - box.Min.Y, box.Max.Z - box.Min.Z) * 0.9;
-            springLength = springRadius / 7.5 * 25;
-            if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
-            {
-                springLength = l.Length * 0.5;
-                springRadius = springLength * 7.5 / 25 * 0.9;
-            }
+
+            #region old spring length and diameter
+            //springLength = springRadius / 7.5 * 25;
+            //if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
+            //{
+            //    springLength = l.Length * 0.5;
+            //    springRadius = springLength * 7.5 / 25 * 0.9;
+            //}
+            #endregion
+
             /*
             if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
             {
@@ -374,11 +380,20 @@ namespace Kinergy.KineticUnit
                 springLength = l.Length * 0.8;
                 springRadius = springLength * 7.5 / 25 * 0.9;
             }*/
-            wireRadius = springRadius / 7.5 * 1;
-            skeletonAvailableRange = new Interval((springLength / 2 + 5) / l.Length, 1 - (springLength / 2 + 5) / l.Length);
+            
 
             skeleton = l.ToNurbsCurve();
             skeleton.Transform(xrotateBack);
+
+            Point3d stPt = skeleton.PointAtNormalizedLength(t1);
+            Point3d endPt = skeleton.PointAt(t2);
+            springLength = stPt.DistanceTo(endPt);
+
+            springRadius = Math.Min(box_sel.Max.Y - box_sel.Min.Y, box_sel.Max.Z - box_sel.Min.Z) * 0.9;
+            wireRadius = springRadius / 7.5 * 1;
+            skeletonAvailableRange = new Interval((springLength / 2 + 5) / l.Length, 1 - (springLength / 2 + 5) / l.Length);
+
+
             string body = string.Format("The skeleton is from {0},{1},{2} to {3},{4},{5}", skeleton.PointAtStart.X, skeleton.PointAtStart.Y, skeleton.PointAtStart.Z, skeleton.PointAtEnd.X, skeleton.PointAtEnd.Y, skeleton.PointAtEnd.Z);
             RhinoApp.WriteLine(body);
             body = string.Format("The skeletonAvailableRange is from {0} to {1},length is {2}", skeletonAvailableRange.Min, skeletonAvailableRange.Max, skeletonAvailableRange.Length);
@@ -426,11 +441,25 @@ namespace Kinergy.KineticUnit
             Plane plane1 = new Rhino.Geometry.Plane(skeleton.PointAtNormalizedLength(springStart), tan1);
             plane1.ExtendThroughBox(box, out Interval s1, out Interval t1);
             plane2.ExtendThroughBox(box, out Interval s2, out Interval t2);
-            Brep[] Cut_Brep1 = model.Trim(plane1, 0.0001);
-            Brep[] Cut_Brep2 = model.Trim(plane2, 0.0001);
 
-            Shape mc1 = new Shape(Cut_Brep1[0].CapPlanarHoles(0.00001), false, "model");
-            Shape mc2 = new Shape(Cut_Brep2[0].CapPlanarHoles(0.00001), false, "model");
+            //int redIndex = myDoc.Materials.Add();
+            //Rhino.DocObjects.Material redMat = myDoc.Materials[redIndex];
+            //redMat.DiffuseColor = System.Drawing.Color.Red;
+            //redMat.SpecularColor = System.Drawing.Color.Red;
+            //redMat.CommitChanges();
+            //ObjectAttributes redAttribute;
+            //redAttribute = new ObjectAttributes();
+            //redAttribute.LayerIndex = 1;
+            //redAttribute.MaterialIndex = redIndex;
+            //redAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            //myDoc.Objects.AddBrep(model, redAttribute);
+            //myDoc.Views.Redraw();
+
+            Brep[] Cut_Brep1 = model.Trim(plane1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            Brep[] Cut_Brep2 = model.Trim(plane2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+
+            Shape mc1 = new Shape(Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance), false, "model");
+            Shape mc2 = new Shape(Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance), false, "model");
             modelCut.Add(mc1);
             modelCut.Add(mc2);
             entityList.Add(mc1);
@@ -593,7 +622,7 @@ namespace Kinergy.KineticUnit
             }
             return true;
         }
-        public bool ConstructLock(int type=1)
+        public bool ConstructLock(int type)
         {
             if(type==1)
             {

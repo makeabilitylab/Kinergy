@@ -28,6 +28,7 @@ namespace HumanUIforKinergy.KinergyUtilities
         Guid selected = Guid.Empty;
         Curve skeleton = null;
         Vector3d skeletonVec = Vector3d.Unset;
+        ProcessingWin processingwin = new ProcessingWin();
         /// <summary>
         /// Initializes a new instance of the ModelPreprocessNew3 class.
         /// </summary>
@@ -56,12 +57,13 @@ namespace HumanUIforKinergy.KinergyUtilities
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddBrepParameter("ModelRegionOfInterest", "M", "", GH_ParamAccess.item);
-            //pManager.AddBrepParameter("InnerBox", "B", "The biggest inner box generated", GH_ParamAccess.item);
-            //pManager.AddGeometryParameter("InnerCylinder", "C", "The biggest inner cylinder generated", GH_ParamAccess.item);
             pManager.AddGeometryParameter("InnerCavity", "C", "The biggest inner cavity generated", GH_ParamAccess.item);
             pManager.AddCurveParameter("Skeleton", "S", "", GH_ParamAccess.item);
             pManager.AddVectorParameter("Direction", "D", "The main direction of model.", GH_ParamAccess.item);
-            pManager.AddVectorParameter("Brep", "Brep", "The selected brep.", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("Trigger", "S", "trigger instant translation", GH_ParamAccess.item);
+            pManager.AddNumberParameter("SkeletonStartPos", "SPos", "the start of the selected segment", GH_ParamAccess.item);
+            pManager.AddNumberParameter("SkeletonEndPos", "EPos", "the end of the selected segment", GH_ParamAccess.item);
+            pManager.AddBrepParameter("OriginalBrep", "OriB", "original brep", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -70,6 +72,9 @@ namespace HumanUIforKinergy.KinergyUtilities
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            bool IT_trigger = false;
+            DA.SetData(4, IT_trigger);
+
             RhinoApp.KeyboardEvent += GetKey;
             t1 = 0;
             t2 = 1;
@@ -105,12 +110,13 @@ namespace HumanUIforKinergy.KinergyUtilities
                 ObjRef currObj = new ObjRef(selObjId);
 
                 model = currObj.Brep();
-
+                DA.SetData(7, model);
+                
                 bool selectDirection = false, selectRegion = false;
 
-                if (!DA.GetData(2, ref selectDirection))
+                if (!DA.GetData(1, ref selectDirection))
                     return;
-                if (!DA.GetData(3, ref selectRegion))
+                if (!DA.GetData(2, ref selectRegion))
                     return;
 
                 // get the inner cavity of the selected brep
@@ -127,13 +133,14 @@ namespace HumanUIforKinergy.KinergyUtilities
                     gp1.SetCommandPrompt("Press AS, ZX, or QW to rotate the partition planes around X, Y, or Z axis (CW and CCW). Press enter to continue.");
                     gp1.AcceptNothing(true);
                     Rhino.Input.GetResult r1;
+
                     OperatingArrow = true;
                     do
                     {
                         if (!ArrowGenerated)
                             GenerateArrow();
                         r1 = gp1.Get(true);
-
+                        
                     } while (r1 != Rhino.Input.GetResult.Nothing);
                     OperatingArrow = false;
                 }
@@ -141,7 +148,7 @@ namespace HumanUIforKinergy.KinergyUtilities
                 if (v != Vector3d.Unset && selectRegion)
                 {
                     Rhino.Input.Custom.GetPoint gp2 = new Rhino.Input.Custom.GetPoint();
-                    gp2.SetCommandPrompt("Click and drag the partition plane to adjust their position. Press enter to confirm and move on.");
+                    gp2.SetCommandPrompt("Click and drag the partition plane to adjust their position. Press enter to confirm and move on");
                     gp2.MouseDown += Gp_SelectionMouseDown;
                     gp2.MouseMove += Gp_SelectionMouseMove;
 
@@ -165,11 +172,16 @@ namespace HumanUIforKinergy.KinergyUtilities
                 PlaneGenerated = false;
                 ArrowGenerated = false;
 
+                // Call out the waiting window
+                processingwin.Show();
+
                 if (v != Vector3d.Unset && PlaneSelected)
                 {
                     Plane p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
+                    DA.SetData(5, t1);
                     //p1Reverse.ExtendThroughBox(box, out _, out _);
                     Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+                    DA.SetData(6, t2);
                     //p2Reverse.ExtendThroughBox(box, out _, out _);
                     /*Brep[] Cut_Brep1 = m.Trim(pl1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
                     Brep Brep1 = Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);*/
@@ -247,6 +259,9 @@ namespace HumanUIforKinergy.KinergyUtilities
                     //else
                     //    throw new Exception("Invalid type");
 
+                    // Hide the processing window
+                    processingwin.Hide();
+
                     if (v_box >= v_cylinder)
                         DA.SetData(1, result1);
                     else
@@ -255,7 +270,8 @@ namespace HumanUIforKinergy.KinergyUtilities
                     DA.SetData(0, Brep2);
                     DA.SetData(2, skeleton);
                     DA.SetData(3, v);
-                    DA.SetData(4, model);
+                    IT_trigger = true;
+                    DA.SetData(4, IT_trigger);
                 }
 
             }

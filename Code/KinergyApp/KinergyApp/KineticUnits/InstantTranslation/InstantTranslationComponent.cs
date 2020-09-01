@@ -40,7 +40,9 @@ namespace InstTranslation
             pManager.AddBooleanParameter("CurvedModel", "CM", "If the model should be calculated as curved shape", GH_ParamAccess.item);
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
             pManager.AddNumberParameter("Distance", "D", "Proportion of spring that's able to be compressed", GH_ParamAccess.item);
-            
+            pManager.AddNumberParameter("SkeletonStartPos", "SPos", "the start of the selected segment", GH_ParamAccess.item);
+            pManager.AddNumberParameter("SkeletonEndPos", "EPos", "the end of the selected segment", GH_ParamAccess.item);
+            pManager.AddBrepParameter("OriginalBrep", "OriB", "original brep", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -59,8 +61,10 @@ namespace InstTranslation
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            double t1 = 0, t2 = 1;
             bool start = false;
             Brep model = null;
+            Brep oriModel = null;
             Vector3d direction = Vector3d.Unset;
             double energy=0;
             double distance=0;
@@ -72,26 +76,56 @@ namespace InstTranslation
             if (!DA.GetData(4, ref energy)) { return; }
             if (!DA.GetData(5, ref distance)) { return; }
             if (!DA.GetData(1, ref model)) { return; }
+            if (!DA.GetData(6, ref t1)) { return; }
+            if (!DA.GetData(7, ref t2)) { return; }
+            if (!DA.GetData(8, ref oriModel)) { return; }
+
 
             // Step 1: Create an instance of InstantTranslation class
-            InstantTranslation motion = new InstantTranslation(model,curved,direction,energy, distance);
+            InstantTranslation motion = new InstantTranslation(oriModel, curved,direction,energy, distance);
 
             #region Step 2: Find the position of the helical spring
-            List<Point3d> pts = motion.GetSpringPositionCandidates();
-            double sp_X = 0, sp_Y = 0, sp_Z = 0;
-            foreach(Point3d pt in pts)
+            if (curved)
             {
-                sp_X += sp_X + pt.X;
-                sp_Y += sp_Y + pt.Y;
-                sp_Z += sp_Z + pt.Z;
+                motion.CalculateCurvedSkeleton();
+            }
+            else
+            {
+                motion.CalculateStraightSkeleton(t1, t2, model);
             }
 
-            sp_X = sp_X / pts.Count;
-            sp_Y = sp_Y / pts.Count;
-            sp_Z = sp_Z / pts.Count;
+            // List<Point3d> pts = motion.GetSpringPositionCandidates();
+            //double sp_X = 0, sp_Y = 0, sp_Z = 0;
+            //foreach(Point3d pt in pts)
+            //{
+            //    sp_X += sp_X + pt.X;
+            //    sp_Y += sp_Y + pt.Y;
+            //    sp_Z += sp_Z + pt.Z;
+            //}
 
-            Point3d springPos = new Point3d(sp_X, sp_Y, sp_Z);
+            //sp_X = sp_X / pts.Count;
+            //sp_Y = sp_Y / pts.Count;
+            //sp_Z = sp_Z / pts.Count;
+
+            //Point3d midPt = new Point3d(sp_X, sp_Y, sp_Z);
+            //double dis = 1000000000000;
+            //foreach (Point3d pt in pts)
+            //{
+            //    if (pt.DistanceTo(midPt) <= dis)
+            //    {
+            //        dis = pt.DistanceTo(midPt);
+            //        sp_X = pt.X;
+            //        sp_Y = pt.Y;
+            //        sp_Z = pt.Z;
+            //    }
+
+            //}
+
+            Point3d springPos = motion.Skeleton.PointAtNormalizedLength((t1 + t2) / 2);
             #endregion
+            //Rhino.RhinoDoc myDoc = Rhino.RhinoDoc.ActiveDoc;
+            //myDoc.Objects.AddCurve(motion.Skeleton);
+            //myDoc.Views.Redraw();
 
             #region Step 3: Construct the spring based on the input energy and distance
             motion.SetSpringPosition(springPos);

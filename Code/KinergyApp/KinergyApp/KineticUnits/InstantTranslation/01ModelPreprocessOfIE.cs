@@ -53,7 +53,7 @@ namespace InstTranslation
             }
             else
             {
-                motion.CalculateStraightSkeleton();
+                //motion.CalculateStraightSkeleton();
             }
 
             List<Point3d> pts = motion.GetSpringPositionCandidates();
