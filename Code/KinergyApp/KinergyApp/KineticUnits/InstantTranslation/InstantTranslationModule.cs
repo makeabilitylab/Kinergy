@@ -181,6 +181,14 @@ namespace InstTranslation
                 // select the target model and the region to be converted
                 RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent;
 
+                if(selObjId != Guid.Empty)
+                {
+                    RhinoDoc.ActiveDoc.Objects.Show(selObjId, true);
+                    RhinoDoc.ActiveDoc.Views.Redraw();
+                    toBeBaked.Clear();
+                    selObjId = Guid.Empty;
+                }
+
                 ObjRef objSel_ref;
                 var rc = RhinoGet.GetOneObject("Select a surface or polysurface", false, ObjectType.AnyObject, out objSel_ref);
                 if (rc == Rhino.Commands.Result.Success)
@@ -573,8 +581,7 @@ namespace InstTranslation
             }
             else
             {
-                // set the lock by default--inside the body
-                lockPos = 1;
+               
             }
         }
 
