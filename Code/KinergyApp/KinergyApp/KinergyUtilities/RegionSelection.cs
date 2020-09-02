@@ -259,9 +259,6 @@ namespace HumanUIforKinergy.KinergyUtilities
                     //else
                     //    throw new Exception("Invalid type");
 
-                    // Hide the processing window
-                    processingwin.Hide();
-
                     if (v_box >= v_cylinder)
                         DA.SetData(1, result1);
                     else
@@ -273,6 +270,8 @@ namespace HumanUIforKinergy.KinergyUtilities
                     IT_trigger = true;
                     DA.SetData(4, IT_trigger);
                 }
+                // Hide the processing window
+                processingwin.Hide();
 
             }
             

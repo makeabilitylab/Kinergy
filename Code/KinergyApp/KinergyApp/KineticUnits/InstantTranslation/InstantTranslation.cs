@@ -59,6 +59,7 @@ namespace Kinergy.KineticUnit
         public bool Curved { get => curved; set => curved = value; }
         public Curve Skeleton { get => skeleton; protected set => skeleton = value; }
         public Brep Model { get => model; set => model = value; }
+        public List<Shape> ModelCut { get => modelCut; set => modelCut = value; }
 
         /// <summary> Default constructor without basic input parameter </summary>
         /// <returns> Returns empty instance</returns>
@@ -389,7 +390,8 @@ namespace Kinergy.KineticUnit
             Point3d endPt = skeleton.PointAt(t2);
             springLength = stPt.DistanceTo(endPt);
 
-            springRadius = Math.Min(box_sel.Max.Y - box_sel.Min.Y, box_sel.Max.Z - box_sel.Min.Z) * 0.9;
+            //springRadius = Math.Min(box_sel.Max.Y - box_sel.Min.Y, box_sel.Max.Z - box_sel.Min.Z) * 0.9;
+            springRadius = Math.Min(model.ClosestPoint(stPt).DistanceTo(stPt), model.ClosestPoint(endPt).DistanceTo(endPt)) * 2;
             wireRadius = springRadius / 7.5 * 1;
             skeletonAvailableRange = new Interval((springLength / 2 + 5) / l.Length, 1 - (springLength / 2 + 5) / l.Length);
 
@@ -479,6 +481,7 @@ namespace Kinergy.KineticUnit
                 Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
                 Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
                 spring = new Helix(startPoint, endPoint, springRadius, wireRadius, roundNum, distance,energy);
+                //spring = new Helix(skeleton, springStart, springEnd, springRadius, wireRadius, roundNum, distance, energy);
             }
             EntityList.Add(spring);
             if (spring.Model != null)

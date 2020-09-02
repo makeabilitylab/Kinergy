@@ -270,6 +270,7 @@
     <Compile Include="KineticUnits\InstantTranslation\GenerateLockForInstantTranslation.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslation.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationComponent.cs" />
+    <Compile Include="KineticUnits\InstantTranslation\InstantTranslationModule.cs" />
     <Compile Include="KineticUnits\InstantTranslation\Utilities.cs" />
     <Compile Include="KineticUnits\InstantTwisting\01ConstructKineticComponents_IT.cs" />
     <Compile Include="KineticUnits\InstantTwisting\02SettingLock_IT.cs" />

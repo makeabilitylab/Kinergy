@@ -11,6 +11,9 @@ namespace KinergyUtilities
 {
     public class EndEffectorSelectionForHelical : GH_Component
     {
+        bool toStart;
+        bool valueObtained;
+        List<Arrow> arrows;
         /// <summary>
         /// Initializes a new instance of the EndEffectorSelectionForHelical class.
         /// </summary>
@@ -19,6 +22,9 @@ namespace KinergyUtilities
               "Select the end-effector for a helical spring",
               "Kinergy", "Utilities")
         {
+            toStart = false;
+            valueObtained = false;
+            arrows = new List<Arrow>();
         }
 
         /// <summary>
@@ -27,7 +33,8 @@ namespace KinergyUtilities
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddBooleanParameter("Select", "S", "Whether to select the end-effector", GH_ParamAccess.item);
-            pManager.AddScriptVariableParameter("DirectionCandidates", "D", "Candidate directions as arrows", GH_ParamAccess.list);
+            pManager.AddGenericParameter("DirectionCandidates", "D", "Candidate directions as arrows", GH_ParamAccess.list);
+            //pManager.AddBooleanParameter("Enabled", "EN", "Whether or not values passed to this battery", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -44,16 +51,23 @@ namespace KinergyUtilities
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            List<Arrow> arrows = new List<Arrow>();
+            
             bool start = false;
             Arrow p = null;
+
             if (!DA.GetDataList(1, arrows)) { return; }
-            if (arrows.Count == 0)
-            { return; }
-            DA.GetData(0, ref start);
-            if (start == false)
-            { return; }
-            else
+
+            //if (!DA.GetData(2, ref valueObtained)) { return; }
+            //if (valueObtained == false) { return; }
+
+            if (!DA.GetData(0, ref start)) { return; }
+            if (start == true) { toStart = true; }
+            else { toStart = false; }
+
+            //if (start == true && valueObtained == true){ toStart = true; }
+            //else{ toStart = false; }
+            
+            if (toStart)
             {
                 List<Curve> arrowCurves = new List<Curve>();
                 foreach (Arrow a in arrows)
@@ -79,7 +93,7 @@ namespace KinergyUtilities
                     Point3d arrow1_cen = arrowCurves[0].GetBoundingBox(true).Center;
                     Point3d arrow2_cen = arrowCurves[1].GetBoundingBox(true).Center;
 
-                    if(ee_cen.DistanceTo(arrow1_cen) <= ee_cen.DistanceTo(arrow2_cen))
+                    if (ee_cen.DistanceTo(arrow1_cen) <= ee_cen.DistanceTo(arrow2_cen))
                     {
                         // select arrow2
                         p = arrows[1];

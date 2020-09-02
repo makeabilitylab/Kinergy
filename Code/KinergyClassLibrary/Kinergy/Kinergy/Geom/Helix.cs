@@ -29,7 +29,7 @@ namespace Kinergy
             private double springRadius = 0;
             private double wireRadius = 0;
             private double length=0;
-            private int roundNum=0;
+            private double roundNum=0;
             private double deltaSpringRadius = 0;
             private double deltaWireRadius = 0;
             private double strength = 1;
@@ -44,7 +44,7 @@ namespace Kinergy
             public double SpringRadius { get => springRadius; private set => springRadius = value; }
             public double WireRadius { get => wireRadius; private set => wireRadius = value; }
             public double Length { get => length; private set => length = value; }
-            public int RoundNum { get => roundNum; private set => roundNum = value; }
+            public double RoundNum { get => roundNum; private set => roundNum = value; }
             public Vector3d Direction { get => direction;private set => direction = value; }
             public Curve Skeleton { get => skeleton;private set => skeleton = value; }
 
@@ -65,7 +65,7 @@ namespace Kinergy
             {
                 length = len;
                 if(spring_Radius!=0)
-                {springRadius = spring_Radius; }
+                {springRadius = spring_Radius/2; }
                 else { springRadius = 7.5 * length / 25; }
                 if(wire_Radius!=0)
                 { wireRadius = wire_Radius;}
@@ -91,7 +91,7 @@ namespace Kinergy
                 this.endPoint = endPoint;
                 length = new Line(this.startPoint, this.endPoint).Length;
                 if (spring_Radius != 0)
-                { springRadius = spring_Radius; }
+                { springRadius = spring_Radius/2; }
                 else { springRadius = 7.5 * length / 25; }
                 if (wire_Radius != 0)
                 { wireRadius = wire_Radius; }
@@ -112,7 +112,7 @@ namespace Kinergy
                 endT = end;
                 length = skeleton.GetLength() * Math.Abs(start - end);
                 if (spring_Radius != 0)
-                { springRadius = spring_Radius; }
+                { springRadius = spring_Radius/2; }
                 else { springRadius = 7.5 * length / 25; }
                 if (wire_Radius != 0)
                 { wireRadius = wire_Radius; }
@@ -129,9 +129,9 @@ namespace Kinergy
             private void FixParameter()
             {
                 int roundNumMin = 3;
-                double wireRadiusMin = Math.Max(springRadius / 12, 2.8);
-                double wireRadiusMax = Math.Min(springRadius / 6, Length / roundNumMin - 0.6);
-                double wireRadiusStep = 0.2;
+                double wireRadiusMin = 2.8;
+                double wireRadiusMax = Math.Min(springRadius / 3, Length / roundNumMin - 0.6);
+                double wireRadiusStep = 0.6;
 
                 if (wireRadiusMin >= wireRadiusMax)
                 {
@@ -161,15 +161,16 @@ namespace Kinergy
                 }
                 else
                 {
-                    compressionCurr = compressionMin + (compressionMax - compressionMin) * maxPressDistance;
-                    RoundNum = (int)((1 - compressionCurr) * Length / WireRadius);
-                    int RoundNum_pre = 0;
+                    // compressionCurr = compressionMin + (compressionMax - compressionMin) * maxPressDistance; // old version by Yawen
+                    compressionCurr = maxPressDistance; // the current compression is imported from the value of the slide bar on the interface
+                    RoundNum = (1 - compressionCurr) * Length / WireRadius;
+                    double RoundNum_pre = 0;
                     while (RoundNum - RoundNum_pre != 0)
                     {
                         RoundNum_pre = RoundNum;
-                        wireRadiusMax = Math.Min(springRadius / 6, Length / RoundNum - 0.6);
-                        WireRadius = -((int)(maxPressDistance * (wireRadiusMax - wireRadiusMin) / wireRadiusStep)) * wireRadiusStep + wireRadiusMax;
-                        RoundNum = (int)((1 - compressionCurr) * Length / WireRadius);
+                        wireRadiusMax = Math.Min(springRadius / 3, Length / RoundNum - 0.6);
+                        WireRadius = -(maxPressDistance * (wireRadiusMax - wireRadiusMin) / wireRadiusStep) * wireRadiusStep + wireRadiusMax;
+                        RoundNum = (1 - compressionCurr) * Length / WireRadius;
                         if (RoundNum < roundNumMin)
                         {
                             RoundNum = roundNumMin;
@@ -181,27 +182,27 @@ namespace Kinergy
 
                 //change round number and wire radius based on strength with the same compression
                 double constCompression = RoundNum * WireRadius;
-                wireRadiusMax = Math.Min(springRadius / 6, Length / RoundNum - 0.6);
+                wireRadiusMax = Math.Min(springRadius, Length / RoundNum - 0.6);
                 double strengthMax = Math.Pow(wireRadiusMax, 5);
                 double strengthMin = Math.Pow(wireRadiusMin, 5);
                 double strengthCurr = strengthMin + (strengthMax - strengthMin) * strength;
                 double WireRadius0 = WireRadius;
-                int RoundNum0 = RoundNum;
+                double RoundNum0 = RoundNum;
                 WireRadius = Math.Log(strengthCurr, 5);
-                RoundNum = (int)(constCompression / WireRadius);
-                wireRadiusMax = Math.Min(springRadius / 6, Length / RoundNum - 0.6);
-                if ((RoundNum < roundNumMin) || (WireRadius > wireRadiusMax))
-                {
-                    WireRadius = WireRadius0;
-                    RoundNum = RoundNum0;
-                }
-                WireRadius = WireRadius /3;//TODO adjust this by applying Yawen's debugging.
+                RoundNum = constCompression / WireRadius;
+                //wireRadiusMax = Math.Min(springRadius / 3, Length / RoundNum - 0.6);
+                //if ((RoundNum < roundNumMin) || (WireRadius > wireRadiusMax))
+                //{
+                //    WireRadius = WireRadius0;
+                //    RoundNum = RoundNum0;
+                //}
+                // WireRadius = WireRadius /3;//TODO adjust this by applying Yawen's debugging.
             }
             private void GenerateSpring()
             {
                 FixParameter();
                 
-                int points_per_round = 10, point_num = roundNum * points_per_round;
+                int points_per_round = 10, point_num = (int)(roundNum * points_per_round);
                 var Pi = Math.PI;
                 if(skeleton==null)//No skeleton is given, so the spring woul be generated with 2 pts.
                 {
@@ -233,7 +234,8 @@ namespace Kinergy
                     }
                     base.BaseCurve = s;
                     //Brep[] new_Spring = Rhino.Geometry.Brep.CreateFromSweep(s, cc, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    Brep[] new_Spring = Rhino.Geometry.Brep.CreateFromLoft(sections,Point3d.Unset, Point3d.Unset,LoftType.Tight,false);
+                    //Brep[] new_Spring = Rhino.Geometry.Brep.CreateFromLoft(sections,Point3d.Unset, Point3d.Unset,LoftType.Tight,false);
+                    Brep[] new_Spring = Brep.CreatePipe(s, wireRadius/2, false, PipeCapMode.Round, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAngleToleranceRadians);
                     base.Model = new_Spring[0];
                 }
                 else //skeleton is given, so the spring should be generated along skeleton
@@ -265,7 +267,7 @@ namespace Kinergy
                     
                     base.BaseCurve = s;
                     //Brep[] new_Spring = Rhino.Geometry.Brep.CreateFromSweep(s, cc, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    Brep[] new_Spring = Brep.CreatePipe(s,wireRadius,false,PipeCapMode.Flat,true,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,RhinoDoc.ActiveDoc.ModelAngleToleranceRadians);
+                    Brep[] new_Spring = Brep.CreatePipe(s,wireRadius,false,PipeCapMode.Round,true,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,RhinoDoc.ActiveDoc.ModelAngleToleranceRadians);
                     base.Model = new_Spring[0];
                 }
 

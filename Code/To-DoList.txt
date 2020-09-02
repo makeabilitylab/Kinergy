@@ -1,3 +1,7 @@
 Kinergy Development To-Do List:
 
 1. [Low] Allow the user to press "x", "y", or "z" to set the rotatory axis for planes when selecting the region. Then the user can rotate the planes by hitting direction arrows on the keyboard.
+
+2. [Low] Change the arrow indicator to 3D version.
+
+3. [Medium] Clean the skeleton generation part for curved and non-curve body. 
