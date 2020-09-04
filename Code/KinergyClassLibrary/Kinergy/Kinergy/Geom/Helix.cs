@@ -89,6 +89,7 @@ namespace Kinergy
             {
                 this.startPoint = startPoint;
                 this.endPoint = endPoint;
+                direction = new Vector3d(endPoint) - new Vector3d(startPoint);
                 length = new Line(this.startPoint, this.endPoint).Length;
                 if (spring_Radius != 0)
                 { springRadius = spring_Radius/2; }
@@ -407,13 +408,15 @@ namespace Kinergy
                 { return false; }
                 Transform t;
                 double v = m.MovementValue;
-                Vector3d translation = new Vector3d(skeleton.PointAtNormalizedLength(endT + travel / skeleton.GetLength() + v / skeleton.GetLength()))
-                    - new Vector3d(skeleton.PointAtNormalizedLength(endT + travel / skeleton.GetLength()));
+                /*Vector3d translation = new Vector3d(skeleton.PointAtNormalizedLength(endT + travel / skeleton.GetLength() + v / skeleton.GetLength()))
+                    - new Vector3d(skeleton.PointAtNormalizedLength(endT + travel / skeleton.GetLength()));*/
+                Vector3d translation = direction / direction.Length * v;
                 t =  Transform.Translation(translation);
-                Transform r = Transform.Rotation(AverageTangent(skeleton, endT + travel / skeleton.GetLength()),
+                /*Transform r = Transform.Rotation(AverageTangent(skeleton, endT + travel / skeleton.GetLength()),
                     AverageTangent(skeleton, endT + travel / skeleton.GetLength() + v / skeleton.GetLength()),
-                    skeleton.PointAtNormalizedLength(endT + travel / skeleton.GetLength()));
-                m.Trans = t * r;
+                    skeleton.PointAtNormalizedLength(endT + travel / skeleton.GetLength()));*/
+                //m.Trans = t * r;
+                m.Trans = t;
                 return true;
             }
             /// <summary>

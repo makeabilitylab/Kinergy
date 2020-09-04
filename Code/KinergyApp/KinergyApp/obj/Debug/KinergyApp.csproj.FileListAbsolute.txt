@@ -56,3 +56,4 @@ C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\ob
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
+C:\Users\60213\Desktop\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.ProcessingWin.resources
