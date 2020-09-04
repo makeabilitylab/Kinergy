@@ -257,7 +257,7 @@
     <Compile Include="KineticUnits\InstantExtension\InstantExtension.cs" />
     <Compile Include="KineticUnits\InstantExtension\InstantExtensionComponent.cs" />
     <Compile Include="KineticUnits\InstantExtension\Utilities.cs" />
-    <Compile Include="KineticUnits\InstantTwisting\01ConstructKineticComponents_IT.cs" />
+    <Compile Include="KineticUnits\InstantTwisting\InstantTwistingComponent.cs" />
     <Compile Include="KineticUnits\InstantTwisting\02SettingLock_IT.cs" />
     <Compile Include="KineticUnits\InstantTwisting\03EndEffector_IT.cs" />
     <Compile Include="KineticUnits\InstantTwisting\InstantTwisting.cs" />

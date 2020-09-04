@@ -18,6 +18,8 @@ namespace Kinergy.KineticUnit
     {
         protected List<Entity> entityList;
         private bool loaded;
+        private Transform Translation=Transform.Identity;
+        public Vector3d direction = Vector3d.Unset;
         public List<Entity> EntityList { get => entityList;protected set => entityList = value; }
         public bool Loaded { get => loaded;protected set => loaded = value; }
 
@@ -26,12 +28,18 @@ namespace Kinergy.KineticUnit
             entityList = new List<Entity>();
             loaded = false;
         }
+        public void Translate(double dis)
+        {
+            Translation = Transform.Multiply(Translation, Transform.Translation(direction / direction.Length * dis));
+        }
         public virtual List<Brep> GetModel()
         {
             List<Brep> models = new List<Brep>();
             foreach(Entity e in entityList)
             {
-                models.Add(e.GetModelinWorldCoordinate());
+                Brep m = e.GetModelinWorldCoordinate();
+                m.Transform(Translation);
+                models.Add(m);
             }
             return models;
         }
@@ -40,11 +48,13 @@ namespace Kinergy.KineticUnit
             List<Mesh> models = new List<Mesh>();
             foreach (Entity e in entityList)
             {
-                Mesh[] ms = Mesh.CreateFromBrep(e.GetModelinWorldCoordinate(), MeshingParameters.FastRenderMesh);
-                foreach(Mesh m in ms)
+                Brep m = e.GetModelinWorldCoordinate();
+                m.Transform(Translation);
+                Mesh[] ms = Mesh.CreateFromBrep(m, MeshingParameters.FastRenderMesh);
+                foreach(Mesh me in ms)
                 {
-                    if(m.Faces.Count>0)
-                    {models.Add(m); }
+                    if(me.Faces.Count>0)
+                    {models.Add(me); }
                 }
             }
             return models;
