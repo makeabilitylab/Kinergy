@@ -788,8 +788,20 @@ namespace Kinergy.KineticUnit
             }
             else if(type==2)
             {
+                double extension = 3.4;
+
                 Point3d p_inside = skeleton.PointAtNormalizedLength(lockT);
                 Vector3d lockBaseVector = new Vector3d(lockPosition) - new Vector3d(p_inside);
+                double lockOffset = lockPosition.DistanceTo(p_inside) + extension;
+                lockBaseVector = lockBaseVector * lockOffset / lockBaseVector.Length;
+
+                #region test by LH
+                //Line test_L1 = new Line(p_inside, lockBaseVector);
+                //Curve test_Cr1 = test_L1.ToNurbsCurve();
+                //myDoc.Objects.AddCurve(test_Cr1);
+                //myDoc.Views.Redraw();
+                #endregion
+
                 springRadius = spring.SpringRadius;
                 double scale = springRadius / 7.5;
                 double lock_radius = 1.5 * scale;
@@ -797,71 +809,301 @@ namespace Kinergy.KineticUnit
                 double lock_length;
 
                 //directory for test
-                RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantExtension.3dm");
-                Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantTranslation2.3dm");
-                //Brep LockBase = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockBaseInstantExtension.3dm");
-                Cylinder rod=Cylinder.Unset;
-                if(lockT<springStart)
+                RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantTranslation2.3dm");
+                Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() + 
+                                    "\\LockHeadInstantTranslation2.3dm");
+
+                //Point3d lockHeadCenOrig = LockHead.GetBoundingBox(true).Center;
+                Point3d lockHeadCenOrig = new Point3d(0,0,0);
+                Brep hookBrep = new Brep();
+                Brep hookbarBrep = new Brep();
+
+                //Brep LockBase = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() + 
+                //                  "\\LockBaseInstantExtension.3dm");
+                if (lockT<springStart)
                 {
                     lock_length = skeleton.GetLength() * (springEnd - springStart);
                     lock_length += skeleton.GetLength() * (springStart - lockT);
                     lock_length -= skeleton.GetLength() * (springEnd - springStart) * distance;
-                    Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001)) - new Vector3d(skeleton.PointAtNormalizedLength(springEnd + 0.03));
-                    Circle c = new Circle(new Plane(skeleton.PointAtNormalizedLength(springEnd + 0.03)+lockBaseVector, normal), lock_radius);
-                    rod = new Cylinder(c, normal.Length);
-                    //Brep[] sweep_shape = Rhino.Geometry.Brep.CreateFromSweep(rail, c.ToNurbsCurve(), true, myDoc.ModelAbsoluteTolerance);
-                    //rod = sweep_shape[0];
-                    //Move and rotate two models
-                    Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()))+lockBaseVector);
+                    Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001)) - 
+                        new Vector3d(skeleton.PointAtNormalizedLength(springEnd + 0.03));
+
+                    #region test by LH
+                    //Line test_L2 = new Line(skeleton.PointAtNormalizedLength(springEnd+0.03), normal);
+                    //Curve test_Cr2 = test_L2.ToNurbsCurve();
+                    //myDoc.Objects.AddCurve(test_Cr2);
+                    //myDoc.Views.Redraw();
+                    #endregion
+
+                    #region Create the hook bar
+
+                    Plane skePtPlane = new Plane(skeleton.PointAtNormalizedLength(springEnd + 0.03) + lockBaseVector, normal);
+                    Vector3d xp = 2.11 / 2 * skePtPlane.XAxis;
+                    Vector3d xn = -2.11 / 2 * skePtPlane.XAxis;
+                    Vector3d yp = 2 / 2 * skePtPlane.YAxis;
+                    Vector3d yn = -2 / 2 * skePtPlane.YAxis;
+
+                    Point3d[] hookPts = new Point3d[5];
+                    hookPts[0] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xp + yp;
+                    hookPts[1] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xn + yp;
+                    hookPts[2] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xn + yn;
+                    hookPts[3] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xp + yn;
+                    hookPts[4] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xp + yp;
+                    Curve hookRect = new Polyline(hookPts).ToNurbsCurve();
+
+                    Transform rectAreaRotate = Transform.Rotation(skePtPlane.YAxis, lockBaseVector,
+                                skeleton.PointAtNormalizedLength(springEnd + 0.03));
+                    hookRect.Transform(rectAreaRotate);
+
+                    // create sweep function
+                    var sweep = new Rhino.Geometry.SweepOneRail();
+                    sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+                    sweep.ClosedSweep = false;
+                    sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+                    Point3d sweepFirstPt = skeleton.PointAtNormalizedLength(springEnd + 0.03);
+                    Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001);
+                    Point3d[] railPts = new Point3d[2];
+                    railPts[0] = sweepFirstPt;
+                    railPts[1] = sweepSecondPt;
+                    Curve rail = new Polyline(railPts).ToNurbsCurve();
+
+                    hookBrep = sweep.PerformSweep(rail, hookRect)[0];
+                    hookBrep = hookBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                    Transform hookBrepMove = Transform.Translation(lockBaseVector);
+                    hookBrep.Transform(hookBrepMove);
+
+                    // Create the link between the selected 3D body and the hook bar
+                    Point3d[] linkPts = new Point3d[5];
+                    Vector3d link_yp = skePtPlane.YAxis * (lockBaseVector.Length + 2/2);
+                    linkPts[0] = skeleton.PointAtNormalizedLength(springEnd+0.03) + xp;
+                    linkPts[1] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xp + link_yp;
+                    linkPts[2] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xn + link_yp;
+                    linkPts[3] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xn;
+                    linkPts[4] = skeleton.PointAtNormalizedLength(springEnd + 0.03) + xp;
+                    Curve linkRect = new Polyline(linkPts).ToNurbsCurve();
+                    linkRect.Transform(rectAreaRotate);
+
+                    Point3d sweepLinkFirstPt = skeleton.PointAtNormalizedLength(springEnd + 0.03);
+                    Vector3d extVec = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
+                    Point3d sweepLinkSecondPt = sweepLinkFirstPt + extVec/extVec.Length * 2;
+                    Point3d[] linkRailPts = new Point3d[2];
+                    linkRailPts[0] = sweepLinkFirstPt;
+                    linkRailPts[1] = sweepLinkSecondPt;
+                    Curve linkRail = new Polyline(linkRailPts).ToNurbsCurve();
+
+                    Brep linkBrep = new Brep();
+                    linkBrep = sweep.PerformSweep(linkRail, linkRect)[0];
+                    linkBrep = linkBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                    linkBrep.Flip();
+
+                    #region test by LH
+                    //myDoc.Objects.AddBrep(linkBrep);
+                    //myDoc.Views.Redraw();
+                    //myDoc.Objects.AddBrep(hookBrep);
+                    //myDoc.Views.Redraw();
+                    #endregion
+
+                    var hookbarBreps = Brep.CreateBooleanUnion(new List<Brep> { linkBrep, hookBrep }, myDoc.ModelAbsoluteTolerance);
+                    if(hookbarBreps.Count() == 0)
+                    {
+                        hookBrep.Flip();
+                        hookbarBreps = Brep.CreateBooleanUnion(new List<Brep> { linkBrep, hookBrep }, myDoc.ModelAbsoluteTolerance);
+                    }
+                    hookbarBrep = hookbarBreps[0];
+
+                    #region test by LH
+                    //myDoc.Objects.AddBrep(hookbarBrep);
+                    //myDoc.Views.Redraw();
+                    #endregion
+                    #endregion
+
+                    // Move the imported LockHead to the endpoint of the lock trajectory on the skeleton
+                    Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength())-lockHeadCenOrig));
                     LockHead.Transform(move1);
-                    Transform rotate1 = Transform.Rotation(Vector3d.YAxis,
-                        GeometryMethods.AverageTangent(skeleton, springEnd - lock_length / skeleton.GetLength()),
-                        skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()));
-                    LockHead.Transform(rotate1);
                     Vector3d new_Xaxis = Vector3d.XAxis;
+                    Vector3d new_Yaxis = Vector3d.YAxis;
+                    new_Xaxis.Transform(move1);
+                    new_Yaxis.Transform(move1);
+
+                    Vector3d skeXAxis = skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength());
+                    Transform rotate1 = Transform.Rotation(Vector3d.XAxis, skeXAxis, skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()));
+                    LockHead.Transform(rotate1);
                     new_Xaxis.Transform(rotate1);
-                    Transform rotate2 = Transform.Rotation(new_Xaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()));
+                    new_Yaxis.Transform(rotate1);
+
+                    Transform rotate2 = Transform.Rotation(new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()));
                     LockHead.Transform(rotate2);
+                    new_Xaxis.Transform(rotate2);
+                    new_Yaxis.Transform(rotate2);
+
+                    Transform move2 = Transform.Translation(lockBaseVector);
+                    LockHead.Transform(move2);
+                    new_Xaxis.Transform(move2);
+                    new_Yaxis.Transform(move2);
                 }
                 else
                 {
+
                     lock_length = skeleton.GetLength() * (springEnd - springStart);
                     lock_length += skeleton.GetLength() * (lockT - springEnd);
                     lock_length -= skeleton.GetLength() * (springEnd - springStart) * distance;
                     Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength() + 0.001)) - new Vector3d(skeleton.PointAtNormalizedLength(springStart - 0.03));
-                    Circle c = new Circle(new Plane(skeleton.PointAtNormalizedLength(springStart - 0.03)+lockBaseVector, normal), lock_radius);
-                    rod = new Cylinder(c, normal.Length);
-                    Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()))+lockBaseVector);
-                    LockHead.Transform(move1);
-                    Transform rotate1 = Transform.Rotation(Vector3d.YAxis,
-                        -GeometryMethods.AverageTangent(skeleton, springStart + lock_length / skeleton.GetLength()),
-                        skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
-                    LockHead.Transform(rotate1);
-                    Vector3d new_Xaxis = Vector3d.XAxis;
-                    new_Xaxis.Transform(rotate1);
-                    Transform rotate2 = Transform.Rotation(new_Xaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
-                    LockHead.Transform(rotate2);
-                }
-                LockHead = Brep.CreateBooleanUnion(new List<Brep> { LockHead, rod.ToBrep(true, true) }, myDoc.ModelAbsoluteTolerance)[0];
-                Lock lockHead = new Lock(LockHead, true, false);
-                Lock lockBase = new Lock(null, false,false);
-                lockHead.RegisterOtherPart(lockBase);
-                if (lockT < springStart)
-                {
-                    //Add fixation between lockhead and modelCut[1], lockbase and modelCut[0]
-                    _ = new Fixation(lockHead, modelCut[1]);
-                    _ = new Fixation(lockBase, modelCut[0]);
-                }
-                else
-                {
-                    _ = new Fixation(lockHead, modelCut[0]);//Here lies the problem
-                    _ = new Fixation(lockBase, modelCut[1]);
-                }
-                entityList.Add(lockHead);
-                entityList.Add(lockBase);
 
-                locks.Add(lockHead);
-                locks.Add(lockBase);
+                    #region Create the hook bar
+
+                    Plane skePtPlane = new Plane(skeleton.PointAtNormalizedLength(springStart - 0.03) + lockBaseVector, normal);
+                    Vector3d xp = 2.11 / 2 * skePtPlane.XAxis;
+                    Vector3d xn = -2.11 / 2 * skePtPlane.XAxis;
+                    Vector3d yp = 2 / 2 * skePtPlane.YAxis;
+                    Vector3d yn = -2 / 2 * skePtPlane.YAxis;
+
+                    Point3d[] hookPts = new Point3d[5];
+                    hookPts[0] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xp + yp;
+                    hookPts[1] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xn + yp;
+                    hookPts[2] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xn + yn;
+                    hookPts[3] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xp + yn;
+                    hookPts[4] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xp + yp;
+                    Curve hookRect = new Polyline(hookPts).ToNurbsCurve();
+
+                    Transform rectAreaRotate = Transform.Rotation(skePtPlane.YAxis, lockBaseVector,
+                                skeleton.PointAtNormalizedLength(springStart - 0.03));
+                    hookRect.Transform(rectAreaRotate);
+
+                    // create sweep function
+                    var sweep = new Rhino.Geometry.SweepOneRail();
+                    sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+                    sweep.ClosedSweep = false;
+                    sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+                    Point3d sweepFirstPt = skeleton.PointAtNormalizedLength(springStart - 0.03);
+                    Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength() + 0.001);
+                    Point3d[] railPts = new Point3d[2];
+                    railPts[0] = sweepFirstPt;
+                    railPts[1] = sweepSecondPt;
+                    Curve rail = new Polyline(railPts).ToNurbsCurve();
+
+                    hookBrep = sweep.PerformSweep(rail, hookRect)[0];
+                    hookBrep = hookBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                    Transform hookBrepMove = Transform.Translation(lockBaseVector);
+                    hookBrep.Transform(hookBrepMove);
+
+                    // Create the link between the selected 3D body and the hook bar
+                    // Create the link between the selected 3D body and the hook bar
+                    Point3d[] linkPts = new Point3d[5];
+                    Vector3d link_yp = skePtPlane.YAxis * (lockBaseVector.Length + 2 / 2);
+                    linkPts[0] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xp;
+                    linkPts[1] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xp + link_yp;
+                    linkPts[2] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xn + link_yp;
+                    linkPts[3] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xn;
+                    linkPts[4] = skeleton.PointAtNormalizedLength(springStart - 0.03) + xp;
+                    Curve linkRect = new Polyline(linkPts).ToNurbsCurve();
+                    linkRect.Transform(rectAreaRotate);
+
+                    Point3d sweepLinkFirstPt = skeleton.PointAtNormalizedLength(springStart - 0.03);
+                    Vector3d extVec = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
+                    Point3d sweepLinkSecondPt = sweepLinkFirstPt + extVec / extVec.Length * 2;
+                    Point3d[] linkRailPts = new Point3d[2];
+                    linkRailPts[0] = sweepLinkFirstPt;
+                    linkRailPts[1] = sweepLinkSecondPt;
+                    Curve linkRail = new Polyline(linkRailPts).ToNurbsCurve();
+
+                    Brep linkBrep = new Brep();
+                    linkBrep = sweep.PerformSweep(linkRail, linkRect)[0];
+                    linkBrep = linkBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                    linkBrep.Flip();
+
+                    var hookbarBreps = Brep.CreateBooleanUnion(new List<Brep> { linkBrep, hookBrep }, myDoc.ModelAbsoluteTolerance);
+                    if (hookbarBreps.Count() == 0)
+                    {
+                        hookBrep.Flip();
+                        hookbarBreps = Brep.CreateBooleanUnion(new List<Brep> { linkBrep, hookBrep }, myDoc.ModelAbsoluteTolerance);
+                    }
+                    hookbarBrep = hookbarBreps[0];
+                    #endregion
+
+
+                    //Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength())) + lockBaseVector);
+                    //LockHead.Transform(move1);
+                    //Transform rotate1 = Transform.Rotation(Vector3d.YAxis,
+                    //    -GeometryMethods.AverageTangent(skeleton, springStart + lock_length / skeleton.GetLength()),
+                    //    skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
+                    //LockHead.Transform(rotate1);
+                    //Vector3d new_Xaxis = Vector3d.XAxis;
+                    //new_Xaxis.Transform(rotate1);
+                    //Transform rotate2 = Transform.Rotation(new_Xaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
+                    //LockHead.Transform(rotate2);
+
+                    // Move the imported LockHead to the endpoint of the lock trajectory on the skeleton
+                    Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()) - lockHeadCenOrig));
+                    LockHead.Transform(move1);
+                    Vector3d new_Xaxis = Vector3d.XAxis;
+                    Vector3d new_Yaxis = Vector3d.YAxis;
+                    new_Xaxis.Transform(move1);
+                    new_Yaxis.Transform(move1);
+
+                    Vector3d skeXAxis = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()) - skeleton.PointAtNormalizedLength(springStart);
+                    Transform rotate1 = Transform.Rotation(Vector3d.XAxis, (-1) * skeXAxis, skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
+                    LockHead.Transform(rotate1);
+                    new_Xaxis.Transform(rotate1);
+                    new_Yaxis.Transform(rotate1);
+
+                    Transform rotate2 = Transform.Rotation(new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
+                    LockHead.Transform(rotate2);
+                    new_Xaxis.Transform(rotate2);
+                    new_Yaxis.Transform(rotate2);
+
+                    Transform move2 = Transform.Translation(lockBaseVector);
+                    LockHead.Transform(move2);
+                    new_Xaxis.Transform(move2);
+                    new_Yaxis.Transform(move2);
+
+                    #region test by LH
+                    //myDoc.Objects.AddBrep(LockHead);
+                    //myDoc.Views.Redraw();
+                    #endregion
+                }
+
+                #region test by LH
+                Guid lockID3 = myDoc.Objects.AddBrep(hookbarBrep);
+                myDoc.Views.Redraw();
+                Guid lockID4 = myDoc.Objects.AddBrep(LockHead);
+                myDoc.Views.Redraw();
+                #endregion
+
+                var LockHeadBreps = Brep.CreateBooleanUnion(new List<Brep> { LockHead, hookbarBrep }, myDoc.ModelAbsoluteTolerance);
+                if(LockHeadBreps.Count() == 0)
+                {
+                    // flip hookBrep
+                    hookbarBrep.Flip();
+                    LockHeadBreps = Brep.CreateBooleanUnion(new List<Brep> { LockHead, hookbarBrep }, myDoc.ModelAbsoluteTolerance);
+                }
+
+                if(LockHeadBreps.Count() != 0)
+                {
+                    LockHead = LockHeadBreps[0];
+                    Lock lockHead = new Lock(LockHead, true, false);
+                    Lock lockBase = new Lock(null, false, false);
+                    lockHead.RegisterOtherPart(lockBase);
+                    if (lockT < springStart)
+                    {
+                        //Add fixation between lockhead and modelCut[1], lockbase and modelCut[0]
+                        _ = new Fixation(lockHead, modelCut[1]);
+                        _ = new Fixation(lockBase, modelCut[0]);
+                    }
+                    else
+                    {
+                        _ = new Fixation(lockHead, modelCut[0]);//Here lies the problem
+                        _ = new Fixation(lockBase, modelCut[1]);
+                    }
+                    entityList.Add(lockHead);
+                    entityList.Add(lockBase);
+
+                    locks.Add(lockHead);
+                    locks.Add(lockBase);
+                } 
             }
 
             return true;

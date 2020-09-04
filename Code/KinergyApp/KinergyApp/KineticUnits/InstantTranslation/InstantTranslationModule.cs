@@ -65,7 +65,7 @@ namespace InstTranslation
               "The kinetic unit for instant translation",
               "Kinergy", "InstantTranslation")
         {
-            model = new Brep();
+            model = null;
             conBrep = new Brep();
             innerCavity = new Brep();
             t1 = 0;
@@ -112,8 +112,9 @@ namespace InstTranslation
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("Kinetic unit", "KU", "Kinetic Unit instance for instant translation", GH_ParamAccess.item);
-            pManager.AddBrepParameter("Original brep", "M", "The target model to move", GH_ParamAccess.item);
+            pManager.AddBrepParameter("Original brep", "Brep", "The target model to move", GH_ParamAccess.item);
             pManager.AddBrepParameter("Models", "M", "", GH_ParamAccess.list);
+            pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -506,6 +507,7 @@ namespace InstTranslation
 
                     motion.SetLockPosition(pt);  // is this step redundant?
                     motion.CutModelForLock();
+
                     motion.ConstructLock(lockPos);  // lockPos=1: inside; lockPos=2: outside
 
                     RhinoDoc.ActiveDoc.Objects.Hide(selObjId, true);
@@ -563,6 +565,7 @@ namespace InstTranslation
                 DA.SetDataList(2, null);
             else
                 DA.SetDataList(2, motion.GetModel());
+            DA.SetData(3, toPreview);
         }
 
         private void RhinoApp_KeyboardEvent1(int key)

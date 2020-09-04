@@ -72,6 +72,21 @@ namespace HumanUIforKinergy.Components.UI_Output
             ModelVisual3D mv3 = GetModelVisual3D(vp3);
             List<ModelVisual3D> mv3s = GetModels(vp3);
 
+            if (start)
+            {
+                models = m.GetMeshModel();
+                vp3.Children.Clear();
+                vp3.Children.Add(new SunLight());
+
+                mv3.Content = new _3DViewModel(models, cols).Model;
+                BoundingBox b = m.GetKineticUnitBoundingBox();
+                vp3.Children.Add(mv3);
+
+                //vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
+                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 1.5, b.Center.Z);
+                vp3.Camera.LookDirection = new Vector3D(0, 1, 0);
+            }
+
             if (load && m.Loaded==false)
             {
                 m.LoadKineticUnit();
@@ -83,9 +98,9 @@ namespace HumanUIforKinergy.Components.UI_Output
                 BoundingBox b = m.GetKineticUnitBoundingBox();
                 vp3.Children.Add(mv3);
 
-                //vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
-                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 1.5, b.Center.Z);
-                vp3.Camera.LookDirection = new Vector3D(0,1,0);
+                ////vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
+                //vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 1.5, b.Center.Z);
+                //vp3.Camera.LookDirection = new Vector3D(0,1,0);
                 return;
             }
             if(m.Loaded==false)

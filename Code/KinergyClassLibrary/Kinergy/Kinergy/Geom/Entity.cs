@@ -161,15 +161,18 @@ namespace Kinergy.Geom
         }
         public Brep GetModelinWorldCoordinate()
         {
-            Brep m = Model.DuplicateBrep();
-            //Brep m = model;
-            if(rotateBack!=Transform.Unset)
-            { m.Transform(rotateBack);}
-            //if (Offset != Transform.ZeroTransformation)
-            //{
+            Brep m = null;
+            if(Model != null)
+            {
+                m = Model.DuplicateBrep();
+                //Brep m = model;
+                if (rotateBack != Transform.Unset)
+                { m.Transform(rotateBack); }
+                //if (Offset != Transform.ZeroTransformation)
+                //{
                 m.Transform(offset);
-           // }
-            
+                // }
+            }
             return m;
         }
         public virtual void ResetState()

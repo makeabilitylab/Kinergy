@@ -31,7 +31,8 @@ namespace Kinergy.KineticUnit
             List<Brep> models = new List<Brep>();
             foreach(Entity e in entityList)
             {
-                models.Add(e.GetModelinWorldCoordinate());
+                if(e.Model != null)
+                    models.Add(e.GetModelinWorldCoordinate());
             }
             return models;
         }
@@ -40,12 +41,16 @@ namespace Kinergy.KineticUnit
             List<Mesh> models = new List<Mesh>();
             foreach (Entity e in entityList)
             {
-                Mesh[] ms = Mesh.CreateFromBrep(e.GetModelinWorldCoordinate(), MeshingParameters.FastRenderMesh);
-                foreach(Mesh m in ms)
+                if (e.Model != null)
                 {
-                    if(m.Faces.Count>0)
-                    {models.Add(m); }
+                    Mesh[] ms = Mesh.CreateFromBrep(e.GetModelinWorldCoordinate(), MeshingParameters.FastRenderMesh);
+                    foreach (Mesh m in ms)
+                    {
+                        if (m.Faces.Count > 0)
+                        { models.Add(m); }
+                    }
                 }
+ 
             }
             return models;
         }
@@ -58,13 +63,17 @@ namespace Kinergy.KineticUnit
             }
             foreach(Entity e in entityList)
             {
-                BoundingBox b=e.Model.GetBoundingBox(true);
-                if (b.Min.X < minX) minX = b.Min.X;
-                if (b.Min.Y < minY) minY = b.Min.Y;
-                if (b.Min.Z < minZ) minZ = b.Min.Z;
-                if (b.Max.X > maxX) maxX = b.Max.X;
-                if (b.Max.Y > maxY) maxY = b.Max.Y;
-                if (b.Max.Z > maxZ) maxZ = b.Max.Z;
+                if (e.Model != null)
+                {
+                    BoundingBox b = e.Model.GetBoundingBox(true);
+                    if (b.Min.X < minX) minX = b.Min.X;
+                    if (b.Min.Y < minY) minY = b.Min.Y;
+                    if (b.Min.Z < minZ) minZ = b.Min.Z;
+                    if (b.Max.X > maxX) maxX = b.Max.X;
+                    if (b.Max.Y > maxY) maxY = b.Max.Y;
+                    if (b.Max.Z > maxZ) maxZ = b.Max.Z;
+                }
+                
             }
             return new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
         }
