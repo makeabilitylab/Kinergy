@@ -4,4 +4,6 @@ Kinergy Development To-Do List:
 
 2. [Low] Change the arrow indicator to 3D version.
 
-3. [Medium] Clean the skeleton generation part for curved and non-curve body. 
+3. [Medium] Clean the skeleton generation part for curved and non-curve body.
+
+4. [Medium] Make proper interface logic, e.g., enabling/disabling buttons 

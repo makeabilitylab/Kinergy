@@ -104,6 +104,10 @@ namespace InstTranslation
             // Value listeners 
             pManager.AddNumberParameter("CompressionDisplacement", "Disp", "Proportion of spring that's able to be compressed", GH_ParamAccess.item);
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
+
+            // Confirm and bake all components
+            pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
+
         }
 
         /// <summary>
@@ -123,7 +127,7 @@ namespace InstTranslation
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool reg_input = false, end_input = false, addlock_input = false, pre_input = false;
+            bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
             double disp_input = 4, energy_input = 4;
 
             #region input param readings
@@ -139,10 +143,12 @@ namespace InstTranslation
                 return;
             if (!DA.GetData(5, ref energy_input))
                 return;
+            if (!DA.GetData(6, ref bake_input))
+                return;
             #endregion
 
             // variables to control states
-            bool toSelectRegion = false, toAdjustParam = false, toSetEndEffector = false, toAddLock = false, toRemoveLock = false, toPreview = false;
+            bool toSelectRegion = false, toAdjustParam = false, toSetEndEffector = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
 
             #region Input check. This determines how the cell respond to changed params
             if (reg_input)//This applies to starting situation and when u change the input model
@@ -175,8 +181,27 @@ namespace InstTranslation
                 displacementLevel = disp_input;
                 toAdjustParam = true;
             }
+            if (bake_input)
+            {
+                toBake = true;
+            }
             #endregion
-
+            if (toBake)
+            {
+                if(motion != null)
+                {
+                    if(motion.EntityList != null)
+                    {
+                        foreach(Entity b in motion.EntityList)
+                        {
+                            Brep tempB = b.GetModelinWorldCoordinate();
+                            RhinoDoc.ActiveDoc.Objects.AddBrep(tempB);
+                        }
+                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        this.ExpirePreview(true);
+                    }
+                }
+            }
             if (toSelectRegion)
             {
                 // select the target model and the region to be converted
@@ -479,17 +504,17 @@ namespace InstTranslation
 
                     #region Set the lock inside or outside
 
-                    RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent1;
-                    Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
-                    gp1.SetCommandPrompt("Press \'1\' or \'2\' to set the lock inside or outside the body. Press enter to continue.");
-                    gp1.AcceptNothing(true);
-                    Rhino.Input.GetResult lock_pos_res;
-                    isLockSet = true;
-                    do
-                    {
-                        lock_pos_res = gp1.Get(true);
-                    } while (lock_pos_res != Rhino.Input.GetResult.Nothing);
-                    isLockSet = false;
+                    //RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent1;
+                    //Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
+                    //gp1.SetCommandPrompt("Press \'1\' or \'2\' to set the lock inside or outside the body. Press enter to continue.");
+                    //gp1.AcceptNothing(true);
+                    //Rhino.Input.GetResult lock_pos_res;
+                    //isLockSet = true;
+                    //do
+                    //{
+                    //    lock_pos_res = gp1.Get(true);
+                    //} while (lock_pos_res != Rhino.Input.GetResult.Nothing);
+                    //isLockSet = false;
                     
                     #endregion
 
@@ -629,37 +654,37 @@ namespace InstTranslation
 
             if (key == 0x51)//Q
             {
-                v.Transform(Transform.Rotation(Math.PI / 90, Vector3d.ZAxis, Point3d.Origin));
+                v.Transform(Transform.Rotation(Math.PI / 180*2.5, Vector3d.ZAxis, Point3d.Origin));
                 PlaneGenerated = false;
                 GenerateArrow();
             }
             else if (key == 0x57)//W
             {
-                v.Transform(Transform.Rotation(-Math.PI / 90, Vector3d.ZAxis, Point3d.Origin));
+                v.Transform(Transform.Rotation(-Math.PI / 180 * 2.5, Vector3d.ZAxis, Point3d.Origin));
                 PlaneGenerated = false;
                 GenerateArrow();
             }
             else if (key == 0x41)//A
             {
-                v.Transform(Transform.Rotation(Math.PI / 90, Vector3d.XAxis, Point3d.Origin));
+                v.Transform(Transform.Rotation(Math.PI / 180 * 2.5, Vector3d.XAxis, Point3d.Origin));
                 PlaneGenerated = false;
                 GenerateArrow();
             }
             else if (key == 0x53)//S
             {
-                v.Transform(Transform.Rotation(-Math.PI / 90, Vector3d.XAxis, Point3d.Origin));
+                v.Transform(Transform.Rotation(-Math.PI / 180 * 2.5, Vector3d.XAxis, Point3d.Origin));
                 PlaneGenerated = false;
                 GenerateArrow();
             }
             else if (key == 0x5A)//Z
             {
-                v.Transform(Transform.Rotation(Math.PI / 90, Vector3d.YAxis, Point3d.Origin));
+                v.Transform(Transform.Rotation(Math.PI / 180 * 2.5, Vector3d.YAxis, Point3d.Origin));
                 PlaneGenerated = false;
                 GenerateArrow();
             }
             else if (key == 0x58)//X
             {
-                v.Transform(Transform.Rotation(-Math.PI / 90, Vector3d.YAxis, Point3d.Origin));
+                v.Transform(Transform.Rotation(-Math.PI / 180 * 2.5, Vector3d.YAxis, Point3d.Origin));
                 PlaneGenerated = false;
                 GenerateArrow();
             }

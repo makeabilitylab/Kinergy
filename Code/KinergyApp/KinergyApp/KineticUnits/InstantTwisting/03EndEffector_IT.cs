@@ -25,7 +25,7 @@ namespace InstTwisting
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddGenericParameter("KineticUnit", "KU", "The generated kinetic unit", GH_ParamAccess.item);
-            pManager.AddBrepParameter("EndEffectorModel", "EEM", "The end effector model. Please place it along the given main direction", GH_ParamAccess.item);
+            pManager.AddBrepParameter("EndEffectorModel", "EEM", "The end effector model. Pl place it along the given main direction", GH_ParamAccess.item);
         }
 
         /// <summary>
