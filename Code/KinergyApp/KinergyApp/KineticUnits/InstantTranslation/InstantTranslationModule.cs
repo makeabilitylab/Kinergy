@@ -531,7 +531,7 @@ namespace InstTranslation
                     #region Construct the lock based on the set position and type
 
                     motion.SetLockPosition(pt);  // is this step redundant?
-                    motion.CutModelForLock();
+                    //motion.CutModelForLock();
 
                     motion.ConstructLock(lockPos);  // lockPos=1: inside; lockPos=2: outside
 

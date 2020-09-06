@@ -261,6 +261,10 @@
     <Compile Include="KinergyUtilities\SelectPosition.cs" />
     <Compile Include="KinergyUtilities\SetDirection.cs" />
     <Compile Include="Components\CamAndFollower\CamAndFollowerComponent.cs" />
+    <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotation.cs" />
+    <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotationModule.cs" />
+    <Compile Include="KineticUnits\ContinuousTranslation\ContinuousTranslation.cs" />
+    <Compile Include="KineticUnits\ContinuousTranslation\ContinuousTranslationModule.cs" />
     <Compile Include="KineticUnits\InstantTranslation\01ModelPreprocessOfIE.cs" />
     <Compile Include="KineticUnits\InstantTranslation\02ConstructSpringOfIE.cs" />
     <Compile Include="KineticUnits\InstantTranslation\03GenerateLockPositionCandidateOfIE.cs" />
@@ -272,10 +276,17 @@
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationComponent.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationModule.cs" />
     <Compile Include="KineticUnits\InstantTranslation\Utilities.cs" />
-    <Compile Include="KineticUnits\InstantTwisting\01ConstructKineticComponents_IT.cs" />
-    <Compile Include="KineticUnits\InstantTwisting\02SettingLock_IT.cs" />
-    <Compile Include="KineticUnits\InstantTwisting\03EndEffector_IT.cs" />
-    <Compile Include="KineticUnits\InstantTwisting\InstantTwisting.cs" />
+    <Compile Include="KineticUnits\InstantRotation\01ConstructKineticComponents_IT.cs" />
+    <Compile Include="KineticUnits\InstantRotation\02SettingLock_IT.cs" />
+    <Compile Include="KineticUnits\InstantRotation\03EndEffector_IT.cs" />
+    <Compile Include="KineticUnits\InstantRotation\InstantRotationModule.cs" />
+    <Compile Include="KineticUnits\InstantRotation\InstantRotation.cs" />
+    <Compile Include="KineticUnits\IntermittentOscillation\IntermittentOscillation.cs" />
+    <Compile Include="KineticUnits\IntermittentOscillation\IntermittentOscillationModule.cs" />
+    <Compile Include="KineticUnits\IntermittentRotation\IntermittentRotation.cs" />
+    <Compile Include="KineticUnits\IntermittentRotation\IntermittentRotationModule.cs" />
+    <Compile Include="KineticUnits\Reciprocation\Reciprocation.cs" />
+    <Compile Include="KineticUnits\Reciprocation\ReciprocationModule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\UpgradeSliderComponent.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_AdjustElementAppearance.cs" />
@@ -409,9 +420,7 @@
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="KineticUnits\ContinuousMovingByPress\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

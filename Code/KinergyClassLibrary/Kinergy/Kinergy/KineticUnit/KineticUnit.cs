@@ -18,6 +18,8 @@ namespace Kinergy.KineticUnit
     {
         protected List<Entity> entityList;
         private bool loaded;
+        private Transform Translation = Transform.Identity;
+        public Vector3d direction = Vector3d.Unset;
         public List<Entity> EntityList { get => entityList;protected set => entityList = value; }
         public bool Loaded { get => loaded;protected set => loaded = value; }
 
@@ -26,13 +28,21 @@ namespace Kinergy.KineticUnit
             entityList = new List<Entity>();
             loaded = false;
         }
+        public void Translate(double dis)
+        {
+            Translation = Transform.Multiply(Translation, Transform.Translation(direction / direction.Length * dis));
+        }
         public virtual List<Brep> GetModel()
         {
             List<Brep> models = new List<Brep>();
             foreach(Entity e in entityList)
             {
                 if(e.Model != null)
-                    models.Add(e.GetModelinWorldCoordinate());
+                {
+                    Brep m = e.GetModelinWorldCoordinate();
+                    m.Transform(Translation);
+                    models.Add(m);
+                }
             }
             return models;
         }
@@ -43,11 +53,13 @@ namespace Kinergy.KineticUnit
             {
                 if (e.Model != null)
                 {
-                    Mesh[] ms = Mesh.CreateFromBrep(e.GetModelinWorldCoordinate(), MeshingParameters.FastRenderMesh);
-                    foreach (Mesh m in ms)
+                    Brep m = e.GetModelinWorldCoordinate();
+                    m.Transform(Translation);
+                    Mesh[] ms = Mesh.CreateFromBrep(m, MeshingParameters.FastRenderMesh);
+                    foreach (Mesh me in ms)
                     {
-                        if (m.Faces.Count > 0)
-                        { models.Add(m); }
+                        if (me.Faces.Count > 0)
+                        { models.Add(me); }
                     }
                 }
  
@@ -56,12 +68,12 @@ namespace Kinergy.KineticUnit
         }
         public BoundingBox GetKineticUnitBoundingBox()
         {
-            double minX = 1000000000, minY = 1000000000, minZ = 1000000000, maxX = -1000000000, maxY = -1000000000, maxZ = -1000000000;
-            if(entityList.Count==0)
+            double minX = double.MaxValue, minY = double.MaxValue, minZ = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue, maxZ = double.MinValue;
+            if (entityList.Count == 0)
             {
                 return BoundingBox.Empty;
             }
-            foreach(Entity e in entityList)
+            foreach (Entity e in entityList)
             {
                 if (e.Model != null)
                 {
@@ -106,6 +118,23 @@ namespace Kinergy.KineticUnit
                 e.ResetState();
             }
             loaded = false;
+        }
+        public bool RemoveEntity(Entity e)
+        {
+            if (entityList.Contains(e))
+            {
+                entityList.Remove(e);
+                int Count = e.Constraints.Count;
+                for (int i = 0; i < Count; i++)
+                {
+                    e.Constraints[i].Release();
+                    Count--;
+                    i--;
+                }
+                return true;
+            }
+            else
+                return false;
         }
     }
 }
