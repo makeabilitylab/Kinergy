@@ -265,13 +265,8 @@
     <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotationModule.cs" />
     <Compile Include="KineticUnits\ContinuousTranslation\ContinuousTranslation.cs" />
     <Compile Include="KineticUnits\ContinuousTranslation\ContinuousTranslationModule.cs" />
-    <Compile Include="KineticUnits\InstantTranslation\01ModelPreprocessOfIE.cs" />
-    <Compile Include="KineticUnits\InstantTranslation\02ConstructSpringOfIE.cs" />
-    <Compile Include="KineticUnits\InstantTranslation\03GenerateLockPositionCandidateOfIE.cs" />
-    <Compile Include="KineticUnits\InstantTranslation\04ConstructLockOfIE.cs" />
     <Compile Include="KinergyUtilities\CalculateSkeletonOfMesh.cs" />
     <Compile Include="KinergyUtilities\EndEffectorSelectionForHelical.cs" />
-    <Compile Include="KineticUnits\InstantTranslation\GenerateLockForInstantTranslation.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslation.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationComponent.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationModule.cs" />

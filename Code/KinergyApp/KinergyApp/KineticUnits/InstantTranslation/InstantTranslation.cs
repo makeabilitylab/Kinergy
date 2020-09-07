@@ -19,6 +19,10 @@ using Kinergy.KineticUnit;
 using Kinergy;
 using System.Diagnostics;
 
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
+
 namespace Kinergy.KineticUnit
 {
     public class InstantTranslation : KineticUnit
@@ -112,8 +116,8 @@ namespace Kinergy.KineticUnit
                 if (CutModelForLock() == false)
                 { throw new Exception("Failed to select cut holes for lock."); }
 
-                if (ConstructLock(1) == false)
-                { throw new Exception("Failed to build lock structure."); }
+                //if (ConstructLock(1) == false)
+                //{ throw new Exception("Failed to build lock structure."); }
             }
             return true;
         }
@@ -657,7 +661,7 @@ namespace Kinergy.KineticUnit
             }
             return true;
         }
-        public bool ConstructLock(int type)
+        public bool ConstructLock(int type, GH_Document gh_d)
         {
             #region New version: buckle-like lock
 
@@ -691,9 +695,21 @@ namespace Kinergy.KineticUnit
             Vector3d lockBaseVector = new Vector3d(lockPosition) - new Vector3d(p_inside);
             lockBaseVector = lockBaseVector / lockBaseVector.Length * offset;
 
+            string path = "";
+            if (gh_d.IsFilePathDefined)
+            {
+                path = gh_d.FilePath;
+
+                int idx = path.IndexOf("KinergyMainInterface.gh");
+                path = path.Substring(0, idx) + @"KinergyApp\KinergyApp\Resources\LockHeadInstantTranslation2.3dm";
+
+            }
+
             RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantTranslation2.3dm");
-            Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() +
-                                "\\LockHeadInstantTranslation2.3dm");
+            //Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() +
+            //                    "\\LockHeadInstantTranslation2.3dm");
+
+            Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(path);
 
             // The origin of the imported lock head
             Point3d lockHeadCenOrig = new Point3d(0, 0, 0);
@@ -713,6 +729,9 @@ namespace Kinergy.KineticUnit
 
             Brep secondHookBaseTakeOutBrep = new Brep();
             Brep hookbarBrep = new Brep();
+
+            Brep partForCutModelBoolean = new Brep();
+            Brep partForCutModelBooleanMirror = new Brep();
 
             if (lockT < springStart)
             {
@@ -841,7 +860,7 @@ namespace Kinergy.KineticUnit
                 Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
                 Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
                 Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
-                Vector3d sb_yn = -6 / 2 * secondPtPlane.YAxis;
+                Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBasePts = new Point3d[5];
                 secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
@@ -855,7 +874,7 @@ namespace Kinergy.KineticUnit
 
                 Point3d sweepSecondBaseFirstPt = endPointSlot;
                 Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
-                Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 11.6;
+                Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
                 Point3d[] secondBasePts = new Point3d[2];
                 secondBasePts[0] = sweepSecondBaseFirstPt;
                 secondBasePts[1] = sweepSecondBaseSecondPt;
@@ -866,11 +885,16 @@ namespace Kinergy.KineticUnit
 
                 secondHookBaseBrep.Transform(hookBarBrepMove);
 
+                #region test by LH
+                //myDoc.Objects.AddBrep(secondHookBaseBrep);
+                //myDoc.Views.Redraw();
+                #endregion
+
                 // create the cavity part1 for the lock head
                 Vector3d ca_xp = 4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_xn = -4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_yp = 3 * secondPtPlane.YAxis;
-                Vector3d ca_yn = -3 / 2 * secondPtPlane.YAxis;
+                Vector3d ca_yn = -7 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBaseCavPts = new Point3d[5];
                 secondHookBaseCavPts[0] = endPointSlot + ca_xp + ca_yp;
@@ -883,7 +907,7 @@ namespace Kinergy.KineticUnit
                 secondHookBaseCavRect.Transform(rectAreaRotate);
 
                 Point3d sweepSecondBaseCavFirstPt = endPointSlot;
-                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 9.6;
+                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 11.6;
                 Point3d[] secondBaseCavPts = new Point3d[2];
                 secondBaseCavPts[0] = sweepSecondBaseCavFirstPt;
                 secondBaseCavPts[1] = sweepSecondBaseCavSecondPt;
@@ -894,8 +918,42 @@ namespace Kinergy.KineticUnit
 
                 secondHookBaseCavBrep.Transform(hookBarBrepMove);
 
+                // Add an extension for Boolean different from the main body
+                Brep partForCutModelBooleanInitial = secondHookBaseCavBrep.DuplicateBrep();
+
+                Point3d portForBooleanExtensionFirstPt = endPointSlot;
+                Point3d portForBooleanExtensionSecondPt = portForBooleanExtensionFirstPt - extVec1 / extVec1.Length * 50;
+                Point3d[] partForBooleanExtensionPts = new Point3d[2];
+                partForBooleanExtensionPts[0] = portForBooleanExtensionFirstPt;
+                partForBooleanExtensionPts[1] = portForBooleanExtensionSecondPt;
+                Curve partForBooleanExtensionRail = new Polyline(partForBooleanExtensionPts).ToNurbsCurve();
+
+                Brep partForBooleanExtensionBrep = sweep.PerformSweep(partForBooleanExtensionRail, secondHookBaseCavRect)[0];
+                partForBooleanExtensionBrep = partForBooleanExtensionBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                partForBooleanExtensionBrep.Transform(hookBarBrepMove);
+                partForBooleanExtensionBrep.Flip();
+
+                var brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
+                                myDoc.ModelAbsoluteTolerance);
+
+                if (brepsForBooleanExtension == null)
+                {
+                    partForBooleanExtensionBrep.Flip();
+                    brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
+                                myDoc.ModelAbsoluteTolerance);
+                }
+                partForCutModelBoolean = brepsForBooleanExtension[0];
+
+                partForCutModelBooleanMirror = partForCutModelBoolean.DuplicateBrep();
+                Transform mirrorTrans = Transform.Mirror(p_inside, lockBaseVector);
+                partForCutModelBooleanMirror.Transform(mirrorTrans);
+                partForCutModelBooleanMirror.Flip();
+
                 #region test by LH
                 //myDoc.Objects.AddBrep(secondHookBaseCavBrep);
+                //myDoc.Views.Redraw();
+                //myDoc.Objects.AddBrep(partForCutModelBoolean);
                 //myDoc.Views.Redraw();
                 #endregion
 
@@ -903,7 +961,7 @@ namespace Kinergy.KineticUnit
                 Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
-                Vector3d ca_pt_yn = -2.5 / 2 * secondPtPlane.YAxis;
+                Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBaseCavPtPts = new Point3d[5];
                 secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
@@ -916,7 +974,7 @@ namespace Kinergy.KineticUnit
                 secondHookBaseCavPtRect.Transform(rectAreaRotate);
 
                 Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
-                Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 7;
+                Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
                 Point3d[] secondBaseCavPtPts = new Point3d[2];
                 secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
                 secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
@@ -932,6 +990,19 @@ namespace Kinergy.KineticUnit
                 //myDoc.Views.Redraw();
                 #endregion
 
+                //var allCavities = Brep.CreateBooleanUnion(new List<Brep> { secondHookBaseCavBrep, secondHookBaseCavPtBrep },
+                //                myDoc.ModelRelativeTolerance);
+                //Brep allCavity = allCavities[0];
+
+                //var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, allCavity, myDoc.ModelAbsoluteTolerance);
+                //if (lockbaseBreps == null)
+                //{
+                //    secondHookBaseCavPtBrep.Flip();
+                //    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, allCavity, myDoc.ModelAbsoluteTolerance);
+                //}
+                //lockbaseBrep = lockbaseBreps[0];
+
+
                 var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
                 if (secondHookBaseTakeOutBreps == null)
                 {
@@ -940,6 +1011,10 @@ namespace Kinergy.KineticUnit
                 }
                 secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
 
+                #region test by LH
+                //myDoc.Objects.AddBrep(secondHookBaseTakeOutBrep);
+                //myDoc.Views.Redraw();
+                #endregion
 
                 var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
                 if (lockbaseBreps == null)
@@ -1084,7 +1159,7 @@ namespace Kinergy.KineticUnit
                 Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
                 Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
                 Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
-                Vector3d sb_yn = -6 / 2 * secondPtPlane.YAxis;
+                Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBasePts = new Point3d[5];
                 secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
@@ -1098,7 +1173,7 @@ namespace Kinergy.KineticUnit
 
                 Point3d sweepSecondBaseFirstPt = endPointSlot;
                 Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
-                Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 11.6;
+                Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
                 Point3d[] secondBasePts = new Point3d[2];
                 secondBasePts[0] = sweepSecondBaseFirstPt;
                 secondBasePts[1] = sweepSecondBaseSecondPt;
@@ -1113,7 +1188,7 @@ namespace Kinergy.KineticUnit
                 Vector3d ca_xp = 4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_xn = -4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_yp = 3 * secondPtPlane.YAxis;
-                Vector3d ca_yn = -3 / 2 * secondPtPlane.YAxis;
+                Vector3d ca_yn = -7 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBaseCavPts = new Point3d[5];
                 secondHookBaseCavPts[0] = endPointSlot + ca_xp + ca_yp;
@@ -1126,7 +1201,7 @@ namespace Kinergy.KineticUnit
                 secondHookBaseCavRect.Transform(rectAreaRotate);
 
                 Point3d sweepSecondBaseCavFirstPt = endPointSlot;
-                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 9.6;
+                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 11.6;
                 Point3d[] secondBaseCavPts = new Point3d[2];
                 secondBaseCavPts[0] = sweepSecondBaseCavFirstPt;
                 secondBaseCavPts[1] = sweepSecondBaseCavSecondPt;
@@ -1137,6 +1212,38 @@ namespace Kinergy.KineticUnit
 
                 secondHookBaseCavBrep.Transform(hookBarBrepMove);
 
+                // Add an extension for Boolean different from the main body
+                Brep partForCutModelBooleanInitial = secondHookBaseCavBrep.DuplicateBrep();
+
+                Point3d portForBooleanExtensionFirstPt = endPointSlot;
+                Point3d portForBooleanExtensionSecondPt = portForBooleanExtensionFirstPt - extVec1 / extVec1.Length * 50;
+                Point3d[] partForBooleanExtensionPts = new Point3d[2];
+                partForBooleanExtensionPts[0] = portForBooleanExtensionFirstPt;
+                partForBooleanExtensionPts[1] = portForBooleanExtensionSecondPt;
+                Curve partForBooleanExtensionRail = new Polyline(partForBooleanExtensionPts).ToNurbsCurve();
+
+                Brep partForBooleanExtensionBrep = sweep.PerformSweep(partForBooleanExtensionRail, secondHookBaseCavRect)[0];
+                partForBooleanExtensionBrep = partForBooleanExtensionBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                partForBooleanExtensionBrep.Transform(hookBarBrepMove);
+                partForBooleanExtensionBrep.Flip();
+
+                var brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
+                                myDoc.ModelAbsoluteTolerance);
+
+                if (brepsForBooleanExtension == null)
+                {
+                    partForBooleanExtensionBrep.Flip();
+                    brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
+                                myDoc.ModelAbsoluteTolerance);
+                }
+                partForCutModelBoolean = brepsForBooleanExtension[0];
+
+                partForCutModelBooleanMirror = partForCutModelBoolean.DuplicateBrep();
+                Transform mirrorTrans = Transform.Mirror(p_inside, lockBaseVector);
+                partForCutModelBooleanMirror.Transform(mirrorTrans);
+                partForCutModelBooleanMirror.Flip();
+
                 #region test by LH
                 //myDoc.Objects.AddBrep(secondHookBaseCavBrep);
                 //myDoc.Views.Redraw();
@@ -1146,7 +1253,7 @@ namespace Kinergy.KineticUnit
                 Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
                 Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
-                Vector3d ca_pt_yn = -2.5 / 2 * secondPtPlane.YAxis;
+                Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBaseCavPtPts = new Point3d[5];
                 secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
@@ -1159,7 +1266,7 @@ namespace Kinergy.KineticUnit
                 secondHookBaseCavPtRect.Transform(rectAreaRotate);
 
                 Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
-                Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 7;
+                Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
                 Point3d[] secondBaseCavPtPts = new Point3d[2];
                 secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
                 secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
@@ -1206,25 +1313,87 @@ namespace Kinergy.KineticUnit
             if (LockHeadBreps != null)
             {
                 LockHead = LockHeadBreps[0];
-                Lock lockHead = new Lock(LockHead, true, false);
-                Lock lockBase = new Lock(lockbaseBrep, false, false);
-                lockHead.RegisterOtherPart(lockBase);
+
+                Brep LockHeadMirror = LockHead.DuplicateBrep();
+                Brep LockBaseMirror = lockbaseBrep.DuplicateBrep();
+
+                Transform mirrorTrans = Transform.Mirror(p_inside, lockBaseVector);
+                LockHeadMirror.Transform(mirrorTrans);
+                LockBaseMirror.Transform(mirrorTrans);
+
+
+                Lock lockHead1 = new Lock(LockHead, true, false);
+                Lock lockBase1 = new Lock(lockbaseBrep, false, false);
+                Lock lockHead2 = new Lock(LockHeadMirror, true, false);
+                Lock lockBase2 = new Lock(LockBaseMirror, false, false);
+
+                lockHead1.RegisterOtherPart(lockBase1);
+                lockHead2.RegisterOtherPart(lockBase2);
+
                 if (lockT < springStart)
                 {
                     //Add fixation between lockhead and modelCut[1], lockbase and modelCut[0]
-                    _ = new Fixation(lockHead, modelCut[1]);
-                    _ = new Fixation(lockBase, modelCut[0]);
+                    _ = new Fixation(lockHead1, modelCut[1]);
+                    _ = new Fixation(lockHead2, modelCut[1]);
+
+                    var baseBreps = Brep.CreateBooleanDifference(modelCut[0].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
+                    if (baseBreps == null)
+                    {
+                        partForCutModelBoolean.Flip();
+                        baseBreps = Brep.CreateBooleanDifference(modelCut[0].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
+                    }
+                    Brep modelCutBaseUpdated = baseBreps[0];
+
+                    var baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
+                    if (baseBrepsMirror == null)
+                    {
+                        partForCutModelBooleanMirror.Flip();
+                        baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
+                    }
+
+                    Brep modelCutBaseFinal = baseBrepsMirror[0];
+
+                    modelCut[0].SetModel(modelCutBaseFinal);
+
+                    _ = new Fixation(lockBase1, modelCut[0]);
+                    _ = new Fixation(lockBase2, modelCut[0]);
                 }
                 else
                 {
-                    _ = new Fixation(lockHead, modelCut[0]);//Here lies the problem
-                    _ = new Fixation(lockBase, modelCut[1]);
-                }
-                entityList.Add(lockHead);
-                entityList.Add(lockBase);
+                    _ = new Fixation(lockHead1, modelCut[0]);//Here lies the problem
+                    _ = new Fixation(lockHead2, modelCut[0]);
 
-                locks.Add(lockHead);
-                locks.Add(lockBase);
+                    var baseBreps = Brep.CreateBooleanDifference(modelCut[1].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
+                    if (baseBreps == null)
+                    {
+                        partForCutModelBoolean.Flip();
+                        baseBreps = Brep.CreateBooleanDifference(modelCut[1].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
+                    }
+                    Brep modelCutBaseUpdated = baseBreps[0];
+
+                    var baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
+                    if (baseBrepsMirror == null)
+                    {
+                        partForCutModelBooleanMirror.Flip();
+                        baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
+                    }
+
+                    Brep modelCutBaseFinal = baseBrepsMirror[0];
+
+                    modelCut[1].SetModel(modelCutBaseFinal);
+
+                    _ = new Fixation(lockBase1, modelCut[1]);
+                    _ = new Fixation(lockBase2, modelCut[1]);
+                }
+                entityList.Add(lockHead1);
+                entityList.Add(lockHead2);
+                entityList.Add(lockBase1);
+                entityList.Add(lockBase2);
+
+                locks.Add(lockHead1);
+                locks.Add(lockHead2);
+                locks.Add(lockBase1);
+                locks.Add(lockBase2);
             }
 
             #endregion
@@ -1548,7 +1717,6 @@ namespace Kinergy.KineticUnit
             //}
 
             #endregion
-
 
             //if (type==1)
             //{

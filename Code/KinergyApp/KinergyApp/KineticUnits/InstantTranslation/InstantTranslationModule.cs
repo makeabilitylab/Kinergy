@@ -116,7 +116,7 @@ namespace InstTranslation
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("Kinetic unit", "KU", "Kinetic Unit instance for instant translation", GH_ParamAccess.item);
-            pManager.AddBrepParameter("Original brep", "Brep", "The target model to move", GH_ParamAccess.item);
+            //pManager.AddBrepParameter("Original brep", "Brep", "The target model to move", GH_ParamAccess.item);
             pManager.AddBrepParameter("Models", "M", "", GH_ParamAccess.list);
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
@@ -532,8 +532,8 @@ namespace InstTranslation
 
                     motion.SetLockPosition(pt);  // is this step redundant?
                     //motion.CutModelForLock();
-
-                    motion.ConstructLock(lockPos);  // lockPos=1: inside; lockPos=2: outside
+                    GH_Document gh_d = this.OnPingDocument();
+                    motion.ConstructLock(lockPos, gh_d);  // lockPos=1: inside; lockPos=2: outside
 
                     RhinoDoc.ActiveDoc.Objects.Hide(selObjId, true);
                     RhinoDoc.ActiveDoc.Views.Redraw();
@@ -585,12 +585,12 @@ namespace InstTranslation
             }
 
             DA.SetData(0, motion);
-            DA.SetData(1, model);
+            //DA.SetData(1, model);
             if(motion == null)
-                DA.SetDataList(2, null);
+                DA.SetDataList(1, null);
             else
-                DA.SetDataList(2, motion.GetModel());
-            DA.SetData(3, toPreview);
+                DA.SetDataList(1, motion.GetModel());
+            DA.SetData(2, toPreview);
         }
 
         private void RhinoApp_KeyboardEvent1(int key)
