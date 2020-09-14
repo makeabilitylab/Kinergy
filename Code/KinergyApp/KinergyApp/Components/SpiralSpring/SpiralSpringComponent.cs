@@ -39,7 +39,7 @@ namespace HumanUIforKinergy.Components.SpiralSpring
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("Spiral Spring", "S", "The spiral spring object", GH_ParamAccess.item);
-            pManager.AddBrepParameter("Models", "M", "The brep models of cam and follower", GH_ParamAccess.item);
+            pManager.AddBrepParameter("Models", "M", "The brep models of spiral", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace HumanUIforKinergy.Components.SpiralSpring
             if (!DA.GetData(5, ref n)) { return; }
             if (!DA.GetData(6, ref a)) { return; }
             a = Math.PI * a / 180;
-            Spiral c = new Spiral(p.Origin, p.Normal, rmax, rmin,t,w, n, a);
+            Spiral c = new Spiral(p.Origin, p.Normal, rmax, rmin,n,t,w , a);
             
             DA.SetData(0, c);
             
