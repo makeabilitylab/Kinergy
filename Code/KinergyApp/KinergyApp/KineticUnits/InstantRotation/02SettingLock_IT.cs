@@ -49,8 +49,8 @@ namespace InstTwisting
             if (!DA.GetData(0, ref IT))
                 return;
             DA.GetData(1, ref type);
-            IT.SetLockPosition();
-            IT.ConstructLocks();
+            IT.SetLockPosition_Old();
+            IT.ConstructLocks_Old();
             DA.SetData(0, IT);
             DA.SetDataList(1, IT.GetModel(new List<string> { "Locks"}));
         }

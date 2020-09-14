@@ -18,7 +18,7 @@ namespace Kinergy
             Cylinder rodCylinder;
             Curve skeleton;
             Vector3d direction;
-            public Curve Skeleton { get => skeleton;private set => skeleton = value; }
+            public Curve Skeleton { get => skeleton;set => skeleton = value; }
             public Vector3d Direction { get => direction;private set => direction = value; }
             public Cylinder RodCylinder { get => rodCylinder;private  set => rodCylinder = value; }
 

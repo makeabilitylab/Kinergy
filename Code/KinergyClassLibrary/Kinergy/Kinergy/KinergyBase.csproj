@@ -63,6 +63,7 @@
     <Compile Include="Geom\Follower.cs" />
     <Compile Include="Geom\Lock.cs" />
     <Compile Include="Geom\Shape.cs" />
+    <Compile Include="Geom\Socket.cs" />
     <Compile Include="Geom\Wheel.cs" />
     <Compile Include="KineticUnit\KineticUnit.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

@@ -113,6 +113,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Components\SpiralSpring\SpiralSpringComponent.cs" />
+    <Compile Include="Components\SpiralSpring\SpiralSpringComponentNew.cs" />
     <Compile Include="HumanUIforKinergy\Components\Testing - Troubleshooting\ElemFromGuid_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateBorder_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateExpander_Component.cs" />
@@ -261,6 +262,7 @@
     <Compile Include="KinergyUtilities\SelectPosition.cs" />
     <Compile Include="KinergyUtilities\SetDirection.cs" />
     <Compile Include="Components\CamAndFollower\CamAndFollowerComponent.cs" />
+    <Compile Include="KinergyUtilities\TestingComponentForBrepOffset.cs" />
     <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotation.cs" />
     <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotationModule.cs" />
     <Compile Include="KineticUnits\ContinuousTranslation\ContinuousTranslation.cs" />
