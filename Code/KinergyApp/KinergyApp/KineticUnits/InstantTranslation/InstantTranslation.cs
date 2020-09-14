@@ -696,23 +696,31 @@ namespace Kinergy.KineticUnit
             lockBaseVector = lockBaseVector / lockBaseVector.Length * offset;
 
             string path = "";
+            string path_base = "";
             if (gh_d.IsFilePathDefined)
             {
                 path = gh_d.FilePath;
+                path_base = gh_d.FilePath;
 
                 int idx = path.IndexOf("KinergyMainInterface.gh");
-                path = path.Substring(0, idx) + @"KinergyApp\KinergyApp\Resources\LockHeadInstantTranslation2.3dm";
+                path = path.Substring(0, idx) + @"KinergyApp\KinergyApp\Resources\lockhead2.3dm";
+                path_base = path.Substring(0, idx) + @"KinergyApp\KinergyApp\Resources\bucket.3dm";
 
             }
 
-            RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\LockHeadInstantTranslation2.3dm");
+            RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\lockhead2.3dm");
             //Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() +
             //                    "\\LockHeadInstantTranslation2.3dm");
 
             Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(path);
 
+            RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\bucket.3dm");
+
+            Brep LockBase = FileOperation.SingleBrepFromResourceFileDirectory(path_base);
+
             // The origin of the imported lock head
             Point3d lockHeadCenOrig = new Point3d(0, 0, 0);
+            Point3d lockBaseCenOrig = new Point3d(0, 0, 0);
 
             // create sweep function
             var sweep = new Rhino.Geometry.SweepOneRail();
@@ -750,10 +758,10 @@ namespace Kinergy.KineticUnit
 
                 #region construct the hook bar for lock
 
-                Vector3d f_xp = 2.11 / 2 * firstPtPlane.XAxis;
-                Vector3d f_xn = -2.11 / 2 * firstPtPlane.XAxis;
-                Vector3d f_yp = 2 / 2 * firstPtPlane.YAxis;
-                Vector3d f_yn = -2 / 2 * firstPtPlane.YAxis;
+                Vector3d f_xp = 4 / 2 * firstPtPlane.XAxis;
+                Vector3d f_xn = -4 / 2 * firstPtPlane.XAxis;
+                Vector3d f_yp = 1.2 / 2 * firstPtPlane.YAxis;
+                Vector3d f_yn = -1.2 / 2 * firstPtPlane.YAxis;
 
                 Point3d[] hookBarPts = new Point3d[5];
                 hookBarPts[0] = endPointHook + f_xp + f_yp;
@@ -767,7 +775,7 @@ namespace Kinergy.KineticUnit
                 hookBarRect.Transform(rectAreaRotate);
 
                 Point3d sweepFirstPt = endPointHook;
-                Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001);
+                Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001) - lockBaseVector / lockBaseVector.Length * 1.2/2;
                 Point3d[] railPts = new Point3d[2];
                 railPts[0] = sweepFirstPt;
                 railPts[1] = sweepSecondPt;
@@ -776,6 +784,7 @@ namespace Kinergy.KineticUnit
                 hookBarBrep = sweep.PerformSweep(rail, hookBarRect)[0];
                 hookBarBrep = hookBarBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
+                
                 Transform hookBarBrepMove = Transform.Translation(lockBaseVector);
                 hookBarBrep.Transform(hookBarBrepMove);
 
@@ -857,33 +866,33 @@ namespace Kinergy.KineticUnit
                 #endregion
 
                 #region construct the hood base at the start of the skeleton
-                Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
-                Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
-                Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
-                Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
+                //Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
+                //Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
+                //Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
+                //Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
 
-                Point3d[] secondHookBasePts = new Point3d[5];
-                secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
-                secondHookBasePts[1] = endPointSlot + sb_xn + sb_yp;
-                secondHookBasePts[2] = endPointSlot + sb_xn + sb_yn;
-                secondHookBasePts[3] = endPointSlot + sb_xp + sb_yn;
-                secondHookBasePts[4] = endPointSlot + sb_xp + sb_yp;
-                Curve secondHookBaseRect = new Polyline(secondHookBasePts).ToNurbsCurve();
+                //Point3d[] secondHookBasePts = new Point3d[5];
+                //secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
+                //secondHookBasePts[1] = endPointSlot + sb_xn + sb_yp;
+                //secondHookBasePts[2] = endPointSlot + sb_xn + sb_yn;
+                //secondHookBasePts[3] = endPointSlot + sb_xp + sb_yn;
+                //secondHookBasePts[4] = endPointSlot + sb_xp + sb_yp;
+                //Curve secondHookBaseRect = new Polyline(secondHookBasePts).ToNurbsCurve();
 
-                secondHookBaseRect.Transform(rectAreaRotate);
+                //secondHookBaseRect.Transform(rectAreaRotate);
 
-                Point3d sweepSecondBaseFirstPt = endPointSlot;
-                Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
-                Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
-                Point3d[] secondBasePts = new Point3d[2];
-                secondBasePts[0] = sweepSecondBaseFirstPt;
-                secondBasePts[1] = sweepSecondBaseSecondPt;
-                Curve secondBaseRail = new Polyline(secondBasePts).ToNurbsCurve();
+                //Point3d sweepSecondBaseFirstPt = endPointSlot;
+                //Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
+                //Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
+                //Point3d[] secondBasePts = new Point3d[2];
+                //secondBasePts[0] = sweepSecondBaseFirstPt;
+                //secondBasePts[1] = sweepSecondBaseSecondPt;
+                //Curve secondBaseRail = new Polyline(secondBasePts).ToNurbsCurve();
 
-                secondHookBaseBrep = sweep.PerformSweep(secondBaseRail, secondHookBaseRect)[0];
-                secondHookBaseBrep = secondHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                //secondHookBaseBrep = sweep.PerformSweep(secondBaseRail, secondHookBaseRect)[0];
+                //secondHookBaseBrep = secondHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                secondHookBaseBrep.Transform(hookBarBrepMove);
+                //secondHookBaseBrep.Transform(hookBarBrepMove);
 
                 #region test by LH
                 //myDoc.Objects.AddBrep(secondHookBaseBrep);
@@ -891,10 +900,10 @@ namespace Kinergy.KineticUnit
                 #endregion
 
                 // create the cavity part1 for the lock head
-                Vector3d ca_xp = 4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_xn = -4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_yp = 3 * secondPtPlane.YAxis;
-                Vector3d ca_yn = -7 / 2 * secondPtPlane.YAxis;
+                Vector3d ca_xp = 6/ 2 * secondPtPlane.XAxis;
+                Vector3d ca_xn = -6/ 2 * secondPtPlane.XAxis;
+                Vector3d ca_yp = 2.6 * secondPtPlane.YAxis;
+                Vector3d ca_yn = -10 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBaseCavPts = new Point3d[5];
                 secondHookBaseCavPts[0] = endPointSlot + ca_xp + ca_yp;
@@ -906,8 +915,9 @@ namespace Kinergy.KineticUnit
 
                 secondHookBaseCavRect.Transform(rectAreaRotate);
 
+                Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
                 Point3d sweepSecondBaseCavFirstPt = endPointSlot;
-                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 11.6;
+                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 12;
                 Point3d[] secondBaseCavPts = new Point3d[2];
                 secondBaseCavPts[0] = sweepSecondBaseCavFirstPt;
                 secondBaseCavPts[1] = sweepSecondBaseCavSecondPt;
@@ -922,7 +932,7 @@ namespace Kinergy.KineticUnit
                 Brep partForCutModelBooleanInitial = secondHookBaseCavBrep.DuplicateBrep();
 
                 Point3d portForBooleanExtensionFirstPt = endPointSlot;
-                Point3d portForBooleanExtensionSecondPt = portForBooleanExtensionFirstPt - extVec1 / extVec1.Length * 50;
+                Point3d portForBooleanExtensionSecondPt = portForBooleanExtensionFirstPt - extVec1 / extVec1.Length * 40;
                 Point3d[] partForBooleanExtensionPts = new Point3d[2];
                 partForBooleanExtensionPts[0] = portForBooleanExtensionFirstPt;
                 partForBooleanExtensionPts[1] = portForBooleanExtensionSecondPt;
@@ -958,32 +968,32 @@ namespace Kinergy.KineticUnit
                 #endregion
 
                 // create the cavity part2 for the lock head
-                Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
-                Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
+                //Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
+                //Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
+                //Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
+                //Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
 
-                Point3d[] secondHookBaseCavPtPts = new Point3d[5];
-                secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-                secondHookBaseCavPtPts[1] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yp;
-                secondHookBaseCavPtPts[2] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yn;
-                secondHookBaseCavPtPts[3] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yn;
-                secondHookBaseCavPtPts[4] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-                Curve secondHookBaseCavPtRect = new Polyline(secondHookBaseCavPtPts).ToNurbsCurve();
+                //Point3d[] secondHookBaseCavPtPts = new Point3d[5];
+                //secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
+                //secondHookBaseCavPtPts[1] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yp;
+                //secondHookBaseCavPtPts[2] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yn;
+                //secondHookBaseCavPtPts[3] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yn;
+                //secondHookBaseCavPtPts[4] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
+                //Curve secondHookBaseCavPtRect = new Polyline(secondHookBaseCavPtPts).ToNurbsCurve();
 
-                secondHookBaseCavPtRect.Transform(rectAreaRotate);
+                //secondHookBaseCavPtRect.Transform(rectAreaRotate);
 
-                Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
-                Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
-                Point3d[] secondBaseCavPtPts = new Point3d[2];
-                secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
-                secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
-                Curve secondBaseCavPtRail = new Polyline(secondBaseCavPtPts).ToNurbsCurve();
+                //Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
+                //Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
+                //Point3d[] secondBaseCavPtPts = new Point3d[2];
+                //secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
+                //secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
+                //Curve secondBaseCavPtRail = new Polyline(secondBaseCavPtPts).ToNurbsCurve();
 
-                secondHookBaseCavPtBrep = sweep.PerformSweep(secondBaseCavPtRail, secondHookBaseCavPtRect)[0];
-                secondHookBaseCavPtBrep = secondHookBaseCavPtBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                //secondHookBaseCavPtBrep = sweep.PerformSweep(secondBaseCavPtRail, secondHookBaseCavPtRect)[0];
+                //secondHookBaseCavPtBrep = secondHookBaseCavPtBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                secondHookBaseCavPtBrep.Transform(hookBarBrepMove);
+                //secondHookBaseCavPtBrep.Transform(hookBarBrepMove);
 
                 #region test by LH
                 //myDoc.Objects.AddBrep(secondHookBaseCavPtBrep);
@@ -1003,26 +1013,55 @@ namespace Kinergy.KineticUnit
                 //lockbaseBrep = lockbaseBreps[0];
 
 
-                var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-                if (secondHookBaseTakeOutBreps == null)
-                {
-                    secondHookBaseCavBrep.Flip();
-                    secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-                }
-                secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
+                //var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
+                //if (secondHookBaseTakeOutBreps == null)
+                //{
+                //    secondHookBaseCavBrep.Flip();
+                //    secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
+                //}
+                //secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
 
-                #region test by LH
-                //myDoc.Objects.AddBrep(secondHookBaseTakeOutBrep);
-                //myDoc.Views.Redraw();
+                //#region test by LH
+                ////myDoc.Objects.AddBrep(secondHookBaseTakeOutBrep);
+                ////myDoc.Views.Redraw();
+                //#endregion
+
+                //var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
+                //if (lockbaseBreps == null)
+                //{
+                //    secondHookBaseCavPtBrep.Flip();
+                //    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
+                //}
+                //lockbaseBrep = lockbaseBreps[0];
+
+                #region transform lock base from bucket.3dm
+                Vector3d se = skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart);
+                Transform bs_move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springStart) - lockBaseCenOrig));
+                LockBase.Transform(bs_move1);
+                Vector3d bs_new_Xaxis = Vector3d.XAxis;
+                Vector3d bs_new_Yaxis = Vector3d.YAxis;
+                bs_new_Xaxis.Transform(bs_move1);
+                bs_new_Yaxis.Transform(bs_move1);
+
+                Vector3d bs_skeXAxis = skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength());
+                Transform bs_rotate1 = Transform.Rotation(Vector3d.XAxis, bs_skeXAxis, skeleton.PointAtNormalizedLength(springEnd));
+                LockBase.Transform(bs_rotate1);
+                bs_new_Xaxis.Transform(bs_rotate1);
+                bs_new_Yaxis.Transform(bs_rotate1);
+
+                Transform bs_rotate2 = Transform.Rotation(bs_new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd));
+                LockBase.Transform(bs_rotate2);
+                bs_new_Xaxis.Transform(bs_rotate2);
+                bs_new_Yaxis.Transform(bs_rotate2);
+
+                Transform bs_move2 = Transform.Translation(lockBaseVector);
+                LockBase.Transform(bs_move2);
+                bs_new_Xaxis.Transform(bs_move2);
+                bs_new_Yaxis.Transform(bs_move2);
+
+                lockbaseBrep = LockBase;
+
                 #endregion
-
-                var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-                if (lockbaseBreps == null)
-                {
-                    secondHookBaseCavPtBrep.Flip();
-                    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-                }
-                lockbaseBrep = lockbaseBreps[0];
 
                 #endregion
 
@@ -1030,7 +1069,6 @@ namespace Kinergy.KineticUnit
                 //myDoc.Objects.AddBrep(lockbaseBrep);
                 //myDoc.Views.Redraw();
                 #endregion
-
 
             }
             else
@@ -1049,10 +1087,10 @@ namespace Kinergy.KineticUnit
 
                 #region construct the hook bar for lock
 
-                Vector3d f_xp = 2.11 / 2 * firstPtPlane.XAxis;
-                Vector3d f_xn = -2.11 / 2 * firstPtPlane.XAxis;
-                Vector3d f_yp = 2 / 2 * firstPtPlane.YAxis;
-                Vector3d f_yn = -2 / 2 * firstPtPlane.YAxis;
+                Vector3d f_xp = 4 / 2 * firstPtPlane.XAxis;
+                Vector3d f_xn = -4 / 2 * firstPtPlane.XAxis;
+                Vector3d f_yp = 1.2 / 2 * firstPtPlane.YAxis;
+                Vector3d f_yn = -1.2 / 2 * firstPtPlane.YAxis;
 
                 Point3d[] hookBarPts = new Point3d[5];
                 hookBarPts[0] = endPointHook + f_xp + f_yp;
@@ -1066,7 +1104,7 @@ namespace Kinergy.KineticUnit
                 hookBarRect.Transform(rectAreaRotate);
 
                 Point3d sweepFirstPt = endPointHook;
-                Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength() + 0.001);
+                Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength() + 0.001) - lockBaseVector / lockBaseVector.Length * 1.2/2;
                 Point3d[] railPts = new Point3d[2];
                 railPts[0] = sweepFirstPt;
                 railPts[1] = sweepSecondPt;
@@ -1156,39 +1194,41 @@ namespace Kinergy.KineticUnit
                 #endregion
 
                 #region construct the hood base at the end of the skeleton
-                Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
-                Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
-                Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
-                Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
+                //Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
+                //Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
+                //Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
+                //Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
 
-                Point3d[] secondHookBasePts = new Point3d[5];
-                secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
-                secondHookBasePts[1] = endPointSlot + sb_xn + sb_yp;
-                secondHookBasePts[2] = endPointSlot + sb_xn + sb_yn;
-                secondHookBasePts[3] = endPointSlot + sb_xp + sb_yn;
-                secondHookBasePts[4] = endPointSlot + sb_xp + sb_yp;
-                Curve secondHookBaseRect = new Polyline(secondHookBasePts).ToNurbsCurve();
+                //Point3d[] secondHookBasePts = new Point3d[5];
+                //secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
+                //secondHookBasePts[1] = endPointSlot + sb_xn + sb_yp;
+                //secondHookBasePts[2] = endPointSlot + sb_xn + sb_yn;
+                //secondHookBasePts[3] = endPointSlot + sb_xp + sb_yn;
+                //secondHookBasePts[4] = endPointSlot + sb_xp + sb_yp;
+                //Curve secondHookBaseRect = new Polyline(secondHookBasePts).ToNurbsCurve();
 
-                secondHookBaseRect.Transform(rectAreaRotate);
+                //secondHookBaseRect.Transform(rectAreaRotate);
 
-                Point3d sweepSecondBaseFirstPt = endPointSlot;
-                Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
-                Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
-                Point3d[] secondBasePts = new Point3d[2];
-                secondBasePts[0] = sweepSecondBaseFirstPt;
-                secondBasePts[1] = sweepSecondBaseSecondPt;
-                Curve secondBaseRail = new Polyline(secondBasePts).ToNurbsCurve();
+                //Point3d sweepSecondBaseFirstPt = endPointSlot;
+                //Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
+                //Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
+                //Point3d[] secondBasePts = new Point3d[2];
+                //secondBasePts[0] = sweepSecondBaseFirstPt;
+                //secondBasePts[1] = sweepSecondBaseSecondPt;
+                //Curve secondBaseRail = new Polyline(secondBasePts).ToNurbsCurve();
 
-                secondHookBaseBrep = sweep.PerformSweep(secondBaseRail, secondHookBaseRect)[0];
-                secondHookBaseBrep = secondHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                //secondHookBaseBrep = sweep.PerformSweep(secondBaseRail, secondHookBaseRect)[0];
+                //secondHookBaseBrep = secondHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                secondHookBaseBrep.Transform(hookBarBrepMove);
+                //secondHookBaseBrep.Transform(hookBarBrepMove);
 
                 // create the cavity part1 for the lock head
-                Vector3d ca_xp = 4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_xn = -4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_yp = 3 * secondPtPlane.YAxis;
-                Vector3d ca_yn = -7 / 2 * secondPtPlane.YAxis;
+
+                Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
+                Vector3d ca_xp = 6 / 2 * secondPtPlane.XAxis;
+                Vector3d ca_xn = -6 / 2 * secondPtPlane.XAxis;
+                Vector3d ca_yp = 2.6 * secondPtPlane.YAxis;
+                Vector3d ca_yn = -10 / 2 * secondPtPlane.YAxis;
 
                 Point3d[] secondHookBaseCavPts = new Point3d[5];
                 secondHookBaseCavPts[0] = endPointSlot + ca_xp + ca_yp;
@@ -1201,7 +1241,7 @@ namespace Kinergy.KineticUnit
                 secondHookBaseCavRect.Transform(rectAreaRotate);
 
                 Point3d sweepSecondBaseCavFirstPt = endPointSlot;
-                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 11.6;
+                Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 12;
                 Point3d[] secondBaseCavPts = new Point3d[2];
                 secondBaseCavPts[0] = sweepSecondBaseCavFirstPt;
                 secondBaseCavPts[1] = sweepSecondBaseCavSecondPt;
@@ -1250,54 +1290,82 @@ namespace Kinergy.KineticUnit
                 #endregion
 
                 // create the cavity part2 for the lock head
-                Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
-                Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
-                Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
+                //Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
+                //Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
+                //Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
+                //Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
 
-                Point3d[] secondHookBaseCavPtPts = new Point3d[5];
-                secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-                secondHookBaseCavPtPts[1] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yp;
-                secondHookBaseCavPtPts[2] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yn;
-                secondHookBaseCavPtPts[3] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yn;
-                secondHookBaseCavPtPts[4] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-                Curve secondHookBaseCavPtRect = new Polyline(secondHookBaseCavPtPts).ToNurbsCurve();
+                //Point3d[] secondHookBaseCavPtPts = new Point3d[5];
+                //secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
+                //secondHookBaseCavPtPts[1] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yp;
+                //secondHookBaseCavPtPts[2] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yn;
+                //secondHookBaseCavPtPts[3] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yn;
+                //secondHookBaseCavPtPts[4] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
+                //Curve secondHookBaseCavPtRect = new Polyline(secondHookBaseCavPtPts).ToNurbsCurve();
 
-                secondHookBaseCavPtRect.Transform(rectAreaRotate);
+                //secondHookBaseCavPtRect.Transform(rectAreaRotate);
 
-                Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
-                Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
-                Point3d[] secondBaseCavPtPts = new Point3d[2];
-                secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
-                secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
-                Curve secondBaseCavPtRail = new Polyline(secondBaseCavPtPts).ToNurbsCurve();
+                //Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
+                //Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
+                //Point3d[] secondBaseCavPtPts = new Point3d[2];
+                //secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
+                //secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
+                //Curve secondBaseCavPtRail = new Polyline(secondBaseCavPtPts).ToNurbsCurve();
 
-                secondHookBaseCavPtBrep = sweep.PerformSweep(secondBaseCavPtRail, secondHookBaseCavPtRect)[0];
-                secondHookBaseCavPtBrep = secondHookBaseCavPtBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                //secondHookBaseCavPtBrep = sweep.PerformSweep(secondBaseCavPtRail, secondHookBaseCavPtRect)[0];
+                //secondHookBaseCavPtBrep = secondHookBaseCavPtBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                secondHookBaseCavPtBrep.Transform(hookBarBrepMove);
+                //secondHookBaseCavPtBrep.Transform(hookBarBrepMove);
 
                 #region test by LH
                 //myDoc.Objects.AddBrep(secondHookBaseCavPtBrep);
                 //myDoc.Views.Redraw();
                 #endregion
 
-                var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-                if (secondHookBaseTakeOutBreps == null)
-                {
-                    secondHookBaseCavBrep.Flip();
-                    secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-                }
-                secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
+                //var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
+                //if (secondHookBaseTakeOutBreps == null)
+                //{
+                //    secondHookBaseCavBrep.Flip();
+                //    secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
+                //}
+                //secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
 
 
-                var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-                if (lockbaseBreps == null)
-                {
-                    secondHookBaseCavPtBrep.Flip();
-                    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-                }
-                lockbaseBrep = lockbaseBreps[0];
+                //var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
+                //if (lockbaseBreps == null)
+                //{
+                //    secondHookBaseCavPtBrep.Flip();
+                //    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
+                //}
+                //lockbaseBrep = lockbaseBreps[0];
+
+                #region transform lock base from bucket.3dm
+                Vector3d se = skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd);
+                Transform bs_move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - lockBaseCenOrig));
+                LockBase.Transform(bs_move1);
+                Vector3d bs_new_Xaxis = Vector3d.XAxis;
+                Vector3d bs_new_Yaxis = Vector3d.YAxis;
+                bs_new_Xaxis.Transform(bs_move1);
+                bs_new_Yaxis.Transform(bs_move1);
+
+                Vector3d bs_skeXAxis = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()) - skeleton.PointAtNormalizedLength(springStart);
+                Transform bs_rotate1 = Transform.Rotation(Vector3d.XAxis, (-1) * bs_skeXAxis, skeleton.PointAtNormalizedLength(springEnd));
+                LockBase.Transform(bs_rotate1);
+                bs_new_Xaxis.Transform(bs_rotate1);
+                bs_new_Yaxis.Transform(bs_rotate1);
+
+                Transform bs_rotate2 = Transform.Rotation(bs_new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd));
+                LockBase.Transform(bs_rotate2);
+                bs_new_Xaxis.Transform(bs_rotate2);
+                bs_new_Yaxis.Transform(bs_rotate2);
+
+                Transform bs_move2 = Transform.Translation(lockBaseVector);
+                LockBase.Transform(bs_move2);
+                bs_new_Xaxis.Transform(bs_move2);
+                bs_new_Yaxis.Transform(bs_move2);
+
+                lockbaseBrep = LockBase;
+                #endregion
 
                 #endregion
 
@@ -1307,8 +1375,13 @@ namespace Kinergy.KineticUnit
                 #endregion
             }
 
+
             var LockHeadBreps = Brep.CreateBooleanUnion(new List<Brep> { firstHookBaseBrep, hookBarBrep, LockHead }, 
                                 myDoc.ModelAbsoluteTolerance);
+
+            //myDoc.Objects.AddBrep(LockHeadBreps0[0]);
+            //myDoc.Objects.AddBrep(LockHead);
+            //myDoc.Views.Redraw();
 
             if (LockHeadBreps != null)
             {

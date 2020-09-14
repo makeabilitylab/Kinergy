@@ -24,8 +24,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
         double t1, t2; // the positoins of start point and end point of the segment on the normalized skeleton
         Curve skeleton;     // skeleton
         double energyLevel;         // value of the strength slide bar
-        double amplitudeLevel;   // value of the amplitude slide bar
-        int speed;
+        int amplitude;   // value of the amplitude slide bar
+        double speedLevel;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
         List<Arrow> lockDirCandidates;
@@ -36,7 +36,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
         double min_wire_diamter;
         double min_coil_num;
         double energy;
-        double amplitude;
+        double speed;
         bool isLockSet;
         Guid selObjId;
         List<Guid> toBeBaked;
@@ -71,8 +71,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
             t2 = 1;
             skeleton = null;
             energyLevel = 0.5;
-            amplitudeLevel = 4;
-            speed = 1;
+            amplitude = 0;
+            speedLevel = 4;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -82,7 +82,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
             min_wire_diamter = 2.8;
             min_coil_num = 3;
             energy = 0.5;
-            amplitude = 0.5;
+            speed = 0.5;
             arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;
@@ -102,8 +102,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
 
             // Value listeners 
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Amplitude", "A", "The amplitude of the oscillation", GH_ParamAccess.item);
-            pManager.AddTextParameter("Speed", "V", "The speed/velocity of the oscillation", GH_ParamAccess.item);
+            pManager.AddTextParameter("Amplitude", "A", "The amplitude of the oscillation", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Speed", "V", "The speed/velocity of the oscillation", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -120,14 +120,14 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
 
-        int ConvertSpeedToIntType(string patternType)
+        int ConvertAmpToIntType(string ampType)
         {
             int result = 0;
-            switch (patternType)
+            switch (ampType)
             {
-                case "1": result = 0; break;
-                case "2": result = 1; break;
-                case "3": result = 1; break;
+                case "small": result = 0; break;
+                case "medium": result = 1; break;
+                case "big": result = 1; break;
             }
             return result;
         }
@@ -140,8 +140,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
         {
             bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
             double energy_input = 4;
-            double amplitude_input = 4;
-            string speed_input = "";
+            string amplitude_input = "";
+            double speed_input = 4;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -187,15 +187,15 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
                 toPreview = true;
             }
 
-            if (energyLevel == energy_input && amplitude == amplitude_input && speed == ConvertSpeedToIntType(speed_input))
+            if (energyLevel == energy_input && amplitude == ConvertAmpToIntType(amplitude_input) && speedLevel == speed_input)
             {
                 toAdjustParam = false;
             }
             else
             {
                 energyLevel = energy_input;
-                amplitude = amplitude_input;
-                speed = ConvertSpeedToIntType(speed_input);
+                amplitude = ConvertAmpToIntType(amplitude_input);
+                speedLevel = speed_input;
                 toAdjustParam = true;
             }
             if (bake_input)

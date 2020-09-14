@@ -73,13 +73,11 @@
     <Compile Include="Utilities\Arrow.cs" />
     <Compile Include="Geom\BoxLike.cs" />
     <Compile Include="Geom\Component.cs" />
-    <Compile Include="KineticUnit\ContinuousMovingPress.cs" />
     <Compile Include="Relationship\Engagement.cs" />
     <Compile Include="Utilities\Convert resource file.cs" />
     <Compile Include="Utilities\FileOperation.cs" />
     <Compile Include="Relationship\Fixation.cs" />
     <Compile Include="Geom\Gear.cs" />
-    <Compile Include="Generator\GearSet.cs" />
     <Compile Include="Relationship\Hinge.cs" />
     <Compile Include="Relationship\Locking.cs" />
     <Compile Include="Movement.cs" />

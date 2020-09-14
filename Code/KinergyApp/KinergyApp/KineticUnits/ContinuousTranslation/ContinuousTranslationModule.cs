@@ -24,7 +24,8 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
         double t1, t2; // the positoins of start point and end point of the segment on the normalized skeleton
         Curve skeleton;     // skeleton
         double energyLevel;         // value of the strength slide bar
-        double distanceLevel;   // value of the distance slide bar
+        double speedLevel;
+        int distance;   // value of the distance slide bar
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
         List<Arrow> lockDirCandidates;
@@ -35,7 +36,7 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
         double min_wire_diamter;
         double min_coil_num;
         double energy;
-        double distance;
+        double speed;
         bool isLockSet;
         Guid selObjId;
         List<Guid> toBeBaked;
@@ -70,7 +71,7 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
             t2 = 1;
             skeleton = null;
             energyLevel = 0.5;
-            distanceLevel = 4;
+            speedLevel = 4;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -80,7 +81,8 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
             min_wire_diamter = 2.8;
             min_coil_num = 3;
             energy = 0.5;
-            distance = 0.5;
+            speed = 4;
+            distance = 0;
             arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;
@@ -100,7 +102,8 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
 
             // Value listeners 
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Distance", "Dis", "The distance the end-effector can travel with", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Speed", "S", "Speed of motion", GH_ParamAccess.item);
+            pManager.AddTextParameter("Distance", "Dis", "The distance the end-effector can travel with", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -116,6 +119,17 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
             pManager.AddBrepParameter("Models", "M", "", GH_ParamAccess.list);
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
+        int ConvertDistanceToIntType(string disType)
+        {
+            int result = 0;
+            switch (disType)
+            {
+                case "Short": result = 0; break;
+                case "Long": result = 1; break;
+                case "Longer": result = 1; break;
+            }
+            return result;
+        }
 
         /// <summary>
         /// This is the method that actually does the work.
@@ -125,7 +139,8 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
         {
             bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
             double energy_input = 4;
-            double distance_input = 4;
+            double speed_input = 4;
+            string distance_input = "";
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -138,9 +153,11 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
                 return;
             if (!DA.GetData(4, ref energy_input))
                 return;
-            if (!DA.GetData(5, ref distance_input))
+            if (!DA.GetData(5, ref speed_input))
                 return;
-            if (!DA.GetData(6, ref bake_input))
+            if (!DA.GetData(6, ref distance_input))
+                return;
+            if (!DA.GetData(7, ref bake_input))
                 return;
             #endregion
 
@@ -169,14 +186,15 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
                 toPreview = true;
             }
 
-            if (energyLevel == energy_input && distance == distance_input)
+            if (energyLevel == energy_input && speedLevel == speed_input && distance == ConvertDistanceToIntType(distance_input))
             {
                 toAdjustParam = false;
             }
             else
             {
                 energyLevel = energy_input;
-                distance = distance_input;
+                speedLevel = speed_input;
+                distance = ConvertDistanceToIntType(distance_input);
                 toAdjustParam = true;
             }
             if (bake_input)

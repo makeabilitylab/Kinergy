@@ -386,6 +386,9 @@ namespace InstTranslation
                         //DA.SetData(2, skeleton);
                         //DA.SetData(3, v);
                         processingwin.Hide();
+
+                        Transform cavityTranslation = Transform.Translation(Brep2.GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
+                        innerCavity.Transform(cavityTranslation);
                     }
                     
                     #endregion
@@ -481,7 +484,7 @@ namespace InstTranslation
                 }
                 else
                 {
-                    RhinoApp.CommandPrompt = "Please select a region first!";
+                    RhinoApp.CommandPrompt = "Please select an object first!";
                 }
             }
 

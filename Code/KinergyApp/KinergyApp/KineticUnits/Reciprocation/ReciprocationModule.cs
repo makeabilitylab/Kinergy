@@ -24,7 +24,8 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         double t1, t2; // the positoins of start point and end point of the segment on the normalized skeleton
         Curve skeleton;     // skeleton
         double energyLevel;         // value of the strength slide bar
-        double amplitudeLevel;   // value of the amplitude slide bar
+        int amplitude;
+        double speedLevel;      // value of the speed slide bar
         int pattern;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
@@ -36,7 +37,6 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         double min_wire_diamter;
         double min_coil_num;
         double energy;
-        double amplitude;
         bool isLockSet;
         Guid selObjId;
         List<Guid> toBeBaked;
@@ -49,6 +49,7 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         bool ArrowGenerated = false;
         bool PlaneSelected = false;
         double arrowScale;
+        double speed;
         Plane pl1, pl2;
         PlaneSurface s1, s2;
         Guid selected = Guid.Empty;
@@ -71,22 +72,23 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
             t2 = 1;
             skeleton = null;
             energyLevel = 0.5;
-            amplitudeLevel = 4;
+            amplitude = 0;
             pattern = 1;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
             p = null;
+            speedLevel = 0;
 
             lockState = false;
             min_wire_diamter = 2.8;
             min_coil_num = 3;
             energy = 0.5;
-            amplitude = 0.5;
             arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;
             toBeBaked = new List<Guid>();
+            speed = 0;
         }
 
         /// <summary>
@@ -102,7 +104,8 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
 
             // Value listeners 
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Amplitude", "A", "The amplitude of the reciprocation", GH_ParamAccess.item);
+            pManager.AddTextParameter("Amplitude", "A", "The amplitude of the reciprocation", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Speed", "S", "The speed of the reciprocation", GH_ParamAccess.item);
             pManager.AddTextParameter("Pattern", "P", "The type of the cam profile", GH_ParamAccess.item);
 
             // Confirm and bake all components
@@ -125,8 +128,20 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
             int result = 0;
             switch (patternType)
             {
-                case "1": result = 0; break;
-                case "2": result = 1; break;
+                case @"Uniform acceleration & deceleration": result = 0; break;
+                case @"Slightly rising & suddenly falling": result = 1; break;
+            }
+            return result;
+        }
+
+        int ConvertAmpToIntType(string ampType)
+        {
+            int result = 0;
+            switch (ampType)
+            {
+                case "small": result = 0; break;
+                case "medium": result = 1; break;
+                case "big": result = 1; break;
             }
             return result;
         }
@@ -139,7 +154,8 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         {
             bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
             double energy_input = 4;
-            double amplitude_input = 4;
+            string amplitude_input = "";
+            double speed_input = 4;
             string pattern_input = "";
 
             #region input param readings
@@ -155,9 +171,11 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
                 return;
             if (!DA.GetData(5, ref amplitude_input))
                 return;
-            if (!DA.GetData(6, ref pattern_input))
+            if (!DA.GetData(6, ref speed_input))
                 return;
-            if (!DA.GetData(7, ref bake_input))
+            if (!DA.GetData(7, ref pattern_input))
+                return;
+            if (!DA.GetData(8, ref bake_input))
                 return;
             #endregion
 
@@ -186,14 +204,15 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
                 toPreview = true;
             }
 
-            if (energyLevel == energy_input && amplitude == amplitude_input && pattern == ConvertPatternToIntType(pattern_input))
+            if (energyLevel == energy_input && amplitude == ConvertAmpToIntType(amplitude_input) && speedLevel == speed_input  && pattern == ConvertPatternToIntType(pattern_input))
             {
                 toAdjustParam = false;
             }
             else
             {
                 energyLevel = energy_input;
-                amplitude = amplitude_input;
+                amplitude = ConvertAmpToIntType(amplitude_input);
+                speedLevel = speed_input;
                 pattern = ConvertPatternToIntType(pattern_input);
                 toAdjustParam = true;
             }

@@ -6,4 +6,12 @@ Kinergy Development To-Do List:
 
 3. [Medium] Clean the skeleton generation part for curved and non-curve body.
 
-4. [Medium] Make proper interface logic, e.g., enabling/disabling buttons 
+4. [Medium] Make proper interface logic, e.g., enabling/disabling buttons
+
+5. [High] The object has to be aligned with the x, y, z axis 
+
+6. [High] continuous rotation, the outDiameter should be re-calibrated using the brep rather than the boundingbox
+
+7. [High] the hook height should be taken into account for the helical spring for continuous rotation
+
+8. 

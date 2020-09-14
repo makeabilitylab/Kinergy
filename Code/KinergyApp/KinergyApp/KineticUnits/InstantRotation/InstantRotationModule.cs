@@ -35,7 +35,7 @@ namespace InstRotation
         double min_wire_diamter;
         double min_coil_num;
         double energy;
-        double displacement;
+        double angle;
         bool isLockSet;
         Guid selObjId;
         List<Guid> toBeBaked;
@@ -80,7 +80,7 @@ namespace InstRotation
             min_wire_diamter = 2.8;
             min_coil_num = 3;
             energy = 0.5;
-            displacement = 0.5;
+            angle = 0.5;
             arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;

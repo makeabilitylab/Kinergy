@@ -25,7 +25,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         Curve skeleton;     // skeleton
         double energyLevel;         // value of the strength slide bar
         double stepAngle;   // value of the step angle slide bar
-        int speed;
+        double speedLevel;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
         List<Arrow> lockDirCandidates;
@@ -37,6 +37,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         double min_coil_num;
         double energy;
         bool isLockSet;
+        double speed;
         Guid selObjId;
         List<Guid> toBeBaked;
 
@@ -71,7 +72,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             skeleton = null;
             energyLevel = 0.5;
             stepAngle = 30;
-            speed = 1;
+            speedLevel = 4;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -85,6 +86,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             isLockSet = false;
             selObjId = Guid.Empty;
             toBeBaked = new List<Guid>();
+            speed = 0;
         }
 
         /// <summary>
@@ -101,7 +103,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             // Value listeners 
             pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
             pManager.AddTextParameter("Step angle", "Ang", "The angle for each step", GH_ParamAccess.item);
-            pManager.AddTextParameter("Speed", "V", "The speed/velocity of the rotation", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Speed", "V", "The speed/velocity of the rotation", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -118,17 +120,6 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
 
-        int ConvertSpeedToIntType(string patternType)
-        {
-            int result = 0;
-            switch (patternType)
-            {
-                case "1": result = 0; break;
-                case "2": result = 1; break;
-                case "3": result = 1; break;
-            }
-            return result;
-        }
 
         double ConvertInputAngleToIntType(string angleText)
         {
@@ -153,7 +144,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
             double energy_input = 4;
             string angle_input = "";
-            string speed_input = "";
+            double speed_input = 4;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -199,7 +190,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
                 toPreview = true;
             }
 
-            if (energyLevel == energy_input && stepAngle == ConvertInputAngleToIntType(angle_input) && speed == ConvertSpeedToIntType(speed_input))
+            if (energyLevel == energy_input && stepAngle == ConvertInputAngleToIntType(angle_input) && speedLevel == speed_input)
             {
                 toAdjustParam = false;
             }
@@ -207,7 +198,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             {
                 energyLevel = energy_input;
                 stepAngle = ConvertInputAngleToIntType(angle_input);
-                speed = ConvertSpeedToIntType(speed_input);
+                speedLevel = speed_input;
                 toAdjustParam = true;
             }
             if (bake_input)
