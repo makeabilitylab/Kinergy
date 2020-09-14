@@ -33,7 +33,7 @@ namespace Kinergy.Geom
         { 
             get 
             { return model; } 
-            protected set 
+            set 
             {
                 model = value;
                 //UpdateBasicParams(); 

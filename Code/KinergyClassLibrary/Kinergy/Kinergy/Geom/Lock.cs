@@ -36,35 +36,46 @@ namespace Kinergy.Geom
             headOrBase = LockHeadOrLockBase;
             releasePosition = Release;
         }
-        public Lock(Point3d CenterPoint,Vector3d direction,double radius, bool stat = false, string n = "") : base(null, false, n)
+        public Lock(Point3d CenterPoint,Vector3d direction,double radius, bool reverse=false,bool stat = false, string n = "") : base(null, false, n)
         {
-            model = BuildRatchetLock(CenterPoint, direction, radius);
+            model = BuildRatchetLock(CenterPoint, direction, radius,reverse);
             headOrBase = true;
         }
         public bool HeadOrBase { get => headOrBase;private set => headOrBase = value; }
         public Lock OtherPart { get => otherPart;private set => otherPart = value; }
         public bool Locked { get => locked;private set => locked = value; }
         public Point3d ReleasePosition { get => releasePosition;private set => releasePosition = value; }
-        public static Brep BuildRatchetLock(Point3d CenterPoint, Vector3d direction, double radius)
+        public static Brep BuildRatchetLock(Point3d CenterPoint, Vector3d direction, double radius,bool reverse=false)
         {
             List<Point3d> outerPts = new List<Point3d>();
             List<Point3d> innerPts = new List<Point3d>();
             Plane p = new Plane(CenterPoint, direction);
             PolyCurve s = new PolyCurve();
-            for (int i=0;i<8;i++)
+            for (int i=0;i<12;i++)
             {
-                double angle = Math.PI / 4 * i;
+                double angle = Math.PI / 6 * i;
+                
                 Vector3d x = p.XAxis, y = p.YAxis;
                 outerPts.Add(CenterPoint + x * Math.Sin(angle) * radius * 1.1 + y * Math.Cos(angle) * radius * 1.1);
-                innerPts.Add(CenterPoint + x * Math.Sin(angle) * radius * 0.9 + y * Math.Cos(angle) * radius * 0.9);
+                innerPts.Add(CenterPoint + x * Math.Sin(angle) * radius * 0.75 + y * Math.Cos(angle) * radius * 0.75);
             }
-            for(int i=0;i<8;i++)
+            for(int i=0;i<12;i++)
             {
-                s.Append(new Line(outerPts[i], innerPts[i]).ToNurbsCurve());
-                s.Append(new Line(innerPts[i], outerPts[(i+1)%8]).ToNurbsCurve());
+                if(reverse)
+                {
+                    
+                    s.Append(new Line(innerPts[i],outerPts[i]).ToNurbsCurve());
+                    s.Append(new Line(outerPts[i],innerPts[(i + 1) % 12]).ToNurbsCurve());
+                }
+                else
+                {
+                    s.Append(new Line(outerPts[i], innerPts[i]).ToNurbsCurve());
+                    s.Append(new Line(innerPts[i], outerPts[(i + 1) % 12]).ToNurbsCurve());
+                }
+                
             }
-            Point3d start = CenterPoint - direction * radius * 0.05;
-            Point3d end = CenterPoint + direction * radius * 0.05;
+            Point3d start = CenterPoint - direction *2;
+            Point3d end = CenterPoint + direction * 2;
             Curve c = s.ToNurbsCurve();
             Curve c1 = s.ToNurbsCurve();
             c.Transform(Transform.Translation((new Vector3d(start) - new Vector3d(end)) / 2));

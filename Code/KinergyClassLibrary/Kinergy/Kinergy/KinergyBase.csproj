@@ -63,6 +63,8 @@
     <Compile Include="Geom\Follower.cs" />
     <Compile Include="Geom\Lock.cs" />
     <Compile Include="Geom\Shape.cs" />
+    <Compile Include="Geom\Socket.cs" />
+    <Compile Include="Geom\Wheel.cs" />
     <Compile Include="KineticUnit\KineticUnit.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -72,13 +74,11 @@
     <Compile Include="Utilities\Arrow.cs" />
     <Compile Include="Geom\BoxLike.cs" />
     <Compile Include="Geom\Component.cs" />
-    <Compile Include="KineticUnit\ContinuousMovingPress.cs" />
     <Compile Include="Relationship\Engagement.cs" />
     <Compile Include="Utilities\Convert resource file.cs" />
     <Compile Include="Utilities\FileOperation.cs" />
     <Compile Include="Relationship\Fixation.cs" />
     <Compile Include="Geom\Gear.cs" />
-    <Compile Include="Generator\GearSet.cs" />
     <Compile Include="Relationship\Hinge.cs" />
     <Compile Include="Relationship\Locking.cs" />
     <Compile Include="Movement.cs" />

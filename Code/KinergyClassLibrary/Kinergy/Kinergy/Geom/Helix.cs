@@ -129,75 +129,120 @@ namespace Kinergy
             }
             private void FixParameter()
             {
-                int roundNumMin = 3;
-                double wireRadiusMin = 2.8;
-                double wireRadiusMax = Math.Min(springRadius / 3, Length / roundNumMin - 0.6);
-                double wireRadiusStep = 0.6;
 
-                if (wireRadiusMin >= wireRadiusMax)
+                double clearance = 0.6;
+                double G = 2.4;
+                double roundNumMin = 3;
+                double wireRadiusMin = Math.Max(2.8, springRadius * 2 / 12);
+                double wireRadiusMax = Math.Min(springRadius * 2 / 4, (Length - (roundNumMin - 1) * 0.6) / roundNumMin);
+                double roundNumMax = (Length + clearance) / (wireRadiusMin + clearance);
+
+                #region New version by LH
+
+                // Calculate the range of compression displacement
+                // double compressionCurr = Length * (1 - (roundNumMin * wireRadiusMax + clearance * (roundNumMin - 1)) / Length) * maxPressDistance;
+                double compressionCurr = Length * maxPressDistance;
+
+                // Calculate the range of energy
+                //double strengthMin = Math.Pow(wireRadiusMin, 5) / Math.Pow(Length, 3);
+                //double strengthMax = Math.Pow(wireRadiusMax , 2) / Math.Pow(roundNumMin, 3);
+                double strengthMin = G * Math.Pow(Length * (1 - (roundNumMax * wireRadiusMin + clearance * (roundNumMax - 1)) / Length), 2) * Math.Pow(wireRadiusMin, 4) /
+                                            (16 * Math.Pow(springRadius * 2, 3) * roundNumMax);
+                double strengthMax = G * Math.Pow(Length * (1 - (roundNumMin * wireRadiusMax + clearance * (roundNumMin - 1)) / Length), 2) * Math.Pow(wireRadiusMax, 4) /
+                                            (16 * Math.Pow(springRadius * 2, 3) * roundNumMin);
+   
+                double strengthCurr = strengthMin + (strengthMax - strengthMin) * strength;
+
+
+                // Test if wire radius is valid
+                WireRadius = Math.Log((16 * Math.Pow(springRadius * 2, 3) * strengthCurr * (Length + clearance))/(G * Math.Pow(compressionCurr,3)), 5);
+
+                if (WireRadius < wireRadiusMin)
                 {
-                    WireRadius = wireRadiusMax;
-                }
-
-                else
-                {
-                    //int stepN = (int)((wireRadiusMax - wireRadiusMin) / wireRadiusStep);
-                    WireRadius = -((int)(maxPressDistance * (wireRadiusMax - wireRadiusMin) / wireRadiusStep)) * wireRadiusStep + wireRadiusMax;
-                }
-
-
-                double compressionMax = 1 - roundNumMin * wireRadiusMin /Length;
-                double compressionMin = 0.1;
-                double compressionCurr = 0.5;
-                double gap = 0.6;
-
-                //get round number and wire radius based on compression
-                if (compressionMin >= compressionMax)
-                {
-                    compressionCurr = compressionMax;
                     WireRadius = wireRadiusMin;
-                    RoundNum = roundNumMin;
-                    gap = Length / RoundNum - WireRadius;
-                    return;
                 }
                 else
                 {
-                    // compressionCurr = compressionMin + (compressionMax - compressionMin) * maxPressDistance; // old version by Yawen
-                    compressionCurr = maxPressDistance; // the current compression is imported from the value of the slide bar on the interface
-                    RoundNum = (1 - compressionCurr) * Length / WireRadius;
-                    double RoundNum_pre = 0;
-                    while (RoundNum - RoundNum_pre != 0)
+                    if (WireRadius > wireRadiusMax)
                     {
-                        RoundNum_pre = RoundNum;
-                        wireRadiusMax = Math.Min(springRadius / 3, Length / RoundNum - 0.6);
-                        WireRadius = -(maxPressDistance * (wireRadiusMax - wireRadiusMin) / wireRadiusStep) * wireRadiusStep + wireRadiusMax;
-                        RoundNum = (1 - compressionCurr) * Length / WireRadius;
-                        if (RoundNum < roundNumMin)
-                        {
-                            RoundNum = roundNumMin;
-                            WireRadius = (1 - compressionCurr) * Length / RoundNum;
-                            break;
-                        }
+                        WireRadius = wireRadiusMax;
                     }
                 }
 
-                //change round number and wire radius based on strength with the same compression
-                double constCompression = RoundNum * WireRadius;
-                wireRadiusMax = Math.Min(springRadius, Length / RoundNum - 0.6);
-                double strengthMax = Math.Pow(wireRadiusMax, 5);
-                double strengthMin = Math.Pow(wireRadiusMin, 5);
-                double strengthCurr = strengthMin + (strengthMax - strengthMin) * strength;
-                double WireRadius0 = WireRadius;
-                double RoundNum0 = RoundNum;
-                WireRadius = Math.Log(strengthCurr, 5);
-                RoundNum = constCompression / WireRadius;
+                RoundNum = (Length - compressionCurr) / WireRadius;
+
+                #endregion
+
+                #region Old version
+
+                //// Initial wire radius
+                //if (wireRadiusMin >= wireRadiusMax)
+                //{
+                //    WireRadius = wireRadiusMin;
+                //}
+                //else
+                //{
+                //    //int stepN = (int)((wireRadiusMax - wireRadiusMin) / wireRadiusStep);
+                //    WireRadius = -(maxPressDistance * (wireRadiusMax - wireRadiusMin) / wireRadiusStep) * wireRadiusStep + wireRadiusMax;
+                //}
+
+                //// Calculate the compression
+                //double compressionMax = 1 - (roundNumMin * wireRadiusMin + clearance * (roundNumMin-1)) /Length;
+                //double compressionMin = 0.1;
+                //double compressionCurr = 0.5;
+                //double gap = 0.6;
+
+                ////get round number and wire radius based on compression
+                //if (compressionMin >= compressionMax)
+                //{
+                //    // This should not happen
+                //    //compressionCurr = compressionMax;
+                //    //WireRadius = wireRadiusMin;
+                //    //RoundNum = roundNumMin;
+                //    //gap = Length / RoundNum - WireRadius;
+                //    return;
+                //}
+                //else
+                //{
+                //    // compressionCurr = compressionMin + (compressionMax - compressionMin) * maxPressDistance; // old version by Yawen
+                //    compressionCurr = maxPressDistance; // the current compression is imported from the value of the slide bar on the interface
+                //    RoundNum = (1 - compressionCurr) * Length / WireRadius;
+                //    double RoundNum_pre = 0;
+                //    while (RoundNum - RoundNum_pre != 0)
+                //    {
+                //        RoundNum_pre = RoundNum;
+                //        wireRadiusMax = Math.Min(springRadius / 3, Length / RoundNum - 0.6);
+                //        WireRadius = -(maxPressDistance * (wireRadiusMax - wireRadiusMin) / wireRadiusStep) * wireRadiusStep + wireRadiusMax;
+                //        RoundNum = (1 - compressionCurr) * Length / WireRadius;
+                //        if (RoundNum < roundNumMin)
+                //        {
+                //            RoundNum = roundNumMin;
+                //            WireRadius = (1 - compressionCurr) * Length / RoundNum;
+                //            break;
+                //        }
+                //    }
+                //}
+
+                ////change round number and wire radius based on strength with the same compression
+                //double constCompression = RoundNum * WireRadius;
+                //wireRadiusMax = Math.Min(springRadius/3, Length / RoundNum - 0.6);
+                //double strengthMax = Math.Pow(wireRadiusMax, 5);
+                //double strengthMin = Math.Pow(wireRadiusMin, 5);
+                //double strengthCurr = strengthMin + (strengthMax - strengthMin) * strength;
+                //double WireRadius0 = WireRadius;
+                //double RoundNum0 = RoundNum;
+                //WireRadius = Math.Log(strengthCurr, 5);
+                //RoundNum = constCompression / WireRadius;
                 //wireRadiusMax = Math.Min(springRadius / 3, Length / RoundNum - 0.6);
                 //if ((RoundNum < roundNumMin) || (WireRadius > wireRadiusMax))
                 //{
                 //    WireRadius = WireRadius0;
                 //    RoundNum = RoundNum0;
                 //}
-                // WireRadius = WireRadius /3;//TODO adjust this by applying Yawen's debugging.
+                //gap = Length / RoundNum - WireRadius;
+                //// WireRadius = WireRadius /3;//TODO adjust this by applying Yawen's debugging.
+
+                #endregion
             }
             private void GenerateSpring()
             {
