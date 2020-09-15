@@ -34,6 +34,9 @@ namespace Kinergy.KineticUnit
         private int _inputType;
         Brep _innerCavity;
 
+        Shape ModelShape;
+        Shape shaftRodShape;  // spiral spring central shaft
+
 
         private Curve skeleton;
         private List<Shape> modelCut;
@@ -42,6 +45,11 @@ namespace Kinergy.KineticUnit
         private Spiral springS;
         private Brep innerShell;
         private int outputAxelInOut = 1;        // 1: in; 2: out
+        double lastGearRadius = 0;
+        Point3d springSCenter = new Point3d();
+        Point3d keySSidePt = new Point3d();
+        Point3d lastGearPos = new Point3d();
+        Point3d springSSidePt = new Point3d();
 
         ProcessingWin processingwin = new ProcessingWin();
 
@@ -60,6 +68,95 @@ namespace Kinergy.KineticUnit
             this._innerCavity = inCavity;
             this.skeleton = null;
 
+        }
+
+        public void ConstructLocks(Transform translationBack, Transform rotationBack, Transform poseRotationBack)
+        {
+            if(InputType == 1)
+            {
+
+            }
+            else
+            {
+                double ratchetThickness = 1.6;
+                double tolerance = 0.4;
+                double lockRadius = 0.8;
+
+                Vector3d xPos = new Vector3d(1, 0, 0);
+                Vector3d zPos = new Vector3d(0, 0, 1);
+                Point3d lockPos = keySSidePt + xPos * (lastGearRadius * 0.9 - tolerance) - zPos * (1.732 * (lockRadius) + tolerance);
+
+                locks = new List<Lock>();
+
+                //Build the locking structure.
+
+                Vector3d springDir = (springSSidePt - keySSidePt) / springSSidePt.DistanceTo(keySSidePt);
+
+                
+                double lockLen = lastGearPos.DistanceTo(keySSidePt) / 2 - tolerance - ratchetThickness;
+                double extensionLen = 10;
+                
+                Lock LockHead = new Lock(keySSidePt + springDir * lockLen, -springDir, lastGearRadius * 0.9,false,false,"", ratchetThickness);
+
+                Brep lockheadBrep = LockHead.GetModelinWorldCoordinate();
+
+                lockheadBrep.Transform(translationBack);
+                lockheadBrep.Transform(rotationBack);
+                lockheadBrep.Transform(poseRotationBack);
+                LockHead.SetModel(lockheadBrep);
+
+                //Vector3d centerLinkDirection = new Vector3d(lockClosestPointOnAxis) - new Vector3d(LockPosition);
+                Point3d lockBarSt = lockPos - springDir * extensionLen;
+                Point3d lockBarEnd = lockPos + springDir * (lockLen - 1);
+
+                Line lockbarLine = new Line(lockBarSt, lockBarEnd);
+                Curve lockRail = lockbarLine.ToNurbsCurve();
+                Brep lockbarRod = Brep.CreatePipe(lockRail, lockRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                Brep lockbarRodDiff = Brep.CreatePipe(lockRail, lockRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                Sphere lockHandler = new Sphere(lockBarSt, 2 * lockRadius);
+
+                Point3d lockDisc1PtSt = lockPos - springDir * (1.9 + 1.6 + 1);
+                Point3d lockDisc1PtEnd = lockDisc1PtSt + springDir * 1;
+
+                Point3d lockDisc2PtSt = lockPos + springDir * (1);
+                Point3d lockDisc2PtEnd = lockDisc2PtSt + springDir * 1;
+
+                Line lockDisc1Line = new Line(lockDisc1PtSt, lockDisc1PtEnd);
+                Curve lockDisc1Rail = lockDisc1Line.ToNurbsCurve();
+                Brep lockDisc1 = Brep.CreatePipe(lockDisc1Rail, 1.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                Line lockDisc2Line = new Line(lockDisc2PtSt, lockDisc2PtEnd);
+                Curve lockDisc2Rail = lockDisc2Line.ToNurbsCurve();
+                Brep lockDisc2 = Brep.CreatePipe(lockDisc2Rail, 1.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                Brep lockPart = Brep.CreateBooleanUnion(new List<Brep> { lockbarRod, lockHandler.ToBrep(), lockDisc1, lockDisc2 }, MyDoc.ModelAbsoluteTolerance)[0];
+
+                lockPart.Transform(translationBack);
+                lockPart.Transform(rotationBack);
+                lockPart.Transform(poseRotationBack);
+
+                lockbarRodDiff.Transform(translationBack);
+                lockbarRodDiff.Transform(rotationBack);
+                lockbarRodDiff.Transform(poseRotationBack);
+
+
+                if (ModelShape != null)
+                {
+                    Brep finalModel = Brep.CreateBooleanDifference(ModelShape.GetModelinWorldCoordinate(), lockbarRodDiff, MyDoc.ModelAbsoluteTolerance)[0];
+                    Model = finalModel.DuplicateBrep();
+                    ModelShape.SetModel(Model);
+                }
+
+
+                locks.Add(LockHead);
+                locks.Add(new Lock(lockPart, false));
+                entityList.Add(LockHead);
+                entityList.Add(locks[1]);
+                LockHead.RegisterOtherPart(locks[1]);
+                _ = new Fixation(shaftRodShape, LockHead);
+            }
+            
         }
 
         /// <summary>
@@ -84,7 +181,7 @@ namespace Kinergy.KineticUnit
             Brep[] innerWalls;
 
             processingwin.Show();
-            Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, false, MyDoc.ModelAbsoluteTolerance, out innerShells, out innerWalls);
+            Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, true, MyDoc.ModelAbsoluteTolerance, out innerShells, out innerWalls);
 
             innerShell = shells[0];
             processingwin.Hide();
@@ -157,15 +254,20 @@ namespace Kinergy.KineticUnit
             double thickness = Math.Min(2, 3 * pitch);
             double backlash = 0.6;
             double backlashGap = 1.374;
-            double maxGearDiameter = outDiameter * 0.3;
+            double maxGearDiameter = outDiameter * 0.29;
             double pairGearRatio = minRatio;
             double module = module0;
             double pressureAngle = 20;
-            double tolerance = 0.6;
+            double tolerance = 0.4;
             double discThickness = 1;
-            double shaftRadius = 1.2;
-            double discRadius = 2;
-            Point3d lastGearPos = new Point3d();
+            double shaftRadius = 1.5;
+            double discRadius = 2.5;
+
+            Brep shDiffRodSpiral = new Brep();
+            Brep shaftCutoutBrep = new Brep();
+            Brep modelDiffLaterUsedBrep = new Brep();
+
+
 
             if (xLength < 0) return;
 
@@ -230,13 +332,13 @@ namespace Kinergy.KineticUnit
 
             double gearDistance = teethEqualInt * (1 + grNew) * currModule / 2 + backlash * backlashGap;
 
-
+    
             // shift all the gears to one side, which is the Y postive side
             double maxshift = (totalThickness - 2 * gap) / 2 - currNum * (thickness + gap); 
             double yOriginal = 0;
             if(maxshift > 0)
             {
-                yOriginal -= maxshift;
+                yOriginal -= maxshift/2;
             }
 
             List<Point3d> gearCenters = new List<Point3d>();
@@ -407,17 +509,8 @@ namespace Kinergy.KineticUnit
                                 shaftEntities.Add(shaftShape);
 
                                 // difference with the model brep
-                                Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + 0.8, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
-                                Brep shDiffRod = shDiffRods[0];
-
-                                var outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRod, MyDoc.ModelAbsoluteTolerance);
-                                if (outputAxleModelBreps == null)
-                                {
-                                    shDiffRod.Flip();
-                                    outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRod, MyDoc.ModelAbsoluteTolerance);
-                                }
-                                Brep outputAxleModelBrep = outputAxleModelBreps[0];
-                                Model = outputAxleModelBrep.DuplicateBrep();
+                                Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                shDiffRodSpiral = shDiffRods[0];
                             }
                             
                         }
@@ -430,8 +523,6 @@ namespace Kinergy.KineticUnit
                     gearDir = pt - gearCenters.ElementAt(gearCenters.IndexOf(pt) - 1);
                     Gear BigGear = new Gear(pt, gearDir, gearTeethNum, currModule, pressureAngle, thickness);
                     Brep bigGear = BigGear.Model;
-
-                    
 
                     #region test by LH
                     //MyDoc.Objects.AddBrep(bigGear);
@@ -455,7 +546,8 @@ namespace Kinergy.KineticUnit
                     gears.Add(bigGear);
 
                     if(gearCenters.IndexOf(pt) == gearCenters.Count() - 1)
-                    {
+                    {   
+
                         // create the last shaft
                         List<Brep> bs = new List<Brep>();
                         lastGearPos = pt;
@@ -466,56 +558,228 @@ namespace Kinergy.KineticUnit
                         Point3d[] projBrepPts;
                         projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs, projPts, projDir, MyDoc.ModelAbsoluteTolerance);
 
-                        if (projBrepPts.Count() == 2)
+                        // Set spring parameters
+                        springSSidePt = pt.DistanceTo(projBrepPts[0]) > pt.DistanceTo(projBrepPts[1]) ? projBrepPts[0] : projBrepPts[1];
+                        keySSidePt = pt.DistanceTo(projBrepPts[0]) > pt.DistanceTo(projBrepPts[1]) ? projBrepPts[1] : projBrepPts[0];
+                        springSCenter = (springSSidePt + pt) / 2 - 4 * projDir;
+                        lastGearRadius = currModule * gearTeethNum / 2;
+
+                        if (InputType == 1)
                         {
-                            Point3d pt1 = new Point3d();    // the point on the postive side
-                            Point3d pt2 = new Point3d();    // the point on the negative side
-
-                            if (projBrepPts[0].Y > projBrepPts[1].Y)
+                            if (projBrepPts.Count() == 2)
                             {
-                                pt1 = projBrepPts[0] + projDir * 0.2;
-                                pt2 = projBrepPts[1] - projDir * 0.2;
+                                Point3d pt1 = new Point3d();    // the point on the postive side
+                                Point3d pt2 = new Point3d();    // the point on the negative side
+
+                                if (projBrepPts[0].Y > projBrepPts[1].Y)
+                                {
+                                    pt1 = projBrepPts[0] + projDir * 0.2;
+                                    pt2 = projBrepPts[1] - projDir * 0.2;
+                                }
+                                else
+                                {
+                                    pt1 = projBrepPts[1] + projDir * 0.2;
+                                    pt2 = projBrepPts[0] - projDir * 0.2;
+                                }
+                                Line shaftRailLine = new Line(pt2, pt1);
+                                Curve shaftRail = shaftRailLine.ToNurbsCurve();
+                                Brep[] shaftRods = Brep.CreatePipe(shaftRail, shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep shaftRod = shaftRods[0];
+
+
+                                // create a brep to different the gears
+                                Brep bDiffPart = new Brep();
+
+                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                bDiffPart = bDiffParts[0];
+
+                                partsForShaftDifference.Add(bDiffPart);
+
+                                // add two discs around the gear
+                                Point3d disc_first_pt1 = pt - projDir * (tolerance + discThickness);
+                                Point3d disc_first_pt2 = pt - projDir * (tolerance);
+                                Point3d disc_second_pt1 = pt + projDir * (thickness + tolerance);
+                                Point3d disc_second_pt2 = pt + projDir * (thickness + tolerance + discThickness);
+
+                                Line discFirstRailLine = new Line(disc_first_pt1, disc_first_pt2);
+                                Line discSecondRailLine = new Line(disc_second_pt1, disc_second_pt2);
+                                Curve firstDiscRail = discFirstRailLine.ToNurbsCurve();
+                                Curve secondDiscRail = discSecondRailLine.ToNurbsCurve();
+                                Brep[] firstDiscs = Brep.CreatePipe(firstDiscRail, discRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] secondDiscs = Brep.CreatePipe(secondDiscRail, discRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep firstDisc = firstDiscs[0];
+                                Brep secondDisc = secondDiscs[0];
+
+                                var shaftAllParts = Brep.CreateBooleanUnion(new List<Brep> { shaftRod, firstDisc, secondDisc }, MyDoc.ModelAbsoluteTolerance);
+                                if (shaftAllParts != null)
+                                {
+                                    shafts.Add(shaftAllParts[0]);
+                                    Shape shaftshape = new Shape(shaftAllParts[0], false, "shaft");
+                                    shaftEntities.Add(shaftshape);
+                                }
                             }
-                            else
+                        }
+                        else
+                        {
+                            if (projBrepPts.Count() == 2)
                             {
-                                pt1 = projBrepPts[1] + projDir * 0.2;
-                                pt2 = projBrepPts[0] - projDir * 0.2;
-                            }
-                            Line shaftRailLine = new Line(pt2, pt1);
-                            Curve shaftRail = shaftRailLine.ToNurbsCurve();
-                            Brep[] shaftRods = Brep.CreatePipe(shaftRail, shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
-                            Brep shaftRod = shaftRods[0];
+                                // Generate the revolute joint
 
-                           
-                            // create a brep to different the gears
-                            Brep bDiffPart = new Brep();
+                                #region Step 1: geneate the central rod
+                                Point3d pt1 = new Point3d();    // the point on the postive side
+                                Point3d pt2 = new Point3d();    // the point on the negative side
 
-                            Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
-                            bDiffPart = bDiffParts[0];
 
-                            partsForShaftDifference.Add(bDiffPart);
+                                if (projBrepPts[0].Y > projBrepPts[1].Y)
+                                {
+                                    pt2 = projBrepPts[0] - projDir * 0.8;
+                                    pt1 = projBrepPts[1] - projDir * 20;
+                                }
+                                else
+                                {
+                                    pt2 = projBrepPts[1] - projDir * 0.8;
+                                    pt1 = projBrepPts[0] - projDir * 20;
+                                }
+                                Line shaftRailLine = new Line(pt1, pt2);
+                                Curve shaftRail = shaftRailLine.ToNurbsCurve();
+                                Brep[] shaftRods = Brep.CreatePipe(shaftRail, shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep shaftRod = shaftRods[0];
 
-                            // add two discs around the gear
-                            Point3d disc_first_pt1 = pt - projDir * (tolerance + discThickness);
-                            Point3d disc_first_pt2 = pt - projDir * (tolerance);
-                            Point3d disc_second_pt1 = pt + projDir * (thickness + tolerance);
-                            Point3d disc_second_pt2 = pt + projDir * (thickness + tolerance + discThickness);
+                                shaftCutoutBrep = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
-                            Line discFirstRailLine = new Line(disc_first_pt1, disc_first_pt2);
-                            Line discSecondRailLine = new Line(disc_second_pt1, disc_second_pt2);
-                            Curve firstDiscRail = discFirstRailLine.ToNurbsCurve();
-                            Curve secondDiscRail = discSecondRailLine.ToNurbsCurve();
-                            Brep[] firstDiscs = Brep.CreatePipe(firstDiscRail, discRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
-                            Brep[] secondDiscs = Brep.CreatePipe(secondDiscRail, discRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
-                            Brep firstDisc = firstDiscs[0];
-                            Brep secondDisc = secondDiscs[0];
 
-                            var shaftAllParts = Brep.CreateBooleanUnion(new List<Brep> { shaftRod, firstDisc, secondDisc }, MyDoc.ModelAbsoluteTolerance);
-                            if (shaftAllParts != null)
-                            {
-                                shafts.Add(shaftAllParts[0]);
-                                Shape shaftshape = new Shape(shaftAllParts[0], false, "shaft");
-                                shaftEntities.Add(shaftshape);
+                                // Create the handler -- the key
+                                Vector3d xpos = new Vector3d(1, 0, 0);
+                                Point3d handlerSt = pt1 - xpos * 1.5;
+                                Point3d handlerEnd = pt1 + xpos * 1.5;
+                                Line handlerLine = new Line(handlerSt, handlerEnd);
+                                Curve handlerRail = handlerLine.ToNurbsCurve();
+
+                                Brep handlerBrep = Brep.CreatePipe(handlerRail, 5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                                handlerBrep.Transform(translateBack);
+                                handlerBrep.Transform(rotationBack);
+                                handlerBrep.Transform(postRotationBack);
+                                Shape handlerShape = new Shape(handlerBrep, false, "key");
+                                EntityList.Add(handlerShape);
+
+                                shaftRod.Transform(translateBack);
+                                shaftRod.Transform(rotationBack);
+                                shaftRod.Transform(postRotationBack);
+                                shaftRodShape = new Shape(shaftRod, false, "joint");
+                                EntityList.Add(shaftRodShape);
+
+                                #endregion
+
+                                #region Step 2: generate the disc
+
+                                Point3d pt3 = pt2 - projDir * 1.6;
+                                Line discRailLine = new Line(pt3, pt2);
+                                Curve discRail = discRailLine.ToNurbsCurve();
+                                Brep[] discRods = Brep.CreatePipe(discRail, shaftRadius * 1.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep discRod = discRods[0];
+
+                                discRod.Transform(translateBack);
+                                discRod.Transform(rotationBack);
+                                discRod.Transform(postRotationBack);
+                                Shape discRodShape = new Shape(discRod, false, "joint");
+                                EntityList.Add(discRodShape);
+                                #endregion
+
+                                #region Step 3: generate the bearing
+
+                                Point3d pt4 = pt2 + projDir * (tolerance * 2 + 0.2);
+                                Point3d pt5 = pt3 - projDir * tolerance * 2;
+
+                                Line bearingLine = new Line(pt5, pt4);
+                                Curve bearingRail = bearingLine.ToNurbsCurve();
+                                Brep bearingExterior = Brep.CreatePipe(bearingRail, 4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep bearingInterior = Brep.CreatePipe(bearingRail, 2.4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                                Brep laterUsedBrep = Brep.CreatePipe(bearingRail, 2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                modelDiffLaterUsedBrep = bearingExterior.DuplicateBrep();
+
+
+                                var bearingBreps = Brep.CreateBooleanDifference(bearingExterior, bearingInterior, MyDoc.ModelAbsoluteTolerance);
+                                if (bearingBreps == null)
+                                {
+                                    bearingInterior.Flip();
+                                    bearingBreps = Brep.CreateBooleanDifference(bearingExterior, bearingInterior, MyDoc.ModelAbsoluteTolerance);
+                                }
+                                Brep bearingBrep = bearingBreps[0];
+
+                                Point3d pt6 = pt5 - projDir * 1.2;
+                                Line capLine = new Line(pt6, pt5);
+                                Curve capRail = capLine.ToNurbsCurve();
+                                Brep capBrep = Brep.CreatePipe(capRail, 4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                                Brep bearingAllBrep = Brep.CreateBooleanUnion(new List<Brep> { bearingBrep, capBrep}, MyDoc.ModelAbsoluteTolerance)[0];
+
+                                Point3d openSlotPt = (pt2 + 0.6 * projDir + pt5 + 0.2*projDir) / 2;
+                                Vector3d osNormal = new Vector3d(0, 0, 1);
+                                Plane openSlotPln = new Plane(openSlotPt, osNormal);
+
+                                // create sweep function
+                                var sweep = new Rhino.Geometry.SweepOneRail();
+                                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
+                                sweep.ClosedSweep = false;
+                                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+
+                                Vector3d os_xp = 1.2 * openSlotPln.XAxis;
+                                Vector3d os_xn = (-1.2) * openSlotPln.XAxis;
+                                Vector3d os_yp = (pt2.DistanceTo(pt5) + 0.4) / 2 * openSlotPln.YAxis;
+                                Vector3d os_yn = (-1) * (pt2.DistanceTo(pt5) + 0.4) / 2 * openSlotPln.YAxis;
+
+                                Point3d[] openSlotPts = new Point3d[5];
+                                openSlotPts[0] = openSlotPt + os_xp + os_yp;
+                                openSlotPts[1] = openSlotPt + os_xn + os_yp;
+                                openSlotPts[2] = openSlotPt + os_xn + os_yn;
+                                openSlotPts[3] = openSlotPt + os_xp + os_yn;
+                                openSlotPts[4] = openSlotPt + os_xp + os_yp;
+                                Curve openSlotRect = new Polyline(openSlotPts).ToNurbsCurve();
+
+
+                                Point3d[] openSlotRailPts = new Point3d[2];
+                                openSlotRailPts[0] = openSlotPt;
+                                openSlotRailPts[1] = openSlotPt + osNormal * 20;
+                                Curve osRail = new Polyline(openSlotRailPts).ToNurbsCurve();
+
+                                Brep openSlotBrep = new Brep();
+
+                                openSlotBrep = sweep.PerformSweep(osRail, openSlotRect)[0];
+                                openSlotBrep = openSlotBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                                Brep openSlotBrep1 = openSlotBrep.DuplicateBrep();
+
+                                Transform openSlotBrepRotation = Transform.Rotation(Math.PI / 2, -projDir, openSlotPt);
+                                Transform openSlotBrepRotation1 = Transform.Rotation(Math.PI, -projDir, openSlotPt);
+                                openSlotBrep1.Transform(openSlotBrepRotation);
+
+                                Brep firstBlock = Brep.CreateBooleanUnion(new List<Brep> { openSlotBrep, openSlotBrep1 }, MyDoc.ModelAbsoluteTolerance)[0];
+
+                                Brep openSlotBrep2 = firstBlock.DuplicateBrep();
+                                openSlotBrep2.Transform(openSlotBrepRotation1);
+
+                                Brep secondBlock0 = Brep.CreateBooleanUnion(new List<Brep> { firstBlock, laterUsedBrep }, MyDoc.ModelAbsoluteTolerance)[0];
+
+                                Brep secondBlock = Brep.CreateBooleanUnion(new List<Brep> { secondBlock0, openSlotBrep2 }, MyDoc.ModelAbsoluteTolerance)[0];
+    
+
+                                Brep[] bearingFinals = Brep.CreateBooleanDifference(bearingAllBrep, secondBlock, MyDoc.ModelAbsoluteTolerance);
+                                if(bearingFinals == null)
+                                {
+                                    secondBlock.Flip();
+                                    bearingFinals = Brep.CreateBooleanDifference(bearingAllBrep, secondBlock, MyDoc.ModelAbsoluteTolerance);
+                                }
+                                Brep bearingFinal = bearingFinals[0];
+
+                                bearingFinal.Transform(translateBack);
+                                bearingFinal.Transform(rotationBack);
+                                bearingFinal.Transform(postRotationBack);
+                                Shape bearingShape = new Shape(bearingFinal, false, "joint");
+                                EntityList.Add(bearingShape);
+                                #endregion
+
                             }
                         }
 
@@ -801,8 +1065,7 @@ namespace Kinergy.KineticUnit
                 EntityList.Add(btnTipShape);
 
                 #endregion
-
-
+                
                 #region construct the guide for the spring
 
                 #region constrcut the hookbar and the hookguide
@@ -968,7 +1231,7 @@ namespace Kinergy.KineticUnit
                 wallGuideFinalBrep.Transform(postRotationBack);
                 Shape wallGuideFinalShape = new Shape(wallGuideFinalBrep, false, "connector");
 
-                Shape ModelShape = new Shape(Model, false, "connector");
+                ModelShape = new Shape(Model, false, "main body");
 
                 EntityList.Add(hookbarShape);
                 EntityList.Add(hookGuideShape);
@@ -980,7 +1243,161 @@ namespace Kinergy.KineticUnit
             }
             else
             {
-                // construct a spiral spring 
+                // create sweep function
+                var sweep = new Rhino.Geometry.SweepOneRail();
+                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+
+                #region construct a spiral spring 
+
+                SpringS = new Spiral(new Vector3d(springSSidePt - springSCenter), springSCenter, lastGearRadius*1, Math.PI*2, (int)(Energy * 10 -1));
+                Brep spring_s_origi = SpringS.GetModelinWorldCoordinate();
+
+                spring_s_origi.Transform(translateBack);
+                spring_s_origi.Transform(rotationBack);
+                spring_s_origi.Transform(postRotationBack);
+
+                SpringS.SetModel(spring_s_origi);
+
+                EntityList.Add(SpringS);
+
+                #endregion
+
+                #region construct the rod that connects the spring outer end to the main body
+
+                Point3d outerEndpt = SpringS.BaseCurve.PointAtNormalizedLength(1);
+                List<Brep> mainbody = new List<Brep>();
+                mainbody.Add(innerShell);
+                List<Point3d> projMBPts = new List<Point3d>();
+                projMBPts.Add(outerEndpt);
+                Vector3d projDir = new Vector3d(0, 1, 0);
+                Point3d[] projBrepPts;
+                projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(mainbody, projMBPts, projDir, MyDoc.ModelAbsoluteTolerance);
+
+                Point3d connectorStPt = springSSidePt.DistanceTo(projBrepPts[0]) > springSSidePt.DistanceTo(projBrepPts[1]) ? projBrepPts[1] : projBrepPts[0];
+
+                Plane fixerPln = new Plane(connectorStPt, new Vector3d(0, 1, 0));
+
+                Vector3d fix_xp = 0.8 * fixerPln.XAxis;
+                Vector3d fix_xn = -0.8 * fixerPln.XAxis;
+                Vector3d fix_yp = 1 * fixerPln.YAxis;
+                Vector3d fix_yn = -1 * fixerPln.YAxis;
+
+                Point3d[] fixerPts = new Point3d[5];
+                fixerPts[0] = connectorStPt + fix_xp + fix_yp;
+                fixerPts[1] = connectorStPt + fix_xn + fix_yp;
+                fixerPts[2] = connectorStPt + fix_xn + fix_yn;
+                fixerPts[3] = connectorStPt + fix_xp + fix_yn;
+                fixerPts[4] = connectorStPt + fix_xp + fix_yp;
+                Curve fixerRect = new Polyline(fixerPts).ToNurbsCurve();
+
+                Line rodRailLine = new Line(connectorStPt, outerEndpt);
+                Curve rodRail = rodRailLine.ToNurbsCurve();
+
+                Brep rod = new Brep();
+
+                rod = sweep.PerformSweep(rodRail, fixerRect)[0];
+                rod = rod.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                rod.Transform(translateBack);
+                rod.Transform(rotationBack);
+                rod.Transform(postRotationBack);
+
+                Shape fixer = new Shape(rod, false, "connector");
+                EntityList.Add(fixer);
+
+                #endregion
+
+
+                #region Cut the bottom part
+
+                Plane cutoutPln = new Plane(InnerCavity.GetBoundingBox(true).Center, new Vector3d(0,0,1));
+
+                Vector3d co_xp = (InnerCavity.GetBoundingBox(true).Max.X - InnerCavity.GetBoundingBox(true).Min.X) * cutoutPln.XAxis;
+                Vector3d co_xn = (-1) * (InnerCavity.GetBoundingBox(true).Max.X - InnerCavity.GetBoundingBox(true).Min.X) * cutoutPln.XAxis;
+                Vector3d co_yp = (totalThickness*0.35) * cutoutPln.YAxis;
+                Vector3d co_yn = (-1) * (totalThickness*0.35) * cutoutPln.YAxis;
+
+                Point3d[] cutoutPts = new Point3d[5];
+                cutoutPts[0] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yp;
+                cutoutPts[1] = InnerCavity.GetBoundingBox(true).Center + co_xn + co_yp;
+                cutoutPts[2] = InnerCavity.GetBoundingBox(true).Center + co_xn + co_yn;
+                cutoutPts[3] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yn;
+                cutoutPts[4] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yp;
+                Curve cutoutRect = new Polyline(cutoutPts).ToNurbsCurve();
+
+
+                Point3d[] cutoutRailPts = new Point3d[2];
+                Vector3d dirCO = new Vector3d(0, 0, -1);
+                cutoutRailPts[0] = InnerCavity.GetBoundingBox(true).Center + dirCO * 100;
+                cutoutRailPts[1] = InnerCavity.GetBoundingBox(true).Center ;
+                Curve coRail = new Polyline(cutoutRailPts).ToNurbsCurve();
+
+                Brep coutoutBrep = new Brep();
+
+                coutoutBrep = sweep.PerformSweep(coRail, cutoutRect)[0];
+                coutoutBrep = coutoutBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+                coutoutBrep.Flip();
+
+                // Drill the holes for the output gear shaft (connecting to the two wheels)
+                shDiffRodSpiral.Transform(translateBack);
+                shDiffRodSpiral.Transform(rotationBack);
+                shDiffRodSpiral.Transform(postRotationBack);
+
+                var outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRodSpiral, MyDoc.ModelAbsoluteTolerance);
+                if (outputAxleModelBreps == null)
+                {
+                    shDiffRodSpiral.Flip();
+                    outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRodSpiral, MyDoc.ModelAbsoluteTolerance);
+                }
+                Brep outputAxleModelBrep = outputAxleModelBreps[0];
+                Model = outputAxleModelBrep.DuplicateBrep();
+
+
+                // Drill the hole for the key and the revolute joint
+                shaftCutoutBrep.Transform(translateBack);
+                shaftCutoutBrep.Transform(rotationBack);
+                shaftCutoutBrep.Transform(postRotationBack);
+
+                var drillers = Brep.CreateBooleanDifference(Model, shaftCutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                if (drillers == null)
+                {
+                    shaftCutoutBrep.Flip();
+                    drillers = Brep.CreateBooleanDifference(Model, shaftCutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Model = drillers[0].DuplicateBrep();
+
+
+                //modelDiffLaterUsedBrep.Transform(translateBack);
+                //modelDiffLaterUsedBrep.Transform(rotationBack);
+                //modelDiffLaterUsedBrep.Transform(postRotationBack);
+
+                //var placeBreps = Brep.CreateBooleanDifference(Model, modelDiffLaterUsedBrep, MyDoc.ModelAbsoluteTolerance);
+                //if (placeBreps == null)
+                //{
+                //    modelDiffLaterUsedBrep.Flip();
+                //    placeBreps = Brep.CreateBooleanDifference(Model, modelDiffLaterUsedBrep, MyDoc.ModelAbsoluteTolerance);
+                //}
+                //Model = placeBreps[0].DuplicateBrep();
+
+                // Cut off the bottom of the main body
+                coutoutBrep.Transform(translateBack);
+                coutoutBrep.Transform(rotationBack);
+                coutoutBrep.Transform(postRotationBack);
+
+                Brep[] finalModels = Brep.CreateBooleanDifference(Model, coutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                if (finalModels == null)
+                {
+                    coutoutBrep.Flip();
+                    finalModels = Brep.CreateBooleanDifference(Model, coutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Model = finalModels[0].DuplicateBrep();
+
+                ModelShape = new Shape(Model, false, "main body");
+                EntityList.Add(ModelShape);
+
+                #endregion
 
             }
             #endregion

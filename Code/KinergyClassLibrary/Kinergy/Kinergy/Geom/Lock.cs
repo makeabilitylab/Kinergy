@@ -36,16 +36,16 @@ namespace Kinergy.Geom
             headOrBase = LockHeadOrLockBase;
             releasePosition = Release;
         }
-        public Lock(Point3d CenterPoint,Vector3d direction,double radius, bool reverse=false,bool stat = false, string n = "") : base(null, false, n)
+        public Lock(Point3d CenterPoint,Vector3d direction,double radius, bool reverse=false,bool stat = false, string n = "", double thickness = 4) : base(null, false, n)
         {
-            model = BuildRatchetLock(CenterPoint, direction, radius,reverse);
+            model = BuildRatchetLock(CenterPoint, direction, radius,reverse, thickness);
             headOrBase = true;
         }
         public bool HeadOrBase { get => headOrBase;private set => headOrBase = value; }
         public Lock OtherPart { get => otherPart;private set => otherPart = value; }
         public bool Locked { get => locked;private set => locked = value; }
         public Point3d ReleasePosition { get => releasePosition;private set => releasePosition = value; }
-        public static Brep BuildRatchetLock(Point3d CenterPoint, Vector3d direction, double radius,bool reverse=false)
+        public static Brep BuildRatchetLock(Point3d CenterPoint, Vector3d direction, double radius,bool reverse=false, double thickness=4)
         {
             List<Point3d> outerPts = new List<Point3d>();
             List<Point3d> innerPts = new List<Point3d>();
@@ -74,8 +74,8 @@ namespace Kinergy.Geom
                 }
                 
             }
-            Point3d start = CenterPoint - direction *2;
-            Point3d end = CenterPoint + direction * 2;
+            Point3d start = CenterPoint - direction * thickness/2;
+            Point3d end = CenterPoint + direction * thickness/2;
             Curve c = s.ToNurbsCurve();
             Curve c1 = s.ToNurbsCurve();
             c.Transform(Transform.Translation((new Vector3d(start) - new Vector3d(end)) / 2));

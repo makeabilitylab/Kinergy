@@ -100,10 +100,24 @@ namespace InstRotation
 
             // Value listeners 
             pManager.AddIntegerParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("MaxAngle", "MaxAng", "The max rotation angle", GH_ParamAccess.item);
+            pManager.AddTextParameter("MaxAngle", "MaxAng", "The max rotation angle", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
+        }
+
+        double ConvertInputAngleToDoubleType(string angleText)
+        {
+            double result = 0;
+            try
+            {
+                result = Convert.ToDouble(angleText);
+            }
+            catch (Exception e)
+            {
+                result = 0;
+            }
+            return result;
         }
 
         /// <summary>
@@ -139,7 +153,7 @@ namespace InstRotation
         {
             bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
             int energy_input = 4;
-            double disp_input = 4;
+            string disp_input = "";
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -183,14 +197,14 @@ namespace InstRotation
                 toPreview = true;
             }
 
-            if (energyLevel == energy_input && displacement==disp_input)
+            if (energyLevel == energy_input && displacement== ConvertInputAngleToDoubleType(disp_input))
             {
                 toAdjustParam = false;
             }
             else
             {
                 energyLevel = energy_input;
-                displacement=disp_input;
+                displacement= ConvertInputAngleToDoubleType(disp_input);
                 toAdjustParam = true;
             }
             if (bake_input)

@@ -121,7 +121,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         }
 
 
-        double ConvertInputAngleToIntType(string angleText)
+        double ConvertInputAngleToDoubleType(string angleText)
         {
             double result = 0;
             try
@@ -190,14 +190,14 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
                 toPreview = true;
             }
 
-            if (energyLevel == energy_input && stepAngle == ConvertInputAngleToIntType(angle_input) && speedLevel == speed_input)
+            if (energyLevel == energy_input && stepAngle == ConvertInputAngleToDoubleType(angle_input) && speedLevel == speed_input)
             {
                 toAdjustParam = false;
             }
             else
             {
                 energyLevel = energy_input;
-                stepAngle = ConvertInputAngleToIntType(angle_input);
+                stepAngle = ConvertInputAngleToDoubleType(angle_input);
                 speedLevel = speed_input;
                 toAdjustParam = true;
             }

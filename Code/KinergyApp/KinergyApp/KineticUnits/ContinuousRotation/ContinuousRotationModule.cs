@@ -34,6 +34,11 @@ namespace ConRotation
         Vector3d orientationDir;
         int outputAxle;
         bool OperatingOutputAxleMethod;
+        bool multipleSelections;
+
+        Transform dirToXTranlationBack;
+        Transform dirToXRotationBack;
+        Transform yToPoseTrans;
 
         // Variables used for different functions
         bool lockState;
@@ -87,6 +92,7 @@ namespace ConRotation
             orientationDir = new Vector3d();
             outputAxle = 1;
             OperatingOutputAxleMethod = false;
+            multipleSelections = false;
 
             lockState = false;
             min_wire_diamter = 2.8;
@@ -428,34 +434,61 @@ namespace ConRotation
             if (toSetEndEffector)
             {
                 // Ask the user to select a Brep and calculate the orientation of the embedded kinetic unit
-                ObjRef objSel_ref;
-                Guid selObjId1 = Guid.Empty;
-                var rc = RhinoGet.GetOneObject("Select a surface or polysurface as the end-effector", false, ObjectType.AnyObject, out objSel_ref);
-                if (rc == Rhino.Commands.Result.Success)
+                List<ObjRef> objSel_refs = new List<ObjRef>();
+                List<Guid> selObjId1s = new List<Guid>();
+                List<Brep> eeBreps = new List<Brep>();
+
+                RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent3;
+                Rhino.Input.Custom.GetPoint gp7 = new Rhino.Input.Custom.GetPoint();
+                gp7.SetCommandPrompt(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.");
+                gp7.AcceptNothing(true);
+                Rhino.Input.GetResult r7;
+
+                multipleSelections = true;
+                do
                 {
-                    // select a brep
-                    selObjId1 = objSel_ref.ObjectId;
-                    ObjRef currObj = new ObjRef(selObjId1);
+                    ObjRef tempObjSel_ref;
+                    Guid selObjIdTemp = Guid.Empty;
 
-                    Brep endeffector = currObj.Brep();
-
-                    #region Step 0: set the output gear axle type
-
-                    RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent2; ;
-                    Rhino.Input.Custom.GetPoint gp4 = new Rhino.Input.Custom.GetPoint();
-                    gp4.SetCommandPrompt(@"Press '1' to set the output gear shaft in the object or '2' to extend the shaft out of the object. Press 'Enter' to continue.");
-                    gp4.AcceptNothing(true);
-                    Rhino.Input.GetResult r4;
-
-                    OperatingOutputAxleMethod = true;
-                    do
+                    var rc = RhinoGet.GetOneObject(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.", false, ObjectType.AnyObject, out tempObjSel_ref);
+                    if (rc == Rhino.Commands.Result.Success)
                     {
-                        r4 = gp4.Get(true);
+                        // select a brep
+                        selObjIdTemp = tempObjSel_ref.ObjectId;
+                        ObjRef currObj = new ObjRef(selObjIdTemp);
 
-                    } while (r4 != Rhino.Input.GetResult.Nothing);
-                    OperatingOutputAxleMethod = false;
+                        Brep endeffector = currObj.Brep();
+                        eeBreps.Add(endeffector);
 
-                    #endregion
+                    }
+                    r7 = gp7.Get(true);
+
+                } while (r7 != Rhino.Input.GetResult.Nothing);
+                multipleSelections = false;
+
+                #region Step 0: set the output gear axle type
+
+                RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent2; ;
+                Rhino.Input.Custom.GetPoint gp4 = new Rhino.Input.Custom.GetPoint();
+                gp4.SetCommandPrompt(@"Press '1' to set the output gear shaft in the object or '2' to extend the shaft out of the object. Press 'Enter' to continue.");
+                gp4.AcceptNothing(true);
+                Rhino.Input.GetResult r4;
+
+                OperatingOutputAxleMethod = true;
+                do
+                {
+                    r4 = gp4.Get(true);
+
+                } while (r4 != Rhino.Input.GetResult.Nothing);
+                OperatingOutputAxleMethod = false;
+
+                #endregion
+
+                if (eeBreps.Count() == 1)
+                {
+                    // only one object is selected as the end-effector
+
+                    Brep endeffector = eeBreps.ElementAt(0);
 
                     Point3d ptS = skeleton.PointAtNormalizedLength(t1);
                     Point3d ptE = skeleton.PointAtNormalizedLength(t2);
@@ -486,8 +519,8 @@ namespace ConRotation
                     double angleXNeg = Vector3d.VectorAngle(rawDir, (-1) * eeDirPlane.XAxis);
                     double angleYPos = Vector3d.VectorAngle(rawDir, eeDirPlane.YAxis);
                     double angleYNeg = Vector3d.VectorAngle(rawDir, (-1) * eeDirPlane.YAxis);
-                    
-                    if(angleXPos <= angleXNeg && angleXPos <= angleYPos && angleXPos <= angleYNeg)
+
+                    if (angleXPos <= angleXNeg && angleXPos <= angleYPos && angleXPos <= angleYNeg)
                     {
                         orientationDir = eeDirPlane.XAxis;
                     }
@@ -515,27 +548,7 @@ namespace ConRotation
 
                     #region Parse energy and the speed
 
-                    // Parse the dispalcement (in percentage) based on the spring length and the posible max compression dispacement
-                    //Point3d ptS = skeleton.PointAtNormalizedLength(t1);
-                    //Point3d ptE = skeleton.PointAtNormalizedLength(t2);
-                    //double s_len = ptS.DistanceTo(ptE);
-                    //double maxDisp = Math.Max(s_len - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
-                    //displacement = (displacementLevel + 1) / 10 * maxDisp / s_len;     // convert the input displacement level into percentage
-
-                    // Parse the speed to gear ratio of the entire gear train
-                    //if (speedLevel <= 4)
-                    //{
-                    //    speed = 5 - speedLevel;
-                    //}
-                    //else if (speedLevel < 9)
-                    //{
-                    //    speed = 1 - (speedLevel - 4) * 0.2;
-                    //}
-                    //else
-                    //{
-                    //    speed = 0.1;
-                    //}
-                    speed = speedLevel;
+                    speed = 3;
                     // Parse the energy to 0.1-1
                     energy = (energyLevel + 1) / 10;
 
@@ -558,14 +571,15 @@ namespace ConRotation
                     Transform dirToXTranlation = Transform.Translation(new Vector3d(projectedSpringPosPt - startPoint));
 
                     // Transform back from X axis to the current kinetic unit orientation
-                    Transform dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
-                    Transform dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
+                    dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
+                    dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
 
                     // Last step, rotate back to the pose of the kinetic unit
                     Vector3d originalYVector = new Vector3d(0, 1, 0);
                     originalYVector.Transform(dirToXTranlationBack);
                     originalYVector.Transform(dirToXRotationBack);
-                    Transform yToPoseRotation = Transform.Rotation(originalYVector, orientationDir, startPoint);
+                    //yToPoseTrans = Transform.Rotation(originalYVector, orientationDir, startPoint);
+                    yToPoseTrans = Transform.Identity;
 
                     // Start transform
                     startPoint.Transform(dirToXRotation);
@@ -576,9 +590,10 @@ namespace ConRotation
                     endPt.Transform(dirToXTranlation);
 
                     double xEnd = endPt.X;
-                    Brep modelDup = innerCavity.DuplicateBrep();
+                    Brep modelDup = model.DuplicateBrep();
                     modelDup.Transform(dirToXRotation);
                     modelDup.Transform(dirToXTranlation);
+
 
                     double outDiameter = Math.Abs(modelDup.GetBoundingBox(true).Max.Z - modelDup.GetBoundingBox(true).Min.Z);
                     //double outDiameter = Double.MaxValue;
@@ -596,11 +611,13 @@ namespace ConRotation
                     //    if (Math.Abs(v.Location.Y) < totalThickness / 2)
                     //        totalThickness = Math.Abs(v.Location.Y) * 2;
                     //}
-
-                    double xSpaceEnd = modelDup.GetBoundingBox(true).Max.X;
+                    Brep innerCavityBrep = innerCavity.DuplicateBrep();
+                    innerCavityBrep.Transform(dirToXTranlation);
+                    innerCavityBrep.Transform(dirToXRotation);
+                    double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
 
                     motion.ConstructGearTrain(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
-                        dirToXTranlationBack, dirToXRotationBack, yToPoseRotation);
+                        dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
 
                     //// transform the generated brep of the gear train back to the orientation and placement of the kinetic unit
                     //foreach(Brep g in brepGearTrain)
@@ -615,13 +632,165 @@ namespace ConRotation
                     #endregion
 
                 }
+                else
+                {
+                    // multiple objects are selected as the end-effectors
 
+                    Point3d ptS = skeleton.PointAtNormalizedLength(t1);
+                    Point3d ptE = skeleton.PointAtNormalizedLength(t2);
+
+                    Point3d tarPt = new Point3d();
+                    Point3d springPosPt = new Point3d();
+
+                    Point3d eeCenter = new Point3d(0,0,0);
+                    foreach(Brep b in eeBreps)
+                    {
+                        BoundingBox eeBoundingBox = b.GetBoundingBox(true);
+                        Point3d ee_center = eeBoundingBox.Center;
+
+                        eeCenter = eeCenter + ee_center;
+                    }
+                    eeCenter = eeCenter / eeBreps.Count();
+                    
+                    if (eeCenter.DistanceTo(ptS) >= eeCenter.DistanceTo(ptE))
+                    {
+                        tarPt = ptE;
+                        springPosPt = ptS;
+                    }
+                    else
+                    {
+                        tarPt = ptS;
+                        springPosPt = ptE;
+                    }
+
+
+                    Plane eeDirPlane = new Plane(tarPt, new Vector3d(ptS - ptE));
+                    Point3d ptOnEE = eeCenter;
+                    Point3d dirPt = eeDirPlane.ClosestPoint(ptOnEE);
+
+                    Vector3d rawDir = new Vector3d(dirPt - tarPt);
+                    double angleXPos = Vector3d.VectorAngle(rawDir, eeDirPlane.XAxis);
+                    double angleXNeg = Vector3d.VectorAngle(rawDir, (-1) * eeDirPlane.XAxis);
+                    double angleYPos = Vector3d.VectorAngle(rawDir, eeDirPlane.YAxis);
+                    double angleYNeg = Vector3d.VectorAngle(rawDir, (-1) * eeDirPlane.YAxis);
+                    double translatingDis = 0;
+                    int directionType = 0; // 1: X, 2 : Y, 3: Z
+
+                    if (angleXPos <= angleXNeg && angleXPos <= angleYPos && angleXPos <= angleYNeg)
+                    {
+                        orientationDir = eeDirPlane.XAxis;
+                        translatingDis = eeCenter.Y - tarPt.Y;
+                        directionType = 2;
+                    }
+                    else if (angleXNeg <= angleXPos && angleXNeg <= angleYPos && angleXNeg <= angleYNeg)
+                    {
+                        orientationDir = (-1) * eeDirPlane.XAxis;
+                        translatingDis = tarPt.Y - eeCenter.Y;
+                        directionType = 2;
+                    }
+                    else if (angleYPos <= angleXPos && angleYPos <= angleXNeg && angleYPos <= angleYNeg)
+                    {
+                        orientationDir = eeDirPlane.YAxis;
+                        translatingDis = eeCenter.Z - tarPt.Z;
+                        directionType = 3;
+                    }
+                    else if (angleYNeg <= angleXPos && angleYNeg <= angleXNeg && angleYNeg <= angleYPos)
+                    {
+                        orientationDir = (-1) * eeDirPlane.YAxis;
+                        translatingDis = tarPt.Z - eeCenter.Z;
+                        directionType = 3;
+                    }
+
+
+                    Transform skeletonTranslate = Transform.Translation(orientationDir*translatingDis);
+                    skeleton.Transform(skeletonTranslate);
+                    ptS.Transform(skeletonTranslate);
+                    ptE.Transform(skeletonTranslate);
+                    tarPt.Transform(skeletonTranslate);
+                    springPosPt.Transform(skeletonTranslate);
+
+                    speed = 1;
+                    // Parse the energy to 0.1-1
+                    energy = (energyLevel + 1) / 10;
+
+                    myDoc.Objects.Hide(selObjId, true);
+
+                    motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
+
+                    Point3d startPoint = springPosPt;
+
+                    Transform dirToXRotation = Transform.Rotation(direction, new Vector3d(1, 0, 0), startPoint);
+                    Point3d projectedSpringPosPt = new Point3d(startPoint.X, 0, 0);
+                    Transform dirToXTranlation = Transform.Translation(new Vector3d(projectedSpringPosPt - startPoint));
+
+                    // Transform back from X axis to the current kinetic unit orientation
+                    dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
+                    dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
+
+                    // Last step, rotate back to the pose of the kinetic unit
+                    Vector3d originalYVector = new Vector3d(0, 1, 0);
+                    originalYVector.Transform(dirToXTranlationBack);
+                    originalYVector.Transform(dirToXRotationBack);
+                    yToPoseTrans = Transform.Translation(orientationDir);
+
+                    // Start transform
+                    startPoint.Transform(dirToXRotation);
+                    startPoint.Transform(dirToXTranlation);
+
+                    Point3d endPt = new Point3d(tarPt);
+                    endPt.Transform(dirToXRotation);
+                    endPt.Transform(dirToXTranlation);
+
+                    double xEnd = endPt.X;
+                    Brep modelDup = model.DuplicateBrep();
+                    modelDup.Transform(dirToXRotation);
+                    modelDup.Transform(dirToXTranlation);
+
+
+                    double outDiameter;
+                    double totalThickness;
+
+                    if (directionType == 3)
+                        outDiameter = Math.Abs(2 * (modelDup.GetBoundingBox(true).Center.Z - translatingDis - modelDup.GetBoundingBox(true).Min.Z));
+                    else
+                        outDiameter = Math.Abs(2 * (modelDup.GetBoundingBox(true).Center.Z - modelDup.GetBoundingBox(true).Min.Z));
+
+                    if (directionType == 2)
+                        totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y - translatingDis);
+                    else
+                        totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y);
+                    //double outDiameter = Double.MaxValue;
+
+                    //foreach(var v in modelDup.Vertices)
+                    //{
+                    //    if (Math.Abs(v.Location.Z) < outDiameter / 2)
+                    //        outDiameter = Math.Abs(v.Location.Z) * 2;
+                    //}
+
+                    //double totalThickness = Double.MaxValue;
+
+                    //foreach(var v in modelDup.Vertices)
+                    //{
+                    //    if (Math.Abs(v.Location.Y) < totalThickness / 2)
+                    //        totalThickness = Math.Abs(v.Location.Y) * 2;
+                    //}
+
+                    Brep innerCavityBrep = innerCavity.DuplicateBrep();
+                    innerCavityBrep.Transform(dirToXTranlation);
+                    innerCavityBrep.Transform(dirToXRotation);
+
+                    double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
+
+                    motion.ConstructGearTrain(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
+                        dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
+                }
 
             }
 
             if (toAddLock)
             {
-
+                if (motion != null)
+                    motion.ConstructLocks(dirToXTranlationBack,dirToXRotationBack,yToPoseTrans);
             }
 
             if (toPreview)
@@ -631,7 +800,9 @@ namespace ConRotation
 
             if (toAdjustParam)
             {
-
+                //if (motion != null)
+                    //Just reconstruct spiral
+                    //motion.AdjustParameter(energyLevel, speedLevel);
             }
 
             DA.SetData(0, motion);
@@ -641,6 +812,12 @@ namespace ConRotation
             else
                 DA.SetDataList(1, motion.GetModel());
             DA.SetData(2, toPreview);
+        }
+
+        private void RhinoApp_KeyboardEvent3(int key)
+        {
+            if (!multipleSelections)
+                return;
         }
 
         private void RhinoApp_KeyboardEvent2(int key)
@@ -654,10 +831,6 @@ namespace ConRotation
             else if (key == 50)// 2
             {
                 outputAxle = 2;
-            }
-            else
-            {
-                outputAxle = 1;
             }
 
         }
@@ -674,10 +847,6 @@ namespace ConRotation
             else if (key == 50)// 2
             {
                 energyChargingMethod = 2;
-            }
-            else
-            {
-                energyChargingMethod = 1;
             }
             
         }
