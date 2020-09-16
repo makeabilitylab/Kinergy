@@ -256,7 +256,7 @@ namespace Kinergy.KineticUnit
                 entityList.Add(LockHead);
                 entityList.Add(locks[1]);
                 LockHead.RegisterOtherPart(locks[1]);
-                _ = new Fixation(shaftRodShape, LockHead);
+                //_ = new Fixation(shaftRodShape, LockHead);
             }
             
         }
@@ -1593,7 +1593,7 @@ namespace Kinergy.KineticUnit
             else
             {
                 // spiral
-                Movement twist = new Movement(shaftRodShape, 2, 2* Math.PI, Transform.Rotation(2*Math.PI, direction, springSCenter));
+                Movement twist = new Movement(shaftRodShape, 2, 2* Math.PI);
                 twist.Activate();
                 //locks[0].SetLocked();
                 Loaded = true;
