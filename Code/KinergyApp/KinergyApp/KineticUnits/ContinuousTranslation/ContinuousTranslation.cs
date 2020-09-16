@@ -925,10 +925,10 @@ namespace Kinergy.KineticUnit
             fshaft.SetModel(fshaftAllParts[0]);*/
             //Construct rack for endeffector
             Point3d p = fpt + new Vector3d(0, -1, 0) * gearTeethNum * currModule / Math.PI / 2;
-            double distanceValue = (_distance + 1) * xLength * 0.15;
-            Point3d frackStPt = p + new Vector3d(1, 0, 0) * _distance / 2;
-            Point3d frackEndPt = p + new Vector3d(-1, 0, 0) * _distance / 2;
-            Rack finalrack = new Rack(frackStPt, frackEndPt, new Point3d(0, 1, 0), currModule);
+            double distanceValue = (_distance + 1) * xLength * 0.2;
+            Point3d frackStPt = p + new Vector3d(1, 0, 0) * distanceValue / 2;
+            Point3d frackEndPt = p + new Vector3d(-1, 0, 0) * distanceValue / 2;
+            Rack finalrack = new Rack(frackStPt, frackEndPt, new Point3d(0, 0, 1), currModule);
             finalrack.Model.Transform(translateBack);
             finalrack.Model.Transform(rotationBack);
             finalrack.Model.Transform(postRotationBack);
@@ -942,15 +942,33 @@ namespace Kinergy.KineticUnit
             //shaft that connect rack to ee
             double dis1 = endeffector.ClosestPoint(frackStPt).DistanceTo(frackStPt);
             double dis2 = endeffector.ClosestPoint(frackEndPt).DistanceTo(frackEndPt);
-            if(dis1<dis2)
+            Point3d DesPt,StPt;
+            if (dis1<dis2)
             {
-
+                DesPt = endeffector.ClosestPoint(frackStPt);
+                StPt = frackStPt;
             }
             else
             {
-
+                DesPt = endeffector.ClosestPoint(frackEndPt);
+                StPt = frackEndPt;
             }
-
+            Point3d midPt = new Point3d(StPt.X, DesPt.Y, StPt.Z);
+            Line l1 = new Line(StPt, midPt), l2 = new Line(midPt, DesPt);
+            Brep pipe1 = Brep.CreatePipe(l1.ToNurbsCurve(), 3.5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+            Brep pipe2=null,midball=null,lastShaft;
+            if(l2.Length>0)
+            {
+                pipe2 = Brep.CreatePipe(l2.ToNurbsCurve(), 3.5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                midball = new Sphere(midPt, 4).ToBrep();
+                lastShaft = Brep.CreateBooleanUnion(new List<Brep> { pipe1, midball, pipe2 }, MyDoc.ModelAbsoluteTolerance)[0];
+            }
+            else
+            {
+                lastShaft = pipe1;
+            }
+           
+            entityList.Add(new Shape(lastShaft));
         }
         
         public double Speed { get => _speed; set => _speed = value; }
