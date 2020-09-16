@@ -79,6 +79,7 @@ namespace Kinergy
                     obj = Object;
                     Type = Tp;
                     movementValue = value;
+                    trans = Transform.Identity;
                 }
                 else
                 {

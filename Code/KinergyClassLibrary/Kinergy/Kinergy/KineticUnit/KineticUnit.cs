@@ -18,8 +18,8 @@ namespace Kinergy.KineticUnit
     {
         protected List<Entity> entityList;
         private bool loaded;
-        private Transform Translation = Transform.Identity;
-        public Vector3d direction = Vector3d.Unset;
+        public Transform Translation = Transform.Identity;
+        public Vector3d direction = Vector3d.XAxis;
         public List<Entity> EntityList { get => entityList;protected set => entityList = value; }
         public bool Loaded { get => loaded;protected set => loaded = value; }
 
@@ -51,15 +51,22 @@ namespace Kinergy.KineticUnit
             List<Mesh> models = new List<Mesh>();
             foreach (Entity e in entityList)
             {
-                if (e.Model != null)
+                if (e.Model != null && e.GetType()!=typeof(Gear))
                 {
                     Brep m = e.GetModelinWorldCoordinate();
                     m.Transform(Translation);
-                    Mesh[] ms = Mesh.CreateFromBrep(m, MeshingParameters.FastRenderMesh);
-                    foreach (Mesh me in ms)
+                    if(m.IsValid)
                     {
-                        if (me.Faces.Count > 0)
-                        { models.Add(me); }
+                        Mesh[] ms = Mesh.CreateFromBrep(m, MeshingParameters.FastRenderMesh);
+                        foreach (Mesh me in ms)
+                        {
+                            if (me.Faces.Count > 0)
+                            { models.Add(me); }
+                        }
+                    }
+                    else
+                    {
+                        int i = 1;
                     }
                 }
  
