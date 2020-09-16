@@ -169,6 +169,13 @@ namespace Kinergy.KineticUnit
                 hookPlateBrep = sweep.PerformSweep(hookRail, hookPlateRect)[0];
                 hookPlateBrep = hookPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
 
+                hookPlateBrep.Transform(translationBack);
+                hookPlateBrep.Transform(rotationBack);
+                hookPlateBrep.Transform(poseRotationBack);
+
+                Shape hookPartShape = new Shape(hookPlateBrep, false, "lock");
+                EntityList.Add(hookPartShape);
+
 
             }
             else
