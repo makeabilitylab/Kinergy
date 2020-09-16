@@ -21,10 +21,10 @@ C:\Users\60213\Desktop\Kinergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debu
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\GH_Util.dll
-C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csprojAssemblyReference.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.Properties.Resources.resources
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.GenerateResource.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.CoreCompileInputs.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csproj.CopyComplete
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\Kinergy.pdb
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyClassLibrary\Kinergy\Kinergy\obj\Debug\KinergyBase.csprojAssemblyReference.cache

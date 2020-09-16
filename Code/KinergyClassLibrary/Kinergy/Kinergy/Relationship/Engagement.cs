@@ -32,10 +32,10 @@ namespace Kinergy
                     throw new Exception("It is illegal to set up engagement between two racks!");
                 }
                 //Then do the IsEngaged check
-                if(obj1.IsEngaged(obj2)==false)
-                {
-                    throw new Exception("Entities not engaged!");
-                }
+                //if(obj1.IsEngaged(obj2)==false)
+                //{
+                //    throw new Exception("Entities not engaged!");
+                //}
 
             }
             public override bool Move(Movement move)

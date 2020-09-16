@@ -33,6 +33,7 @@ namespace Kinergy.KineticUnit
         RhinoDoc _myDoc;
         private int _inputType;
         Brep _innerCavity;
+        Wheel _drivenPart;
 
         // Main model body finalization related
         Shape ModelShape;
@@ -175,7 +176,6 @@ namespace Kinergy.KineticUnit
 
                 Shape hookPartShape = new Shape(hookPlateBrep, false, "lock");
                 EntityList.Add(hookPartShape);
-
 
             }
             else
@@ -711,6 +711,10 @@ namespace Kinergy.KineticUnit
 
                 EntityList.Add(SpringS);
 
+                _ = new Fixation(shaftRodShape, SpringS);
+
+                
+
                 #endregion
 
                 #region construct the rod that connects the spring outer end to the main body
@@ -1095,6 +1099,8 @@ namespace Kinergy.KineticUnit
                         Point3d pt1 = new Point3d();    // the point on the postive side
                         Point3d pt2 = new Point3d();    // the point on the negative side
 
+                       // _ = new Fixation(PinionGear, gearEntities.Last());
+
                         if(projBrepPts[0].Y > projBrepPts[1].Y)
                         {
                             pt1 = projBrepPts[0] + projDir * 0.2;
@@ -1213,6 +1219,15 @@ namespace Kinergy.KineticUnit
                                 // difference with the model brep
                                 Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 shDiffRodSpiral = shDiffRods[0];
+
+                                Vector3d translateDrivenPart = shRailLine.ToNurbsCurve().PointAtNormalizedLength(0.5) - DrivenPart.Direction.ToNurbsCurve().PointAtNormalizedLength(0.5);
+                                Transform wheelTranslation = Transform.Translation(translateDrivenPart);
+
+                                DrivenPart.GetModelinWorldCoordinate().Transform(wheelTranslation);
+                                EntityList.Add(DrivenPart);
+
+                                //_ = new Fixation(shaftShape, DrivenPart);
+                                //_ = new Fixation(PinionGear, shaftShape);
                             }
                             
                         }
@@ -1225,6 +1240,8 @@ namespace Kinergy.KineticUnit
                     gearDir = pt - gearCenters.ElementAt(gearCenters.IndexOf(pt) - 1);
                     Gear BigGear = new Gear(pt, gearDir, gearTeethNum, currModule, pressureAngle, thickness);
                     Brep bigGear = BigGear.Model;
+
+                    _ = new Engagement(BigGear, gearEntities.Last());
 
                     #region test by LH
                     //MyDoc.Objects.AddBrep(bigGear);
@@ -1370,6 +1387,10 @@ namespace Kinergy.KineticUnit
                                 shaftRod.Transform(postRotationBack);
                                 shaftRodShape = new Shape(shaftRod, false, "joint");
                                 EntityList.Add(shaftRodShape);
+
+                                //_ = new Fixation(shaftRodShape, BigGear);
+                                //_ = new Fixation(shaftRodShape, shaftEntities.First());
+                                _ = new Fixation(shaftRodShape, DrivenPart);
 
                                 #endregion
 
@@ -1548,6 +1569,51 @@ namespace Kinergy.KineticUnit
             #endregion
 
         }
+        public override bool LoadKineticUnit()
+        {
+            if(InputType == 1)
+            {
+                // helical
+                //Movement compression;
+                //if (lockT < springStart)
+                //{ compression = new Movement(spring, 3, -springLength * distance); }
+                //else
+                //{ compression = new Movement(spring, 3, springLength * distance); }
+                //spring.SetMovement(compression);
+                //compression.Activate();
+                //locks[0].SetLocked();
+                //Loaded = true;
+                //return true;
+                return true;
+            }
+            else
+            {
+                // spiral
+                Movement twist = new Movement(shaftRodShape, 2, 2* Math.PI, Transform.Rotation(2*Math.PI, direction, springSCenter));
+                twist.Activate();
+                //locks[0].SetLocked();
+                Loaded = true;
+                return true;
+            }
+           
+        }
+        public override bool Trigger()
+        {
+            return true;
+            //return locks[0].Activate();//Create point and wait for selection
+        }
+        public override bool TriggerWithoutInteraction()
+        {
+            return true;
+            //return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
+        }
+        public override Movement Simulate(double interval = 20, double precision = 0.01)
+        {
+            Movement m = null;
+            m = springS.Activate(interval);
+            m.Activate();
+            return m;
+        }
 
 
         #region Member viarables encapsulations
@@ -1564,6 +1630,7 @@ namespace Kinergy.KineticUnit
         public Brep InnerCavity { get => _innerCavity; set => _innerCavity = value; }
         public Helix SpringH { get => springH; set => springH = value; }
         public Spiral SpringS { get => springS; set => springS = value; }
+        public Wheel DrivenPart { get => _drivenPart; set => _drivenPart = value; }
         #endregion
     }
 }

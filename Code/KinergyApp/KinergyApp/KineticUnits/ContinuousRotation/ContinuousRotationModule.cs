@@ -40,6 +40,9 @@ namespace ConRotation
         Transform dirToXRotationBack;
         Transform yToPoseTrans;
 
+        List<Brep> allBrepExisted = new List<Brep>();
+        List<Guid> endEffectorIDs = new List<Guid>();
+
         // Variables used for different functions
         bool lockState;
         double min_wire_diamter;
@@ -451,7 +454,7 @@ namespace ConRotation
                 gp7.SetCommandPrompt(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.");
                 gp7.AcceptNothing(true);
                 Rhino.Input.GetResult r7;
-
+                
                 multipleSelections = true;
                 do
                 {
@@ -463,6 +466,7 @@ namespace ConRotation
                     {
                         // select a brep
                         selObjIdTemp = tempObjSel_ref.ObjectId;
+                        endEffectorIDs.Add(selObjIdTemp);
                         ObjRef currObj = new ObjRef(selObjIdTemp);
 
                         Brep endeffector = currObj.Brep();
@@ -629,6 +633,33 @@ namespace ConRotation
                     motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
                         dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
 
+                    //foreach (var obj in myDoc.Objects)
+                    //{
+                    //    Guid tempID = obj.Id;
+                    //    if (!endEffectorIDs.Contains(tempID))
+                    //    {
+                    //        ObjRef currObj = new ObjRef(tempID);
+
+                    //        Brep tempBrep = currObj.Brep();
+
+                    //        bool isFind = false;
+                    //        foreach (Entity en in motion.EntityList)
+                    //        {
+                    //            if (en.Model == tempBrep)
+                    //            {
+                    //                isFind = true;
+                    //                break;
+                    //            }
+
+                    //        }
+
+                    //        if (!isFind)
+                    //        {
+                    //            motion.EntityList.Add(new Shape(tempBrep, false, ""));
+                    //        }
+                    //    }  
+                    //}
+
                     #endregion
 
                     #endregion
@@ -645,10 +676,18 @@ namespace ConRotation
                     Point3d springPosPt = new Point3d();
 
                     Point3d eeCenter = new Point3d(0,0,0);
+                    Brep eeBrepAll = new Brep();
+
+                    List<Point3d> brepCenters = new List<Point3d>();
                     foreach(Brep b in eeBreps)
                     {
                         BoundingBox eeBoundingBox = b.GetBoundingBox(true);
                         Point3d ee_center = eeBoundingBox.Center;
+
+                        brepCenters.Add(ee_center);
+
+                        //eeBrepAll.Append(b);
+                        eeBrepAll = b;
 
                         eeCenter = eeCenter + ee_center;
                     }
@@ -719,6 +758,20 @@ namespace ConRotation
 
                     motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
 
+                    
+
+
+                    Line dir = new Line();
+                    if (brepCenters.Count() == 2)
+                        dir = new Line(brepCenters.ElementAt(0), brepCenters.ElementAt(1));
+
+                    if (dir != null)
+                    {
+                        Wheel eeBrepWheel = new Wheel(eeBrepAll, dir, motion);
+                        motion.DrivenPart = eeBrepWheel;
+                    }
+
+
                     Point3d startPoint = springPosPt;
 
                     Transform dirToXRotation = Transform.Rotation(direction, new Vector3d(1, 0, 0), startPoint);
@@ -774,6 +827,30 @@ namespace ConRotation
 
                     motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
                         dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
+
+                    //foreach (var obj in myDoc.Objects)
+                    //{
+                    //    Guid tempID = obj.Id;
+                    //    ObjRef currObj = new ObjRef(tempID);
+
+                    //    Brep tempBrep = currObj.Brep();
+
+                    //    bool isFind = false;
+                    //    foreach (Entity en in motion.EntityList)
+                    //    {
+                    //        if (en.Model == tempBrep)
+                    //        {
+                    //            isFind = true;
+                    //            break;
+                    //        }
+
+                    //    }
+
+                    //    if (!isFind)
+                    //    {
+                    //        motion.EntityList.Add(new Shape(tempBrep, false, ""));
+                    //    }
+                    //}
                 }
 
             }

@@ -14,6 +14,10 @@ namespace Kinergy.Geom
         Vector3d normal = Vector3d.Unset;
         double radius = 0, thickness = 0;
         KineticUnit.KineticUnit KU = null;
+        Line direction;
+
+        public Line Direction { get => direction; set => direction = value; }
+
         public Wheel(Point3d cp,Vector3d n,double r,double t,KineticUnit.KineticUnit parent)
         {
             centerPoint = cp;
@@ -22,6 +26,13 @@ namespace Kinergy.Geom
             thickness = t;
             KU = parent;
             Generate();
+        }
+        public Wheel(Brep inputWheelBrep, Line dir, KineticUnit.KineticUnit parent)
+        {
+            direction = dir;
+            radius = 5;
+            Model = inputWheelBrep;
+            KU = parent;
         }
         public override void Generate()
         {
@@ -34,9 +45,14 @@ namespace Kinergy.Geom
         public override bool Move(Movement move)
         {
             if (move.Type == 2)
-                return base.Move(move);
+            {
+                //return base.Move(move);
+                ConductMoveAndUpdateParam(move);
+                return true;
+            }
             else
                 return false;
+
         }
         protected override void ConductMoveAndUpdateParam(Movement move)
         {
