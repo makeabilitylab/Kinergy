@@ -34,7 +34,11 @@ namespace Kinergy.Geom
         public override bool Move(Movement move)
         {
             if (move.Type == 2)
-                return base.Move(move);
+            {
+                //return base.Move(move);
+                ConductMoveAndUpdateParam(move);
+                return true;
+            }
             else
                 return false;
         }
