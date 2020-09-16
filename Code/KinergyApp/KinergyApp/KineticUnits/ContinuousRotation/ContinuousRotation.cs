@@ -66,6 +66,22 @@ namespace Kinergy.KineticUnit
 
         ProcessingWin processingwin = new ProcessingWin();
 
+
+        // spring and gear train parameter updates related
+        Point3d _startPoint = new Point3d();
+        double _xEnd;
+        double _outDiameter;
+        double _totalThickness;
+        double _xSpaceEnd;
+        int _outputAxle;
+        Transform _translateBack, _rotationBack, _postRotationBack;
+
+        List<Gear> gearEntities = new List<Gear>();
+        List<Shape> shaftEntities = new List<Shape>();
+        Shape handlerShape;
+        Shape discRodShape;
+        Shape bearingShape;
+
         double springWidthThreadshold = 20;
 
         public ContinuousRotation(Brep Model, Vector3d Direction, double Energy, double Speed, int InputType, Brep inCavity)
@@ -81,6 +97,71 @@ namespace Kinergy.KineticUnit
             this._innerCavity = inCavity;
             this.skeleton = null;
 
+        }
+
+        public void AdjustParameter(double energylevel, double speedlevel)
+        {
+            if(Energy != energylevel)
+            {
+                double maxDegree = Math.PI * 2;
+                springS.AdjustParam((int)(energylevel * 10 - 1), maxDegree);
+                Brep springModel = springS.GetModelinWorldCoordinate();
+                springModel.Transform(_translateBack);
+                springModel.Transform(_rotationBack);
+                springModel.Transform(_postRotationBack);
+                springS.SetModel(springModel);
+                Energy = energylevel;
+            }
+
+            if(speedlevel != Speed)
+            {
+                Speed = speedlevel;
+
+                foreach(Gear g in gearEntities)
+                {
+                    if (EntityList.Contains(g))
+                    {
+                        EntityList.Remove(g);
+                    }
+                }
+
+                gearEntities.Clear();
+
+                foreach (Shape sh in shaftEntities)
+                {
+                    if (EntityList.Contains(sh))
+                    {
+                        EntityList.Remove(sh);
+                    }
+                }
+
+                shaftEntities.Clear();
+
+                if(handlerShape != null)
+                {
+                    EntityList.Remove(handlerShape);
+                }
+
+                if (discRodShape != null)
+                {
+                    EntityList.Remove(discRodShape);
+                }
+
+                if(bearingShape != null)
+                {
+                    EntityList.Remove(bearingShape);
+                }
+
+                if(shaftRodShape != null)
+                {
+                    EntityList.Remove(shaftRodShape);
+                }
+
+
+                ConstructGearTrain(_startPoint, _xEnd, _outDiameter, _totalThickness, _xSpaceEnd, _outputAxle,
+                _translateBack, _rotationBack, _postRotationBack);
+            }
+            
         }
 
         public void ConstructLocks(Transform translationBack, Transform rotationBack, Transform poseRotationBack)
@@ -256,7 +337,7 @@ namespace Kinergy.KineticUnit
                 entityList.Add(LockHead);
                 entityList.Add(locks[1]);
                 LockHead.RegisterOtherPart(locks[1]);
-                //_ = new Fixation(shaftRodShape, LockHead);
+                _ = new Fixation(shaftRodShape, LockHead);
             }
             
         }
@@ -856,6 +937,8 @@ namespace Kinergy.KineticUnit
             #endregion
         }
 
+        
+
         /// <summary>
         /// Generate the gear train inside the model
         /// </summary>
@@ -870,54 +953,67 @@ namespace Kinergy.KineticUnit
             Transform translateBack, Transform rotationBack, Transform postRotationBack)
         {
 
+            _startPoint = startPoint;
+            _xEnd = xEnd;
+            _outDiameter = outDiameter;
+            _totalThickness = totalThickness;
+            _xSpaceEnd = xSpaceEnd;
+            _outputAxle = outputAxle;
+            _translateBack = translateBack;
+            _rotationBack = rotationBack;
+            _postRotationBack = postRotationBack;
+
             List<Brep> result = new List<Brep>();
 
             #region Step 0: Create a shell
 
-            Brep[] innerShells;
-            Brep[] innerWalls;
-
-            processingwin.Show();
-            Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, true, MyDoc.ModelRelativeTolerance, out innerShells, out innerWalls);
-
-            innerShell = shells[0];
-            processingwin.Hide();
-
-            Plane xySplitPln = new Plane(Model.GetBoundingBox(true).Center, new Vector3d(0, 0, 1));
-
-            Point3d[] ioPts = new Point3d[2];
-            Vector3d upZ = new Vector3d(0, 0, 1);
-            ioPts[0] = innerShell.GetBoundingBox(true).Center - upZ * (innerShell.GetBoundingBox(true).Max.Z - innerShell.GetBoundingBox(true).Min.Z);
-            ioPts[1] = innerShell.GetBoundingBox(true).Center + upZ * (innerShell.GetBoundingBox(true).Max.Z - innerShell.GetBoundingBox(true).Min.Z);
-            Curve railio = new Polyline(ioPts).ToNurbsCurve();
-
-            Brep link = new Brep();
-            link = Brep.CreatePipe(railio, 1, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-            Brep innerShellDup = innerShell.DuplicateBrep();
-            var ioBreps = Brep.CreateBooleanUnion(new List<Brep> { innerShellDup, link }, MyDoc.ModelAbsoluteTolerance);
-            if (ioBreps == null)
+            if(innerShell == null)
             {
-                link.Flip();
-                ioBreps = Brep.CreateBooleanUnion(new List<Brep> { innerShellDup, link }, MyDoc.ModelAbsoluteTolerance);
+                Brep[] innerShells;
+                Brep[] innerWalls;
+
+                processingwin.Show();
+                Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, true, MyDoc.ModelRelativeTolerance, out innerShells, out innerWalls);
+
+                innerShell = shells[0];
+                processingwin.Hide();
+
+                Plane xySplitPln = new Plane(Model.GetBoundingBox(true).Center, new Vector3d(0, 0, 1));
+
+                Point3d[] ioPts = new Point3d[2];
+                Vector3d upZ = new Vector3d(0, 0, 1);
+                ioPts[0] = innerShell.GetBoundingBox(true).Center - upZ * (innerShell.GetBoundingBox(true).Max.Z - innerShell.GetBoundingBox(true).Min.Z);
+                ioPts[1] = innerShell.GetBoundingBox(true).Center + upZ * (innerShell.GetBoundingBox(true).Max.Z - innerShell.GetBoundingBox(true).Min.Z);
+                Curve railio = new Polyline(ioPts).ToNurbsCurve();
+
+                Brep link = new Brep();
+                link = Brep.CreatePipe(railio, 1, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                Brep innerShellDup = innerShell.DuplicateBrep();
+                var ioBreps = Brep.CreateBooleanUnion(new List<Brep> { innerShellDup, link }, MyDoc.ModelAbsoluteTolerance);
+                if (ioBreps == null)
+                {
+                    link.Flip();
+                    ioBreps = Brep.CreateBooleanUnion(new List<Brep> { innerShellDup, link }, MyDoc.ModelAbsoluteTolerance);
+                }
+
+                Brep ioBrep = ioBreps[0];
+
+                #region test by LH
+                //MyDoc.Objects.AddBrep(ioBrep);
+                //MyDoc.Views.Redraw();
+                #endregion
+
+                var finalShellBreps = Brep.CreateBooleanDifference(Model, ioBrep, MyDoc.ModelAbsoluteTolerance);
+                if (finalShellBreps == null)
+                {
+                    ioBrep.Flip();
+                    finalShellBreps = Brep.CreateBooleanDifference(Model, ioBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Brep finalShellBrep = finalShellBreps[0];
+
+                Model = finalShellBrep.DuplicateBrep();
             }
-
-            Brep ioBrep = ioBreps[0];
-
-            #region test by LH
-            //MyDoc.Objects.AddBrep(ioBrep);
-            //MyDoc.Views.Redraw();
-            #endregion
-
-            var finalShellBreps = Brep.CreateBooleanDifference(Model, ioBrep, MyDoc.ModelAbsoluteTolerance);
-            if (finalShellBreps == null)
-            {
-                ioBrep.Flip();
-                finalShellBreps = Brep.CreateBooleanDifference(Model, ioBrep, MyDoc.ModelAbsoluteTolerance);
-            }
-            Brep finalShellBrep = finalShellBreps[0];
-
-            Model = finalShellBrep.DuplicateBrep();
 
             #region test by LH
             //MyDoc.Objects.AddBrep(finalShellBrep);
@@ -1059,8 +1155,7 @@ namespace Kinergy.KineticUnit
                 yPos += thickness;
             }
             Vector3d gearDir = new Vector3d();
-            List<Gear> gearEntities = new List<Gear>();
-            List<Shape> shaftEntities = new List<Shape>();
+            
             List<Brep> gears = new List<Brep>();
             List<Brep> shafts = new List<Brep>();
             List<Brep> partsForShaftDifference = new List<Brep>();
@@ -1379,12 +1474,13 @@ namespace Kinergy.KineticUnit
                                 handlerBrep.Transform(translateBack);
                                 handlerBrep.Transform(rotationBack);
                                 handlerBrep.Transform(postRotationBack);
-                                Shape handlerShape = new Shape(handlerBrep, false, "key");
+                                handlerShape = new Shape(handlerBrep, false, "key");
                                 EntityList.Add(handlerShape);
 
                                 shaftRod.Transform(translateBack);
                                 shaftRod.Transform(rotationBack);
                                 shaftRod.Transform(postRotationBack);
+
                                 shaftRodShape = new Shape(shaftRod, false, "joint");
                                 EntityList.Add(shaftRodShape);
 
@@ -1405,7 +1501,8 @@ namespace Kinergy.KineticUnit
                                 discRod.Transform(translateBack);
                                 discRod.Transform(rotationBack);
                                 discRod.Transform(postRotationBack);
-                                Shape discRodShape = new Shape(discRod, false, "joint");
+                                
+                                discRodShape = new Shape(discRod, false, "joint");
                                 EntityList.Add(discRodShape);
                                 #endregion
 
@@ -1504,7 +1601,8 @@ namespace Kinergy.KineticUnit
                                 bearingFinal.Transform(translateBack);
                                 bearingFinal.Transform(rotationBack);
                                 bearingFinal.Transform(postRotationBack);
-                                Shape bearingShape = new Shape(bearingFinal, false, "joint");
+                                
+                                bearingShape= new Shape(bearingFinal, false, "joint");
                                 EntityList.Add(bearingShape);
                                 #endregion
 
@@ -1593,7 +1691,7 @@ namespace Kinergy.KineticUnit
             else
             {
                 // spiral
-                Movement twist = new Movement(shaftRodShape, 2, 2* Math.PI);
+                Movement twist = new Movement(shaftRodShape, 2, 2* Math.PI, Transform.Rotation(2*Math.PI, direction, springSCenter));
                 twist.Activate();
                 //locks[0].SetLocked();
                 Loaded = true;

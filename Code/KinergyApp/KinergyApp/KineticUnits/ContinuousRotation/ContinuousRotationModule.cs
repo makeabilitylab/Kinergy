@@ -633,32 +633,32 @@ namespace ConRotation
                     motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
                         dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
 
-                    //foreach (var obj in myDoc.Objects)
-                    //{
-                    //    Guid tempID = obj.Id;
-                    //    if (!endEffectorIDs.Contains(tempID))
-                    //    {
-                    //        ObjRef currObj = new ObjRef(tempID);
+                    foreach (var obj in myDoc.Objects)
+                    {
+                        Guid tempID = obj.Id;
+                        if (!endEffectorIDs.Contains(tempID))
+                        {
+                            ObjRef currObj = new ObjRef(tempID);
 
-                    //        Brep tempBrep = currObj.Brep();
+                            Brep tempBrep = currObj.Brep();
 
-                    //        bool isFind = false;
-                    //        foreach (Entity en in motion.EntityList)
-                    //        {
-                    //            if (en.Model == tempBrep)
-                    //            {
-                    //                isFind = true;
-                    //                break;
-                    //            }
+                            bool isFind = false;
+                            foreach (Entity en in motion.EntityList)
+                            {
+                                if (en.Model == tempBrep)
+                                {
+                                    isFind = true;
+                                    break;
+                                }
 
-                    //        }
+                            }
 
-                    //        if (!isFind)
-                    //        {
-                    //            motion.EntityList.Add(new Shape(tempBrep, false, ""));
-                    //        }
-                    //    }  
-                    //}
+                            if (!isFind)
+                            {
+                                motion.EntityList.Add(new Shape(tempBrep, false, ""));
+                            }
+                        }
+                    }
 
                     #endregion
 
@@ -750,7 +750,7 @@ namespace ConRotation
                     tarPt.Transform(skeletonTranslate);
                     springPosPt.Transform(skeletonTranslate);
 
-                    speed = 8;
+                    speed = speedLevel;
                     // Parse the energy to 0.1-1
                     energy = (energyLevel + 1) / 10;
 
@@ -759,8 +759,6 @@ namespace ConRotation
                     motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
 
                     
-
-
                     Line dir = new Line();
                     if (brepCenters.Count() == 2)
                         dir = new Line(brepCenters.ElementAt(0), brepCenters.ElementAt(1));
@@ -828,29 +826,29 @@ namespace ConRotation
                     motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
                         dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
 
-                    //foreach (var obj in myDoc.Objects)
-                    //{
-                    //    Guid tempID = obj.Id;
-                    //    ObjRef currObj = new ObjRef(tempID);
+                    foreach (var obj in myDoc.Objects)
+                    {
+                        Guid tempID = obj.Id;
+                        ObjRef currObj = new ObjRef(tempID);
 
-                    //    Brep tempBrep = currObj.Brep();
+                        Brep tempBrep = currObj.Brep();
 
-                    //    bool isFind = false;
-                    //    foreach (Entity en in motion.EntityList)
-                    //    {
-                    //        if (en.Model == tempBrep)
-                    //        {
-                    //            isFind = true;
-                    //            break;
-                    //        }
+                        bool isFind = false;
+                        foreach (Entity en in motion.EntityList)
+                        {
+                            if (en.Model == tempBrep)
+                            {
+                                isFind = true;
+                                break;
+                            }
 
-                    //    }
+                        }
 
-                    //    if (!isFind)
-                    //    {
-                    //        motion.EntityList.Add(new Shape(tempBrep, false, ""));
-                    //    }
-                    //}
+                        if (!isFind)
+                        {
+                            motion.EntityList.Add(new Shape(tempBrep, false, ""));
+                        }
+                    }
                 }
 
             }
@@ -868,9 +866,9 @@ namespace ConRotation
 
             if (toAdjustParam)
             {
-                //if (motion != null)
-                   // Reconstruct spiral and the gear train
-                    //motion.AdjustParameter(energyLevel, speedLevel);
+                if (motion != null)
+                    // Reconstruct spiral and the gear train
+                    motion.AdjustParameter(energyLevel, speedLevel);
             }
 
             DA.SetData(0, motion);
