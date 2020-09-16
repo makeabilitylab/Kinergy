@@ -74,7 +74,7 @@ namespace Kinergy
                 double theta = maxDegree;
                 int bestN = 1;
                 thicknessX = 0.8;
-                thicknessY = 8;
+                thicknessY = 7;
                 /*double bestMatchingLoss = double.MaxValue;
                 for (int i = 1; i < 10; i++)
                 {

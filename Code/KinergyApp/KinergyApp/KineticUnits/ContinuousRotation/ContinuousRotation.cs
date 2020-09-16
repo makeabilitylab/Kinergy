@@ -181,12 +181,12 @@ namespace Kinergy.KineticUnit
             else
             {
                 double ratchetThickness = 1.6;
-                double tolerance = 0.4;
+                double tolerance = 0.6;
                 double lockRadius = 1.5;
 
                 Vector3d xPos = new Vector3d(1, 0, 0);
                 Vector3d zPos = new Vector3d(0, 0, 1);
-                Point3d lockPos = keySSidePt + xPos * (lastGearRadius * 0.9 - tolerance) - zPos * (1.732 * (lockRadius) + tolerance);
+                Point3d lockPos = keySSidePt + xPos * (lastGearRadius * 0.9) - zPos * (1.732 * lockRadius/2 + tolerance * 3/2);
 
                 locks = new List<Lock>();
 
@@ -956,9 +956,9 @@ namespace Kinergy.KineticUnit
             double pairGearRatio = minRatio;
             double module = module0;
             double pressureAngle = 20;
-            double tolerance = 0.4;
+            double tolerance = 0.6;
             double discThickness = 1;
-            double shaftRadius = 1.5;
+            double shaftRadius = 1.6;
             double discRadius = 2.5;
 
             if (xLength < 0) return;
@@ -1121,7 +1121,7 @@ namespace Kinergy.KineticUnit
                             // create a brep to different the gears
                             Brep bDiffPart = new Brep();
 
-                            Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                            Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                             bDiffPart = bDiffParts[0];
 
                             partsForShaftDifference.Add(bDiffPart);
@@ -1171,7 +1171,7 @@ namespace Kinergy.KineticUnit
                                 // create a brep to different the gears
                                 Brep bDiffPart = new Brep();
 
-                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 bDiffPart = bDiffParts[0];
 
                                 partsForShaftDifference.Add(bDiffPart);
@@ -1217,7 +1217,7 @@ namespace Kinergy.KineticUnit
                                 shaftEntities.Add(shaftShape);
 
                                 // difference with the model brep
-                                Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 shDiffRodSpiral = shDiffRods[0];
 
                                 Vector3d translateDrivenPart = shRailLine.ToNurbsCurve().PointAtNormalizedLength(0.5) - DrivenPart.Direction.ToNurbsCurve().PointAtNormalizedLength(0.5);
@@ -1309,7 +1309,7 @@ namespace Kinergy.KineticUnit
                                 // create a brep to different the gears
                                 Brep bDiffPart = new Brep();
 
-                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 bDiffPart = bDiffParts[0];
 
                                 partsForShaftDifference.Add(bDiffPart);
@@ -1369,8 +1369,8 @@ namespace Kinergy.KineticUnit
 
                                 // Create the handler -- the key
                                 Vector3d xpos = new Vector3d(1, 0, 0);
-                                Point3d handlerSt = pt1 - xpos * 1.5;
-                                Point3d handlerEnd = pt1 + xpos * 1.5;
+                                Point3d handlerSt = pt1 - xpos * shaftRadius;
+                                Point3d handlerEnd = pt1 + xpos * shaftRadius;
                                 Line handlerLine = new Line(handlerSt, handlerEnd);
                                 Curve handlerRail = handlerLine.ToNurbsCurve();
 
@@ -1399,7 +1399,7 @@ namespace Kinergy.KineticUnit
                                 Point3d pt3 = pt2 - projDir * 1.6;
                                 Line discRailLine = new Line(pt3, pt2);
                                 Curve discRail = discRailLine.ToNurbsCurve();
-                                Brep[] discRods = Brep.CreatePipe(discRail, shaftRadius * 1.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] discRods = Brep.CreatePipe(discRail, shaftRadius * 2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 Brep discRod = discRods[0];
 
                                 discRod.Transform(translateBack);
@@ -1411,15 +1411,15 @@ namespace Kinergy.KineticUnit
 
                                 #region Step 3: generate the bearing
 
-                                Point3d pt4 = pt2 + projDir * (tolerance * 2 + 0.2);
-                                Point3d pt5 = pt3 - projDir * tolerance * 2;
+                                Point3d pt4 = pt2 + projDir * ((tolerance-0.2) * 2 + 0.2);
+                                Point3d pt5 = pt3 - projDir * (tolerance-0.2) * 2;
 
                                 Line bearingLine = new Line(pt5, pt4);
                                 Curve bearingRail = bearingLine.ToNurbsCurve();
-                                Brep bearingExterior = Brep.CreatePipe(bearingRail, 4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-                                Brep bearingInterior = Brep.CreatePipe(bearingRail, 2.4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep bearingExterior = Brep.CreatePipe(bearingRail, 5.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep bearingInterior = Brep.CreatePipe(bearingRail, 4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
-                                Brep laterUsedBrep = Brep.CreatePipe(bearingRail, 2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep laterUsedBrep = Brep.CreatePipe(bearingRail, 3, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
                                 modelDiffLaterUsedBrep = bearingExterior.DuplicateBrep();
 
 
@@ -1434,9 +1434,13 @@ namespace Kinergy.KineticUnit
                                 Point3d pt6 = pt5 - projDir * 1.2;
                                 Line capLine = new Line(pt6, pt5);
                                 Curve capRail = capLine.ToNurbsCurve();
-                                Brep capBrep = Brep.CreatePipe(capRail, 4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep capBrep = Brep.CreatePipe(capRail, 5.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep capDiffBrep = Brep.CreatePipe(capRail, 2.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
-                                Brep bearingAllBrep = Brep.CreateBooleanUnion(new List<Brep> { bearingBrep, capBrep}, MyDoc.ModelAbsoluteTolerance)[0];
+                                Brep capBrep1 = Brep.CreateBooleanDifference(capBrep, capDiffBrep, MyDoc.ModelAbsoluteTolerance)[0];
+
+
+                                Brep bearingAllBrep = Brep.CreateBooleanUnion(new List<Brep> { bearingBrep, capBrep1}, MyDoc.ModelAbsoluteTolerance)[0];
 
                                 Point3d openSlotPt = (pt2 + 0.6 * projDir + pt5 + 0.2*projDir) / 2;
                                 Vector3d osNormal = new Vector3d(0, 0, 1);
@@ -1448,8 +1452,8 @@ namespace Kinergy.KineticUnit
                                 sweep.ClosedSweep = false;
                                 sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
 
-                                Vector3d os_xp = 1.2 * openSlotPln.XAxis;
-                                Vector3d os_xn = (-1.2) * openSlotPln.XAxis;
+                                Vector3d os_xp = shaftRadius * openSlotPln.XAxis;
+                                Vector3d os_xn = (-shaftRadius) * openSlotPln.XAxis;
                                 Vector3d os_yp = (pt2.DistanceTo(pt5) + 0.4) / 2 * openSlotPln.YAxis;
                                 Vector3d os_yn = (-1) * (pt2.DistanceTo(pt5) + 0.4) / 2 * openSlotPln.YAxis;
 

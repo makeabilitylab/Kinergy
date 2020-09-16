@@ -750,7 +750,7 @@ namespace ConRotation
                     tarPt.Transform(skeletonTranslate);
                     springPosPt.Transform(skeletonTranslate);
 
-                    speed = speedLevel;
+                    speed = 8;
                     // Parse the energy to 0.1-1
                     energy = (energyLevel + 1) / 10;
 

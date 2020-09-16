@@ -46,6 +46,7 @@ C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bi
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\MetroFramework.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\MetroFramework.Fonts.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\bin\Kinergy.pdb
+C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy\Styles.Default.baml
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy_MarkupCompile.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.g.resources
