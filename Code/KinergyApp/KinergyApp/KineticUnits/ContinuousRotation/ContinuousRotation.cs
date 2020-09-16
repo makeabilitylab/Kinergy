@@ -34,9 +34,21 @@ namespace Kinergy.KineticUnit
         private int _inputType;
         Brep _innerCavity;
 
+        // Main model body finalization related
         Shape ModelShape;
         Shape shaftRodShape;  // spiral spring central shaft
+        Brep shDiffRodSpiral = new Brep();
+        Brep shaftCutoutBrep = new Brep();
+        Brep modelDiffLaterUsedBrep = new Brep();
 
+        int teethEqualInt;      // finalized pinion teeth number in a two-gear set
+        double currModule;      // finalized gear module
+        double grNew;           // finalized gear ratio
+
+
+        // Lock related
+        Point3d guideEnd;
+        Point3d barSt;
 
         private Curve skeleton;
         private List<Shape> modelCut;
@@ -74,13 +86,96 @@ namespace Kinergy.KineticUnit
         {
             if(InputType == 1)
             {
+                Vector3d backDir = new Vector3d(-1, 0, 0);
+
+               
+                List<Brep> bs = new List<Brep>();
+                bs.Add(innerShell);
+                List<Point3d> projPts = new List<Point3d>();
+                projPts.Add(guideEnd);
+                Vector3d projDir = new Vector3d(1, 0, 0);
+                Point3d[] projBrepPts;
+                projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs, projPts, projDir, MyDoc.ModelAbsoluteTolerance);
+
+                Point3d lockBtnPt = new Point3d();
+                if (guideEnd.X >= Math.Min(projBrepPts[0].X, projBrepPts[1].X) && guideEnd.X <= Math.Max(projBrepPts[0].X, projBrepPts[1].X))
+                {
+                    // extend the button to the outside of the innershell
+                    double extensionDis = guideEnd.X - Math.Min(projBrepPts[0].X, projBrepPts[1].X);
+                    lockBtnPt = guideEnd + backDir * (extensionDis + 2);
+
+                }
+                else if (guideEnd.X < Math.Min(projBrepPts[0].X, projBrepPts[1].X))
+                {
+                    // do nothing
+                    lockBtnPt = guideEnd + backDir * 2;
+                }
+
+                Point3d[] hookGuideRailPts = new Point3d[2];
+                hookGuideRailPts[0] = guideEnd;
+                hookGuideRailPts[1] = lockBtnPt;
+                Curve hookGuideRail = new Polyline(hookGuideRailPts).ToNurbsCurve();
+
+                Brep hookGuideBrep = Brep.CreatePipe(hookGuideRail, 0.8, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                Point3d[] hookGuideTipPts = new Point3d[2];
+                hookGuideTipPts[0] = lockBtnPt;
+                hookGuideTipPts[1] = lockBtnPt + backDir * 1.6;
+                Curve hookGuideTipRail = new Polyline(hookGuideTipPts).ToNurbsCurve();
+                Brep hookGuideTipBrep = Brep.CreatePipe(hookGuideTipRail, 1.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                Brep guideBtnPart = Brep.CreateBooleanUnion(new List<Brep> { hookGuideBrep, hookGuideTipBrep }, MyDoc.ModelAbsoluteTolerance)[0];
+
+                guideBtnPart.Transform(translationBack);
+                guideBtnPart.Transform(rotationBack);
+                guideBtnPart.Transform(poseRotationBack);
+
+                Shape guideBtnShape = new Shape(guideBtnPart, false, "lock");
+                EntityList.Add(guideBtnShape);
+
+                // Create the hooks
+                Vector3d yPos = new Vector3d(0, 1, 0);
+                Point3d hookStPt = barSt - yPos * 1.2;
+                Point3d hookEndPt = barSt + yPos * 1.2;
+                Point3d[] hookPts = new Point3d[2];
+                hookPts[0] = hookStPt;
+                hookPts[1] = hookEndPt;
+                Curve hookRail = new Polyline(hookPts).ToNurbsCurve();
+
+                // create sweep function
+                var sweep = new Rhino.Geometry.SweepOneRail();
+                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+
+
+                Plane hookPln = new Plane(hookStPt, yPos);
+
+                Vector3d hk_xp = 0 * hookPln.XAxis;
+                Vector3d hk_xn = (-3) * hookPln.XAxis;
+                Vector3d hk_yp = 4 * hookPln.YAxis;
+                Vector3d hk_yn = 0 * hookPln.YAxis;
+
+                Point3d[] hookPlatePts = new Point3d[4];
+                hookPlatePts[0] = hookStPt + hk_xp + hk_yn;
+                hookPlatePts[1] = hookStPt + hk_xn + hk_yn;
+                hookPlatePts[2] = hookStPt + hk_xp + hk_yp;
+                hookPlatePts[3] = hookStPt + hk_xp + hk_yn;
+
+                Curve hookPlateRect = new Polyline(hookPlatePts).ToNurbsCurve();
+
+                Brep hookPlateBrep = new Brep();
+
+                hookPlateBrep = sweep.PerformSweep(hookRail, hookPlateRect)[0];
+                hookPlateBrep = hookPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
 
             }
             else
             {
                 double ratchetThickness = 1.6;
                 double tolerance = 0.4;
-                double lockRadius = 0.8;
+                double lockRadius = 1.5;
 
                 Vector3d xPos = new Vector3d(1, 0, 0);
                 Vector3d zPos = new Vector3d(0, 0, 1);
@@ -124,11 +219,11 @@ namespace Kinergy.KineticUnit
 
                 Line lockDisc1Line = new Line(lockDisc1PtSt, lockDisc1PtEnd);
                 Curve lockDisc1Rail = lockDisc1Line.ToNurbsCurve();
-                Brep lockDisc1 = Brep.CreatePipe(lockDisc1Rail, 1.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                Brep lockDisc1 = Brep.CreatePipe(lockDisc1Rail, lockRadius + 2 * tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
                 Line lockDisc2Line = new Line(lockDisc2PtSt, lockDisc2PtEnd);
                 Curve lockDisc2Rail = lockDisc2Line.ToNurbsCurve();
-                Brep lockDisc2 = Brep.CreatePipe(lockDisc2Rail, 1.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                Brep lockDisc2 = Brep.CreatePipe(lockDisc2Rail, lockRadius + 2 * tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
                 Brep lockPart = Brep.CreateBooleanUnion(new List<Brep> { lockbarRod, lockHandler.ToBrep(), lockDisc1, lockDisc2 }, MyDoc.ModelAbsoluteTolerance)[0];
 
@@ -159,6 +254,597 @@ namespace Kinergy.KineticUnit
             
         }
 
+        public void ConstructSpring(Point3d startPoint, double xEnd, double outDiameter, double totalThickness, double xSpaceEnd, int outputAxle,
+            Transform translateBack, Transform rotationBack, Transform postRotationBack)
+        {
+            Point3d gearTrainStPos = startPoint + new Vector3d(1, 0, 0) * springWidthThreadshold;
+            double xStart = gearTrainStPos.X;
+            double xLength = xEnd - xStart;
+            double gap = 0.6;
+            int pinionTeethNum = 10; //fixed
+            double minRatio = 1.1; //to ensure that the gear teeth number is integral
+            double module0 = 0.75;
+            double addendum = module0;
+            double pitch = Math.PI * module0;
+            //gear facewidth = min(1.6, pitch*3)  
+            double thickness = Math.Min(2, 3 * pitch);
+            double backlash = 0.6;
+            double backlashGap = 1.374;
+
+            double pairGearRatio = minRatio;
+            double module = module0;
+            double pressureAngle = 20;
+            double tolerance = 0.4;
+            double discThickness = 1;
+            double shaftRadius = 1.5;
+            double discRadius = 2.5;
+
+            if (InputType == 1)
+            {
+                springWidthThreadshold = 15;
+            }
+            else
+            {
+                springWidthThreadshold = 0;
+            }
+
+            #region Step 2: construct the spring
+
+            if (this.InputType == 1)
+            {
+                #region construct a helical spring 
+                Vector3d backwardDir = new Vector3d(-1, 0, 0);
+                Point3d rackTip = lastGearPos + backwardDir * (teethEqualInt * grNew * currModule / 2 + backlash * backlashGap);
+
+                // get the spring skeleton
+                Point3d springPos = rackTip + backwardDir * (2 * currModule + 3 + 1 + springWidthThreadshold / 2);     // 3 is the rack thickness, 1 is the gap
+                List<Brep> bs = new List<Brep>();
+                bs.Add(innerShell);
+                List<Point3d> projPts = new List<Point3d>();
+                projPts.Add(springPos);
+                Vector3d projDir = new Vector3d(0, 0, 1);
+                Point3d[] projBrepPts;
+                projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs, projPts, projDir, MyDoc.ModelAbsoluteTolerance);
+
+                double totalLen = 0;
+                Point3d SpringSt, SpringEnd;
+
+                SpringSt = springPos - projDir * outDiameter / 2.5;
+                SpringEnd = springPos + projDir * outDiameter / 2;
+                totalLen = SpringSt.DistanceTo(SpringEnd);
+
+                Line skeletonLine = new Line(SpringSt, SpringEnd);
+                Curve skeletonH = skeletonLine.ToNurbsCurve();
+
+                double s_len = SpringSt.DistanceTo(SpringEnd);
+                double min_wire_diamter = 2.8;
+                double min_coil_num = 3;
+                double maxDisp = Math.Max(s_len - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
+                double displacement = 0.9 * maxDisp / s_len;
+
+                springH = new Helix(SpringSt, SpringEnd, springWidthThreadshold, 2.8, 0, displacement, Energy);
+
+                Brep brep_s_origi = springH.GetModelinWorldCoordinate();
+                brep_s_origi.Transform(translateBack);
+                brep_s_origi.Transform(rotationBack);
+                brep_s_origi.Transform(postRotationBack);
+                springH.SetModel(brep_s_origi);
+
+                EntityList.Add(springH);
+                #endregion
+
+                #region test by LH
+                //MyDoc.Objects.AddBrep(springH.GetModelinWorldCoordinate());
+                //MyDoc.Views.Redraw();
+                #endregion
+
+                #region construct the rack
+
+                Point3d rackStPt = SpringEnd + projDir * 1 + (-1) * backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1);
+                Point3d rackEndPt = SpringSt + projDir * displacement * s_len + (-1) * backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1);
+                Rack rack = new Rack(rackStPt, rackEndPt, new Point3d(1, 0, 0), currModule);
+
+                Brep brep_r_origi = rack.GetModelinWorldCoordinate();
+                brep_r_origi.Transform(translateBack);
+                brep_r_origi.Transform(rotationBack);
+                brep_r_origi.Transform(postRotationBack);
+                rack.SetModel(brep_r_origi);
+
+                EntityList.Add(rack);
+
+                #endregion
+
+                #region test by LH
+                //MyDoc.Objects.AddBrep(rack.GetModelinWorldCoordinate());
+                //MyDoc.Views.Redraw();
+                #endregion
+
+
+                // create sweep function
+                var sweep = new Rhino.Geometry.SweepOneRail();
+                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+
+
+                #region construct connectors and control button
+
+                #region construct the upper plate
+
+                Point3d upperPlateSt = SpringEnd;
+                Point3d upperPlateEnd = SpringEnd + projDir * 2;
+                Plane upperPlatePln = new Plane(upperPlateSt, projDir);
+
+                Vector3d up_xp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * upperPlatePln.XAxis;
+                Vector3d up_xn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * upperPlatePln.XAxis;
+                Vector3d up_yp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * upperPlatePln.YAxis;
+                Vector3d up_yn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * upperPlatePln.YAxis;
+
+                Point3d[] upperPlatePts = new Point3d[5];
+                upperPlatePts[0] = upperPlateSt + up_xp + up_yp;
+                upperPlatePts[1] = upperPlateSt + up_xn + up_yp;
+                upperPlatePts[2] = upperPlateSt + up_xn + up_yn;
+                upperPlatePts[3] = upperPlateSt + up_xp + up_yn;
+                upperPlatePts[4] = upperPlateSt + up_xp + up_yp;
+                Curve upperPlateRect = new Polyline(upperPlatePts).ToNurbsCurve();
+
+
+                Point3d[] upperRailPts = new Point3d[2];
+                upperRailPts[0] = upperPlateSt;
+                upperRailPts[1] = upperPlateEnd;
+                Curve rail1 = new Polyline(upperRailPts).ToNurbsCurve();
+
+                Brep upperPlateBrep = new Brep();
+
+                upperPlateBrep = sweep.PerformSweep(rail1, upperPlateRect)[0];
+                upperPlateBrep = upperPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                #endregion
+
+                #region constrcut the base plate
+
+                Point3d bottomPlateSt = projBrepPts[0].Z > projBrepPts[1].Z ? projBrepPts[1] : projBrepPts[0];
+                Point3d bottomPlateEnd = SpringSt;
+                Plane bottomPlatePln = new Plane(bottomPlateSt, projDir);
+
+                Vector3d b_xp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * bottomPlatePln.XAxis;
+                Vector3d b_xn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * bottomPlatePln.XAxis;
+                Vector3d b_yp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * bottomPlatePln.YAxis;
+                Vector3d b_yn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * bottomPlatePln.YAxis;
+
+                Point3d[] bottomPlatePts = new Point3d[5];
+                bottomPlatePts[0] = bottomPlateSt + b_xp + b_yp;
+                bottomPlatePts[1] = bottomPlateSt + b_xn + b_yp;
+                bottomPlatePts[2] = bottomPlateSt + b_xn + b_yn;
+                bottomPlatePts[3] = bottomPlateSt + b_xp + b_yn;
+                bottomPlatePts[4] = bottomPlateSt + b_xp + b_yp;
+                Curve bottomPlateRect = new Polyline(bottomPlatePts).ToNurbsCurve();
+
+
+                Point3d[] bottomRailPts = new Point3d[2];
+                bottomRailPts[0] = bottomPlateSt;
+                bottomRailPts[1] = bottomPlateEnd;
+                Curve rail2 = new Polyline(bottomRailPts).ToNurbsCurve();
+
+                Brep bottomPlateBrep = new Brep();
+
+                bottomPlateBrep = sweep.PerformSweep(rail2, bottomPlateRect)[0];
+                bottomPlateBrep = bottomPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                #endregion
+
+                #region constrcut the button
+
+                Point3d btnSt = upperPlateEnd;
+                Point3d btnEnd = projBrepPts[0].Z > projBrepPts[1].Z ? projBrepPts[0] + (1.6 + displacement * s_len) * projDir : projBrepPts[1] + (1.6 + displacement * s_len) * projDir;
+
+                Point3d[] btnRailPts = new Point3d[2];
+                btnRailPts[0] = btnSt;
+                btnRailPts[1] = btnEnd;
+                Curve rail3 = new Polyline(btnRailPts).ToNurbsCurve();
+
+                Brep btnHandlerBrep = new Brep();
+                Brep btnHandlerDiffBrep = new Brep();
+                Brep btnTipBrep = new Brep();
+
+                btnHandlerBrep = Brep.CreatePipe(rail3, 2.5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                btnHandlerDiffBrep = Brep.CreatePipe(rail3, 3.5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+
+                Point3d[] btnTipRailPts = new Point3d[2];
+                btnTipRailPts[0] = btnEnd;
+                btnTipRailPts[1] = btnEnd + projDir * 4;
+                Curve rail4 = new Polyline(btnTipRailPts).ToNurbsCurve();
+                btnTipBrep = Brep.CreatePipe(rail4, 10, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                var finalModelBreps = Brep.CreateBooleanDifference(Model, btnHandlerDiffBrep, MyDoc.ModelAbsoluteTolerance);
+                if (finalModelBreps == null)
+                {
+                    btnHandlerDiffBrep.Flip();
+                    finalModelBreps = Brep.CreateBooleanDifference(Model, btnHandlerDiffBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Brep finalModelBrep = finalModelBreps[0];
+                Model = finalModelBrep.DuplicateBrep();
+
+                #endregion
+
+                #region test by LH
+
+                //MyDoc.Objects.AddBrep(upperPlateBrep);
+                //MyDoc.Views.Redraw();
+                //MyDoc.Objects.AddBrep(bottomPlateBrep);
+                //MyDoc.Views.Redraw();
+                //MyDoc.Objects.AddBrep(btnHandlerBrep);
+                //MyDoc.Views.Redraw();
+                //MyDoc.Objects.AddBrep(btnTipBrep);
+                //MyDoc.Views.Redraw();
+
+                #endregion
+
+                upperPlateBrep.Transform(translateBack);
+                upperPlateBrep.Transform(rotationBack);
+                upperPlateBrep.Transform(postRotationBack);
+                Shape upperPlateShape = new Shape(upperPlateBrep, false, "connector");
+
+                bottomPlateBrep.Transform(translateBack);
+                bottomPlateBrep.Transform(rotationBack);
+                bottomPlateBrep.Transform(postRotationBack);
+                Shape bottomPlateShape = new Shape(bottomPlateBrep, false, "connector");
+
+                btnHandlerBrep.Transform(translateBack);
+                btnHandlerBrep.Transform(rotationBack);
+                btnHandlerBrep.Transform(postRotationBack);
+                Shape btnHandlerShape = new Shape(btnHandlerBrep, false, "connector");
+
+                btnTipBrep.Transform(translateBack);
+                btnTipBrep.Transform(rotationBack);
+                btnTipBrep.Transform(postRotationBack);
+                Shape btnTipShape = new Shape(btnTipBrep, false, "connector");
+
+                EntityList.Add(upperPlateShape);
+                EntityList.Add(bottomPlateShape);
+                EntityList.Add(btnHandlerShape);
+                EntityList.Add(btnTipShape);
+
+                #endregion
+
+                #region construct the guide for the spring
+
+                #region constrcut the hookbar and the hookguide
+                Point3d barEnd = upperPlateSt + backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.5) + projDir * 2;
+                barSt = barEnd - projDir * (totalLen - displacement * s_len - 4);
+                Point3d guideSt = barSt + projDir * (4 + 0.2);        // the hook height is 6mm
+                guideEnd = guideSt + backwardDir * (4 + 1.4);
+
+                Plane hookBarPln = new Plane(barSt, projDir);
+
+                Vector3d hb_xp = 0.6 * hookBarPln.XAxis;
+                Vector3d hb_xn = -0.6 * hookBarPln.XAxis;
+                Vector3d hb_yp = 1.2 * hookBarPln.YAxis;
+                Vector3d hb_yn = -1.2 * hookBarPln.YAxis;
+
+                Point3d[] hookBarPts = new Point3d[5];
+                hookBarPts[0] = barSt + hb_xp + hb_yp;
+                hookBarPts[1] = barSt + hb_xn + hb_yp;
+                hookBarPts[2] = barSt + hb_xn + hb_yn;
+                hookBarPts[3] = barSt + hb_xp + hb_yn;
+                hookBarPts[4] = barSt + hb_xp + hb_yp;
+                Curve hookBarRect = new Polyline(hookBarPts).ToNurbsCurve();
+
+
+                Point3d[] hookBarRailPts = new Point3d[2];
+                hookBarRailPts[0] = barSt;
+                hookBarRailPts[1] = barEnd;
+                Curve rail5 = new Polyline(hookBarRailPts).ToNurbsCurve();
+
+                Brep hookbarBrep = new Brep();
+
+                hookbarBrep = sweep.PerformSweep(rail5, hookBarRect)[0];
+                hookbarBrep = hookbarBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+
+                Point3d[] hookGuideRailPts = new Point3d[2];
+                hookGuideRailPts[0] = guideSt;
+                hookGuideRailPts[1] = guideEnd;
+                Curve rail6 = new Polyline(hookGuideRailPts).ToNurbsCurve();
+
+                Brep hookGuideBrep = new Brep();
+
+                hookGuideBrep = Brep.CreatePipe(rail6, 0.8, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+                #endregion
+
+                #region construct the guide
+                Point3d guideWallPos = SpringSt + backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.5 + 4);
+
+                List<Brep> bs_wall = new List<Brep>();
+                bs_wall.Add(innerShell);
+                List<Point3d> projWallPts = new List<Point3d>();
+                projWallPts.Add(guideWallPos);
+                Vector3d projWallDir = new Vector3d(0, 0, 1);
+                Point3d[] projWallBrepPts;
+                projWallBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs_wall, projWallPts, projWallDir, MyDoc.ModelAbsoluteTolerance);
+
+                Point3d guideWallSt, guideWallEnd;
+
+                if (projWallBrepPts[0].Z > projWallBrepPts[1].Z)
+                {
+                    guideWallEnd = projWallBrepPts[0];
+                    guideWallSt = projWallBrepPts[1];
+                }
+                else
+                {
+                    guideWallEnd = projWallBrepPts[1];
+                    guideWallSt = projWallBrepPts[0];
+                }
+
+                Plane guideWallPln = new Plane(guideWallSt, projWallDir);
+
+                Vector3d gw_xp = 0.8 * guideWallPln.XAxis;
+                Vector3d gw_xn = -0.8 * guideWallPln.XAxis;
+                Vector3d gw_yp = ((springWidthThreadshold + springH.WireRadius) / 2) * guideWallPln.YAxis;
+                Vector3d gw_yn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2) * guideWallPln.YAxis;
+
+                Point3d[] guideWallPts = new Point3d[5];
+                guideWallPts[0] = guideWallSt + gw_xp + gw_yp;
+                guideWallPts[1] = guideWallSt + gw_xn + gw_yp;
+                guideWallPts[2] = guideWallSt + gw_xn + gw_yn;
+                guideWallPts[3] = guideWallSt + gw_xp + gw_yn;
+                guideWallPts[4] = guideWallSt + gw_xp + gw_yp;
+                Curve guideWallRect = new Polyline(guideWallPts).ToNurbsCurve();
+
+
+                Point3d[] guideWallRailPts = new Point3d[2];
+                guideWallRailPts[0] = guideWallSt;
+                guideWallRailPts[1] = guideWallEnd;
+                Curve rail7 = new Polyline(guideWallRailPts).ToNurbsCurve();
+
+                Brep guideWallBrep = new Brep();
+
+                guideWallBrep = sweep.PerformSweep(rail7, guideWallRect)[0];
+                guideWallBrep = guideWallBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                // Open the linear slot 
+
+                Point3d slotSt = guideWallPos;
+                Point3d slotEnd = guideWallPos + projDir * (totalLen + 2);
+
+                Plane wallSlotPln = new Plane(slotSt, projDir);
+
+                Vector3d ws_xp = 2 * wallSlotPln.XAxis;
+                Vector3d ws_xn = -2 * wallSlotPln.XAxis;
+                Vector3d ws_yp = 1.4 * wallSlotPln.YAxis;
+                Vector3d ws_yn = -1.4 * wallSlotPln.YAxis;
+
+                Point3d[] wallSlotPts = new Point3d[5];
+                wallSlotPts[0] = slotSt + ws_xp + ws_yp;
+                wallSlotPts[1] = slotSt + ws_xn + ws_yp;
+                wallSlotPts[2] = slotSt + ws_xn + ws_yn;
+                wallSlotPts[3] = slotSt + ws_xp + ws_yn;
+                wallSlotPts[4] = slotSt + ws_xp + ws_yp;
+                Curve wallSlotRect = new Polyline(wallSlotPts).ToNurbsCurve();
+
+
+                Point3d[] wallSlotRailPts = new Point3d[2];
+                wallSlotRailPts[0] = slotSt;
+                wallSlotRailPts[1] = slotEnd;
+                Curve rail8 = new Polyline(wallSlotRailPts).ToNurbsCurve();
+
+                Brep wallSlotBrep = new Brep();
+
+                wallSlotBrep = sweep.PerformSweep(rail8, wallSlotRect)[0];
+                wallSlotBrep = wallSlotBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                var wallGuideFinalBreps = Brep.CreateBooleanDifference(guideWallBrep, wallSlotBrep, MyDoc.ModelAbsoluteTolerance);
+                if (wallGuideFinalBreps == null)
+                {
+                    wallSlotBrep.Flip();
+                    wallGuideFinalBreps = Brep.CreateBooleanDifference(guideWallBrep, wallSlotBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Brep wallGuideFinalBrep = wallGuideFinalBreps[0];
+
+                #endregion
+
+                #region test by LH
+
+                //MyDoc.Objects.AddBrep(hookbarBrep);
+                //MyDoc.Views.Redraw();
+                //MyDoc.Objects.AddBrep(hookGuideBrep);
+                //MyDoc.Views.Redraw();
+                //MyDoc.Objects.AddBrep(wallGuideFinalBrep);
+                //MyDoc.Views.Redraw();
+                //MyDoc.Objects.AddBrep(Model);
+                //MyDoc.Views.Redraw();
+
+                #endregion
+
+                hookbarBrep.Transform(translateBack);
+                hookbarBrep.Transform(rotationBack);
+                hookbarBrep.Transform(postRotationBack);
+                Shape hookbarShape = new Shape(hookbarBrep, false, "connector");
+
+                hookGuideBrep.Transform(translateBack);
+                hookGuideBrep.Transform(rotationBack);
+                hookGuideBrep.Transform(postRotationBack);
+                Shape hookGuideShape = new Shape(hookGuideBrep, false, "connector");
+
+                wallGuideFinalBrep.Transform(translateBack);
+                wallGuideFinalBrep.Transform(rotationBack);
+                wallGuideFinalBrep.Transform(postRotationBack);
+                Shape wallGuideFinalShape = new Shape(wallGuideFinalBrep, false, "connector");
+
+                ModelShape = new Shape(Model, false, "main body");
+
+                EntityList.Add(hookbarShape);
+                EntityList.Add(hookGuideShape);
+                EntityList.Add(wallGuideFinalShape);
+                EntityList.Add(ModelShape);
+
+                #endregion
+
+            }
+            else
+            {
+                // create sweep function
+                var sweep = new Rhino.Geometry.SweepOneRail();
+                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+
+                #region construct a spiral spring 
+
+                SpringS = new Spiral(new Vector3d(springSSidePt - springSCenter), springSCenter, lastGearRadius * 1.2, Math.PI * 2, (int)(Energy * 10 - 1));
+                Brep spring_s_origi = SpringS.GetModelinWorldCoordinate();
+
+                spring_s_origi.Transform(translateBack);
+                spring_s_origi.Transform(rotationBack);
+                spring_s_origi.Transform(postRotationBack);
+
+                SpringS.SetModel(spring_s_origi);
+
+                EntityList.Add(SpringS);
+
+                #endregion
+
+                #region construct the rod that connects the spring outer end to the main body
+
+                Point3d outerEndpt = SpringS.BaseCurve.PointAtNormalizedLength(1);
+                List<Brep> mainbody = new List<Brep>();
+                mainbody.Add(innerShell);
+                List<Point3d> projMBPts = new List<Point3d>();
+                projMBPts.Add(outerEndpt);
+                Vector3d projDir = new Vector3d(0, 1, 0);
+                Point3d[] projBrepPts;
+                projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(mainbody, projMBPts, projDir, MyDoc.ModelAbsoluteTolerance);
+
+                Point3d connectorStPt = springSSidePt.DistanceTo(projBrepPts[0]) > springSSidePt.DistanceTo(projBrepPts[1]) ? projBrepPts[1] : projBrepPts[0];
+
+                Plane fixerPln = new Plane(connectorStPt, new Vector3d(0, 1, 0));
+
+                Vector3d fix_xp = 0.8 * fixerPln.XAxis;
+                Vector3d fix_xn = -0.8 * fixerPln.XAxis;
+                Vector3d fix_yp = 1 * fixerPln.YAxis;
+                Vector3d fix_yn = -1 * fixerPln.YAxis;
+
+                Point3d[] fixerPts = new Point3d[5];
+                fixerPts[0] = connectorStPt + fix_xp + fix_yp;
+                fixerPts[1] = connectorStPt + fix_xn + fix_yp;
+                fixerPts[2] = connectorStPt + fix_xn + fix_yn;
+                fixerPts[3] = connectorStPt + fix_xp + fix_yn;
+                fixerPts[4] = connectorStPt + fix_xp + fix_yp;
+                Curve fixerRect = new Polyline(fixerPts).ToNurbsCurve();
+
+                Line rodRailLine = new Line(connectorStPt, outerEndpt);
+                Curve rodRail = rodRailLine.ToNurbsCurve();
+
+                Brep rod = new Brep();
+
+                rod = sweep.PerformSweep(rodRail, fixerRect)[0];
+                rod = rod.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+                rod.Transform(translateBack);
+                rod.Transform(rotationBack);
+                rod.Transform(postRotationBack);
+
+                Shape fixer = new Shape(rod, false, "connector");
+                EntityList.Add(fixer);
+
+                #endregion
+
+
+                #region Cut the bottom part
+
+                Plane cutoutPln = new Plane(InnerCavity.GetBoundingBox(true).Center, new Vector3d(0, 0, 1));
+
+                Vector3d co_xp = (InnerCavity.GetBoundingBox(true).Max.X - InnerCavity.GetBoundingBox(true).Min.X) / 2 * cutoutPln.XAxis;
+                Vector3d co_xn = (-1) * (InnerCavity.GetBoundingBox(true).Max.X - InnerCavity.GetBoundingBox(true).Min.X) / 2 * cutoutPln.XAxis;
+                Vector3d co_yp = (totalThickness * 0.35) / 2 * cutoutPln.YAxis;
+                Vector3d co_yn = (-1) * (totalThickness * 0.35) / 2 * cutoutPln.YAxis;
+
+                Point3d[] cutoutPts = new Point3d[5];
+                cutoutPts[0] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yp;
+                cutoutPts[1] = InnerCavity.GetBoundingBox(true).Center + co_xn + co_yp;
+                cutoutPts[2] = InnerCavity.GetBoundingBox(true).Center + co_xn + co_yn;
+                cutoutPts[3] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yn;
+                cutoutPts[4] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yp;
+                Curve cutoutRect = new Polyline(cutoutPts).ToNurbsCurve();
+
+
+                Point3d[] cutoutRailPts = new Point3d[2];
+                Vector3d dirCO = new Vector3d(0, 0, -1);
+                cutoutRailPts[0] = InnerCavity.GetBoundingBox(true).Center + dirCO * 100;
+                cutoutRailPts[1] = InnerCavity.GetBoundingBox(true).Center + dirCO * (InnerCavity.GetBoundingBox(true).Max.Z - InnerCavity.GetBoundingBox(true).Min.Z)/2;
+                Curve coRail = new Polyline(cutoutRailPts).ToNurbsCurve();
+
+                Brep coutoutBrep = new Brep();
+
+                coutoutBrep = sweep.PerformSweep(coRail, cutoutRect)[0];
+                coutoutBrep = coutoutBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+                coutoutBrep.Flip();
+
+                // Drill the holes for the output gear shaft (connecting to the two wheels)
+                shDiffRodSpiral.Transform(translateBack);
+                shDiffRodSpiral.Transform(rotationBack);
+                shDiffRodSpiral.Transform(postRotationBack);
+
+                var outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRodSpiral, MyDoc.ModelAbsoluteTolerance);
+                if (outputAxleModelBreps == null)
+                {
+                    shDiffRodSpiral.Flip();
+                    outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRodSpiral, MyDoc.ModelAbsoluteTolerance);
+                }
+                Brep outputAxleModelBrep = outputAxleModelBreps[0];
+                Model = outputAxleModelBrep.DuplicateBrep();
+
+
+                // Drill the hole for the key and the revolute joint
+                shaftCutoutBrep.Transform(translateBack);
+                shaftCutoutBrep.Transform(rotationBack);
+                shaftCutoutBrep.Transform(postRotationBack);
+
+                var drillers = Brep.CreateBooleanDifference(Model, shaftCutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                if (drillers == null)
+                {
+                    shaftCutoutBrep.Flip();
+                    drillers = Brep.CreateBooleanDifference(Model, shaftCutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Model = drillers[0].DuplicateBrep();
+
+
+                //modelDiffLaterUsedBrep.Transform(translateBack);
+                //modelDiffLaterUsedBrep.Transform(rotationBack);
+                //modelDiffLaterUsedBrep.Transform(postRotationBack);
+
+                //var placeBreps = Brep.CreateBooleanDifference(Model, modelDiffLaterUsedBrep, MyDoc.ModelAbsoluteTolerance);
+                //if (placeBreps == null)
+                //{
+                //    modelDiffLaterUsedBrep.Flip();
+                //    placeBreps = Brep.CreateBooleanDifference(Model, modelDiffLaterUsedBrep, MyDoc.ModelAbsoluteTolerance);
+                //}
+                //Model = placeBreps[0].DuplicateBrep();
+
+                // Cut off the bottom of the main body
+                coutoutBrep.Transform(translateBack);
+                coutoutBrep.Transform(rotationBack);
+                coutoutBrep.Transform(postRotationBack);
+
+                Brep[] finalModels = Brep.CreateBooleanDifference(Model, coutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                if (finalModels == null)
+                {
+                    coutoutBrep.Flip();
+                    finalModels = Brep.CreateBooleanDifference(Model, coutoutBrep, MyDoc.ModelAbsoluteTolerance);
+                }
+                Model = finalModels[0].DuplicateBrep();
+
+                ModelShape = new Shape(Model, false, "main body");
+                EntityList.Add(ModelShape);
+
+                #endregion
+
+            }
+            #endregion
+        }
+
         /// <summary>
         /// Generate the gear train inside the model
         /// </summary>
@@ -181,7 +867,7 @@ namespace Kinergy.KineticUnit
             Brep[] innerWalls;
 
             processingwin.Show();
-            Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, true, MyDoc.ModelAbsoluteTolerance, out innerShells, out innerWalls);
+            Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, true, MyDoc.ModelRelativeTolerance, out innerShells, out innerWalls);
 
             innerShell = shells[0];
             processingwin.Hide();
@@ -229,6 +915,7 @@ namespace Kinergy.KineticUnit
 
             #endregion
 
+
             #region Step 1: construct the gear train 
 
             if (InputType == 1)
@@ -254,7 +941,7 @@ namespace Kinergy.KineticUnit
             double thickness = Math.Min(2, 3 * pitch);
             double backlash = 0.6;
             double backlashGap = 1.374;
-            double maxGearDiameter = outDiameter * 0.29;
+            double maxGearDiameter = outDiameter * 1;
             double pairGearRatio = minRatio;
             double module = module0;
             double pressureAngle = 20;
@@ -262,12 +949,6 @@ namespace Kinergy.KineticUnit
             double discThickness = 1;
             double shaftRadius = 1.5;
             double discRadius = 2.5;
-
-            Brep shDiffRodSpiral = new Brep();
-            Brep shaftCutoutBrep = new Brep();
-            Brep modelDiffLaterUsedBrep = new Brep();
-
-
 
             if (xLength < 0) return;
 
@@ -291,10 +972,24 @@ namespace Kinergy.KineticUnit
                 for(int num = 1; num <= numPairMax; num++)
                 {
                     double r = (xLength / num - backlash * backlashGap) * 2 / (module0 * pinionTeethNum) - 1;
-                    if(r > 5)
+                    if (r > 5)
                     {
                         numPairMin = num + 1;
                     }
+                    else
+                    {
+                        numPairMin = num;
+                        break;
+                    }
+                    //double p_radius = xLength / num - backlash * backlashGap - maxGearDiameter / 2;
+                    //if(p_radius > maxGearDiameter / 2)
+                    //{
+                    //    numPairMin = num + 1;
+                    //}
+                    //else
+                    //{
+                    //    break;
+                    //}
                 }
             }
 
@@ -310,10 +1005,10 @@ namespace Kinergy.KineticUnit
             double mgr = (xLength / currNum - backlash * backlashGap);
 
             int teethMax = (int)(mgr / module0);
-            int teethEqualInt = (teethMax + pinionTeethNum) / 2;
+            teethEqualInt = (teethMax + pinionTeethNum) / 2;
 
             double mNew = mgr / teethEqualInt;
-            double grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
+            grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
 
             for (int i = 1; i <= iterationNum; ++i)
             {
@@ -327,7 +1022,7 @@ namespace Kinergy.KineticUnit
                 grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
             }
 
-            double currModule = (xLength - currNum * backlashGap * backlash) / (currNum * teethEqualInt * (1 + grNew) / 2);
+            currModule = (xLength - currNum * backlashGap * backlash) / (currNum * teethEqualInt * (1 + grNew) / 2);
             int gearTeethNum = (int)(teethEqualInt * grNew);
 
             double gearDistance = teethEqualInt * (1 + grNew) * currModule / 2 + backlash * backlashGap;
@@ -755,6 +1450,7 @@ namespace Kinergy.KineticUnit
                                 Transform openSlotBrepRotation1 = Transform.Rotation(Math.PI, -projDir, openSlotPt);
                                 openSlotBrep1.Transform(openSlotBrepRotation);
 
+
                                 Brep firstBlock = Brep.CreateBooleanUnion(new List<Brep> { openSlotBrep, openSlotBrep1 }, MyDoc.ModelAbsoluteTolerance)[0];
 
                                 Brep openSlotBrep2 = firstBlock.DuplicateBrep();
@@ -843,565 +1539,6 @@ namespace Kinergy.KineticUnit
             #endregion
 
             #endregion
-
-            #region Step 2: construct the spring
-
-            if (this.InputType == 1)
-            {
-                #region construct a helical spring 
-                Vector3d backwardDir = new Vector3d(-1, 0, 0);
-                Point3d rackTip = lastGearPos + backwardDir * (teethEqualInt * grNew * currModule / 2 + backlash * backlashGap);
-
-                // get the spring skeleton
-                Point3d springPos = rackTip + backwardDir * (2 * currModule + 3 + 1 + springWidthThreadshold/2);     // 3 is the rack thickness, 1 is the gap
-                List<Brep> bs = new List<Brep>();
-                bs.Add(innerShell);
-                List<Point3d> projPts = new List<Point3d>();
-                projPts.Add(springPos);
-                Vector3d projDir = new Vector3d(0, 0, 1);
-                Point3d[] projBrepPts;
-                projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs, projPts, projDir, MyDoc.ModelAbsoluteTolerance);
-
-                double totalLen = 0;
-                Point3d SpringSt, SpringEnd;
-
-                SpringSt = springPos - projDir * outDiameter / 2.5;
-                SpringEnd = springPos + projDir * outDiameter / 2;
-                totalLen = SpringSt.DistanceTo(SpringEnd);
-                
-                Line skeletonLine = new Line(SpringSt, SpringEnd);
-                Curve skeletonH = skeletonLine.ToNurbsCurve();
-
-                double s_len = SpringSt.DistanceTo(SpringEnd);
-                double min_wire_diamter = 2.8;
-                double min_coil_num = 3;
-                double maxDisp = Math.Max(s_len - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
-                double displacement = 0.9 * maxDisp/s_len;
-
-                springH = new Helix(SpringSt, SpringEnd, springWidthThreadshold, 2.8, 0, displacement, Energy);
-
-                Brep brep_s_origi = springH.GetModelinWorldCoordinate();
-                brep_s_origi.Transform(translateBack);
-                brep_s_origi.Transform(rotationBack);
-                brep_s_origi.Transform(postRotationBack);
-                springH.SetModel(brep_s_origi);
-
-                EntityList.Add(springH);
-                #endregion
-
-                #region test by LH
-                //MyDoc.Objects.AddBrep(springH.GetModelinWorldCoordinate());
-                //MyDoc.Views.Redraw();
-                #endregion
-
-                result.Add(springH.GetModelinWorldCoordinate());
-
-                #region construct the rack
-
-                Point3d rackStPt = SpringEnd + projDir * 1 + (-1) * backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1);
-                Point3d rackEndPt = SpringSt + projDir * displacement * s_len + (-1) * backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1);
-                Rack rack = new Rack(rackStPt, rackEndPt, new Point3d(1, 0, 0), currModule);
-
-                Brep brep_r_origi = rack.GetModelinWorldCoordinate();
-                brep_r_origi.Transform(translateBack);
-                brep_r_origi.Transform(rotationBack);
-                brep_r_origi.Transform(postRotationBack);
-                rack.SetModel(brep_r_origi);
-
-                EntityList.Add(rack);
-
-                #endregion
-
-                #region test by LH
-                //MyDoc.Objects.AddBrep(rack.GetModelinWorldCoordinate());
-                //MyDoc.Views.Redraw();
-                #endregion
-
-
-                // create sweep function
-                var sweep = new Rhino.Geometry.SweepOneRail();
-                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
-                sweep.ClosedSweep = false;
-                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
-
-
-                #region construct connectors and control button
-
-                #region construct the upper plate
-
-                Point3d upperPlateSt = SpringEnd;
-                Point3d upperPlateEnd = SpringEnd + projDir * 2;
-                Plane upperPlatePln = new Plane(upperPlateSt, projDir);
-
-                Vector3d up_xp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * upperPlatePln.XAxis;
-                Vector3d up_xn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * upperPlatePln.XAxis;
-                Vector3d up_yp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * upperPlatePln.YAxis;
-                Vector3d up_yn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * upperPlatePln.YAxis;
-
-                Point3d[] upperPlatePts = new Point3d[5];
-                upperPlatePts[0] = upperPlateSt + up_xp + up_yp;
-                upperPlatePts[1] = upperPlateSt + up_xn + up_yp;
-                upperPlatePts[2] = upperPlateSt + up_xn + up_yn;
-                upperPlatePts[3] = upperPlateSt + up_xp + up_yn;
-                upperPlatePts[4] = upperPlateSt + up_xp + up_yp;
-                Curve upperPlateRect = new Polyline(upperPlatePts).ToNurbsCurve();
-
-                
-                Point3d[] upperRailPts = new Point3d[2];
-                upperRailPts[0] = upperPlateSt;
-                upperRailPts[1] = upperPlateEnd;
-                Curve rail1 = new Polyline(upperRailPts).ToNurbsCurve();
-
-                Brep upperPlateBrep = new Brep();
-
-                upperPlateBrep = sweep.PerformSweep(rail1, upperPlateRect)[0];
-                upperPlateBrep = upperPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-                #endregion
-
-                #region constrcut the base plate
-
-                Point3d bottomPlateSt = projBrepPts[0].Z > projBrepPts[1].Z?projBrepPts[1]:projBrepPts[0];
-                Point3d bottomPlateEnd = SpringSt;
-                Plane bottomPlatePln = new Plane(bottomPlateSt, projDir);
-
-                Vector3d b_xp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * bottomPlatePln.XAxis;
-                Vector3d b_xn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.2) * bottomPlatePln.XAxis;
-                Vector3d b_yp = ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * bottomPlatePln.YAxis;
-                Vector3d b_yn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2 + 1) * bottomPlatePln.YAxis;
-
-                Point3d[] bottomPlatePts = new Point3d[5];
-                bottomPlatePts[0] = bottomPlateSt + b_xp + b_yp;
-                bottomPlatePts[1] = bottomPlateSt + b_xn + b_yp;
-                bottomPlatePts[2] = bottomPlateSt + b_xn + b_yn;
-                bottomPlatePts[3] = bottomPlateSt + b_xp + b_yn;
-                bottomPlatePts[4] = bottomPlateSt + b_xp + b_yp;
-                Curve bottomPlateRect = new Polyline(bottomPlatePts).ToNurbsCurve();
-
-
-                Point3d[] bottomRailPts = new Point3d[2];
-                bottomRailPts[0] = bottomPlateSt;
-                bottomRailPts[1] = bottomPlateEnd;
-                Curve rail2 = new Polyline(bottomRailPts).ToNurbsCurve();
-
-                Brep bottomPlateBrep = new Brep();
-
-                bottomPlateBrep = sweep.PerformSweep(rail2, bottomPlateRect)[0];
-                bottomPlateBrep = bottomPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-                #endregion
-
-                #region constrcut the button
-
-                Point3d btnSt = upperPlateEnd;
-                Point3d btnEnd = projBrepPts[0].Z > projBrepPts[1].Z ? projBrepPts[0] + (1.6 + displacement * s_len) * projDir : projBrepPts[1] + (1.6 + displacement * s_len) * projDir;
-
-                Point3d[] btnRailPts = new Point3d[2];
-                btnRailPts[0] = btnSt;
-                btnRailPts[1] = btnEnd;
-                Curve rail3 = new Polyline(btnRailPts).ToNurbsCurve();
-
-                Brep btnHandlerBrep = new Brep();
-                Brep btnHandlerDiffBrep = new Brep();
-                Brep btnTipBrep = new Brep();
-
-                btnHandlerBrep = Brep.CreatePipe(rail3, 2.5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-                btnHandlerDiffBrep = Brep.CreatePipe(rail3, 3.5, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-
-                Point3d[] btnTipRailPts = new Point3d[2];
-                btnTipRailPts[0] = btnEnd;
-                btnTipRailPts[1] = btnEnd + projDir * 4;
-                Curve rail4 = new Polyline(btnTipRailPts).ToNurbsCurve();
-                btnTipBrep = Brep.CreatePipe(rail4, 10, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-                var finalModelBreps = Brep.CreateBooleanDifference(Model, btnHandlerDiffBrep, MyDoc.ModelAbsoluteTolerance);
-                if (finalModelBreps == null)
-                {
-                    btnHandlerDiffBrep.Flip();
-                    finalModelBreps = Brep.CreateBooleanDifference(Model, btnHandlerDiffBrep, MyDoc.ModelAbsoluteTolerance);
-                }
-                Brep finalModelBrep = finalModelBreps[0];
-                Model = finalModelBrep.DuplicateBrep();
-
-                #endregion
-
-                #region test by LH
-
-                //MyDoc.Objects.AddBrep(upperPlateBrep);
-                //MyDoc.Views.Redraw();
-                //MyDoc.Objects.AddBrep(bottomPlateBrep);
-                //MyDoc.Views.Redraw();
-                //MyDoc.Objects.AddBrep(btnHandlerBrep);
-                //MyDoc.Views.Redraw();
-                //MyDoc.Objects.AddBrep(btnTipBrep);
-                //MyDoc.Views.Redraw();
-
-                #endregion
-
-                upperPlateBrep.Transform(translateBack);
-                upperPlateBrep.Transform(rotationBack);
-                upperPlateBrep.Transform(postRotationBack);
-                Shape upperPlateShape = new Shape(upperPlateBrep, false, "connector");
-
-                bottomPlateBrep.Transform(translateBack);
-                bottomPlateBrep.Transform(rotationBack);
-                bottomPlateBrep.Transform(postRotationBack);
-                Shape bottomPlateShape = new Shape(bottomPlateBrep, false, "connector");
-
-                btnHandlerBrep.Transform(translateBack);
-                btnHandlerBrep.Transform(rotationBack);
-                btnHandlerBrep.Transform(postRotationBack);
-                Shape btnHandlerShape = new Shape(btnHandlerBrep, false, "connector");
-
-                btnTipBrep.Transform(translateBack);
-                btnTipBrep.Transform(rotationBack);
-                btnTipBrep.Transform(postRotationBack);
-                Shape btnTipShape = new Shape(btnTipBrep, false, "connector");
-
-                EntityList.Add(upperPlateShape);
-                EntityList.Add(bottomPlateShape);
-                EntityList.Add(btnHandlerShape);
-                EntityList.Add(btnTipShape);
-
-                #endregion
-                
-                #region construct the guide for the spring
-
-                #region constrcut the hookbar and the hookguide
-                Point3d barEnd = upperPlateSt + backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.5) + projDir * 2;
-                Point3d barSt = barEnd - projDir * (totalLen - displacement * s_len - 4);
-                Point3d guideSt = barSt + projDir * (4 + 0.2);        // the hook height is 6mm
-                Point3d guideEnd = guideSt + backwardDir * (4 + 1.4);
-
-                Plane hookBarPln = new Plane(barSt, projDir);
-
-                Vector3d hb_xp = 0.6 * hookBarPln.XAxis;
-                Vector3d hb_xn = -0.6* hookBarPln.XAxis;
-                Vector3d hb_yp = 1.2 * hookBarPln.YAxis;
-                Vector3d hb_yn = -1.2 * hookBarPln.YAxis;
-
-                Point3d[] hookBarPts = new Point3d[5];
-                hookBarPts[0] = barSt + hb_xp + hb_yp;
-                hookBarPts[1] = barSt + hb_xn + hb_yp;
-                hookBarPts[2] = barSt + hb_xn + hb_yn;
-                hookBarPts[3] = barSt + hb_xp + hb_yn;
-                hookBarPts[4] = barSt + hb_xp + hb_yp;
-                Curve hookBarRect = new Polyline(hookBarPts).ToNurbsCurve();
-
-
-                Point3d[] hookBarRailPts = new Point3d[2];
-                hookBarRailPts[0] = barSt;
-                hookBarRailPts[1] = barEnd;
-                Curve rail5 = new Polyline(hookBarRailPts).ToNurbsCurve();
-
-                Brep hookbarBrep = new Brep();
-
-                hookbarBrep = sweep.PerformSweep(rail5, hookBarRect)[0];
-                hookbarBrep = hookbarBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-
-                Point3d[] hookGuideRailPts = new Point3d[2];
-                hookGuideRailPts[0] = guideSt;
-                hookGuideRailPts[1] = guideEnd;
-                Curve rail6 = new Polyline(hookGuideRailPts).ToNurbsCurve();
-
-                Brep hookGuideBrep = new Brep();
-
-                hookGuideBrep = Brep.CreatePipe(rail6, 0.8, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-                #endregion
-
-                #region construct the guide
-                Point3d guideWallPos = SpringSt + backwardDir * ((springWidthThreadshold + springH.WireRadius) / 2 + 1.5 + 4);
-
-                List<Brep> bs_wall = new List<Brep>();
-                bs_wall.Add(innerShell);
-                List<Point3d> projWallPts = new List<Point3d>();
-                projWallPts.Add(guideWallPos);
-                Vector3d projWallDir = new Vector3d(0, 0, 1);
-                Point3d[] projWallBrepPts;
-                projWallBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs_wall, projWallPts, projWallDir, MyDoc.ModelAbsoluteTolerance);
-
-                Point3d guideWallSt, guideWallEnd;
-
-                if(projWallBrepPts[0].Z > projWallBrepPts[1].Z)
-                {
-                    guideWallEnd = projWallBrepPts[0];
-                    guideWallSt = projWallBrepPts[1];
-                }
-                else
-                {
-                    guideWallEnd = projWallBrepPts[1];
-                    guideWallSt = projWallBrepPts[0];
-                }
-
-                Plane guideWallPln = new Plane(guideWallSt, projWallDir);
-
-                Vector3d gw_xp = 0.8 * guideWallPln.XAxis;
-                Vector3d gw_xn = -0.8 * guideWallPln.XAxis;
-                Vector3d gw_yp = ((springWidthThreadshold + springH.WireRadius) / 2) * guideWallPln.YAxis;
-                Vector3d gw_yn = (-1) * ((springWidthThreadshold + springH.WireRadius) / 2) * guideWallPln.YAxis;
-
-                Point3d[] guideWallPts = new Point3d[5];
-                guideWallPts[0] = guideWallSt + gw_xp + gw_yp;
-                guideWallPts[1] = guideWallSt + gw_xn + gw_yp;
-                guideWallPts[2] = guideWallSt + gw_xn + gw_yn;
-                guideWallPts[3] = guideWallSt + gw_xp + gw_yn;
-                guideWallPts[4] = guideWallSt + gw_xp + gw_yp;
-                Curve guideWallRect = new Polyline(guideWallPts).ToNurbsCurve();
-
-
-                Point3d[] guideWallRailPts = new Point3d[2];
-                guideWallRailPts[0] = guideWallSt;
-                guideWallRailPts[1] = guideWallEnd;
-                Curve rail7 = new Polyline(guideWallRailPts).ToNurbsCurve();
-
-                Brep guideWallBrep = new Brep();
-
-                guideWallBrep = sweep.PerformSweep(rail7, guideWallRect)[0];
-                guideWallBrep = guideWallBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-                // Open the linear slot 
-
-                Point3d slotSt = guideWallPos;
-                Point3d slotEnd = guideWallPos + projDir * (totalLen + 2);
-
-                Plane wallSlotPln = new Plane(slotSt, projDir);
-
-                Vector3d ws_xp = 2 * wallSlotPln.XAxis;
-                Vector3d ws_xn = -2 * wallSlotPln.XAxis;
-                Vector3d ws_yp = 1.4 * wallSlotPln.YAxis;
-                Vector3d ws_yn = -1.4 * wallSlotPln.YAxis;
-
-                Point3d[] wallSlotPts = new Point3d[5];
-                wallSlotPts[0] = slotSt + ws_xp + ws_yp;
-                wallSlotPts[1] = slotSt + ws_xn + ws_yp;
-                wallSlotPts[2] = slotSt + ws_xn + ws_yn;
-                wallSlotPts[3] = slotSt + ws_xp + ws_yn;
-                wallSlotPts[4] = slotSt + ws_xp + ws_yp;
-                Curve wallSlotRect = new Polyline(wallSlotPts).ToNurbsCurve();
-
-
-                Point3d[] wallSlotRailPts = new Point3d[2];
-                wallSlotRailPts[0] = slotSt;
-                wallSlotRailPts[1] = slotEnd;
-                Curve rail8 = new Polyline(wallSlotRailPts).ToNurbsCurve();
-
-                Brep wallSlotBrep = new Brep();
-
-                wallSlotBrep = sweep.PerformSweep(rail8, wallSlotRect)[0];
-                wallSlotBrep = wallSlotBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-                var wallGuideFinalBreps = Brep.CreateBooleanDifference(guideWallBrep, wallSlotBrep, MyDoc.ModelAbsoluteTolerance);
-                if (wallGuideFinalBreps == null)
-                {
-                    wallSlotBrep.Flip();
-                    wallGuideFinalBreps = Brep.CreateBooleanDifference(guideWallBrep, wallSlotBrep, MyDoc.ModelAbsoluteTolerance);
-                }
-                Brep wallGuideFinalBrep = wallGuideFinalBreps[0];
-
-                #endregion
-
-                #region test by LH
-
-                //MyDoc.Objects.AddBrep(hookbarBrep);
-                //MyDoc.Views.Redraw();
-                //MyDoc.Objects.AddBrep(hookGuideBrep);
-                //MyDoc.Views.Redraw();
-                //MyDoc.Objects.AddBrep(wallGuideFinalBrep);
-                //MyDoc.Views.Redraw();
-                //MyDoc.Objects.AddBrep(Model);
-                //MyDoc.Views.Redraw();
-
-                #endregion
-
-                hookbarBrep.Transform(translateBack);
-                hookbarBrep.Transform(rotationBack);
-                hookbarBrep.Transform(postRotationBack);
-                Shape hookbarShape = new Shape(hookbarBrep, false, "connector");
-
-                hookGuideBrep.Transform(translateBack);
-                hookGuideBrep.Transform(rotationBack);
-                hookGuideBrep.Transform(postRotationBack);
-                Shape hookGuideShape = new Shape(hookGuideBrep, false, "connector");
-
-                wallGuideFinalBrep.Transform(translateBack);
-                wallGuideFinalBrep.Transform(rotationBack);
-                wallGuideFinalBrep.Transform(postRotationBack);
-                Shape wallGuideFinalShape = new Shape(wallGuideFinalBrep, false, "connector");
-
-                ModelShape = new Shape(Model, false, "main body");
-
-                EntityList.Add(hookbarShape);
-                EntityList.Add(hookGuideShape);
-                EntityList.Add(wallGuideFinalShape);
-                EntityList.Add(ModelShape);
-
-                #endregion
-
-            }
-            else
-            {
-                // create sweep function
-                var sweep = new Rhino.Geometry.SweepOneRail();
-                sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
-                sweep.ClosedSweep = false;
-                sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
-
-                #region construct a spiral spring 
-
-                SpringS = new Spiral(new Vector3d(springSSidePt - springSCenter), springSCenter, lastGearRadius*1, Math.PI*2, (int)(Energy * 10 -1));
-                Brep spring_s_origi = SpringS.GetModelinWorldCoordinate();
-
-                spring_s_origi.Transform(translateBack);
-                spring_s_origi.Transform(rotationBack);
-                spring_s_origi.Transform(postRotationBack);
-
-                SpringS.SetModel(spring_s_origi);
-
-                EntityList.Add(SpringS);
-
-                #endregion
-
-                #region construct the rod that connects the spring outer end to the main body
-
-                Point3d outerEndpt = SpringS.BaseCurve.PointAtNormalizedLength(1);
-                List<Brep> mainbody = new List<Brep>();
-                mainbody.Add(innerShell);
-                List<Point3d> projMBPts = new List<Point3d>();
-                projMBPts.Add(outerEndpt);
-                Vector3d projDir = new Vector3d(0, 1, 0);
-                Point3d[] projBrepPts;
-                projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(mainbody, projMBPts, projDir, MyDoc.ModelAbsoluteTolerance);
-
-                Point3d connectorStPt = springSSidePt.DistanceTo(projBrepPts[0]) > springSSidePt.DistanceTo(projBrepPts[1]) ? projBrepPts[1] : projBrepPts[0];
-
-                Plane fixerPln = new Plane(connectorStPt, new Vector3d(0, 1, 0));
-
-                Vector3d fix_xp = 0.8 * fixerPln.XAxis;
-                Vector3d fix_xn = -0.8 * fixerPln.XAxis;
-                Vector3d fix_yp = 1 * fixerPln.YAxis;
-                Vector3d fix_yn = -1 * fixerPln.YAxis;
-
-                Point3d[] fixerPts = new Point3d[5];
-                fixerPts[0] = connectorStPt + fix_xp + fix_yp;
-                fixerPts[1] = connectorStPt + fix_xn + fix_yp;
-                fixerPts[2] = connectorStPt + fix_xn + fix_yn;
-                fixerPts[3] = connectorStPt + fix_xp + fix_yn;
-                fixerPts[4] = connectorStPt + fix_xp + fix_yp;
-                Curve fixerRect = new Polyline(fixerPts).ToNurbsCurve();
-
-                Line rodRailLine = new Line(connectorStPt, outerEndpt);
-                Curve rodRail = rodRailLine.ToNurbsCurve();
-
-                Brep rod = new Brep();
-
-                rod = sweep.PerformSweep(rodRail, fixerRect)[0];
-                rod = rod.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-                rod.Transform(translateBack);
-                rod.Transform(rotationBack);
-                rod.Transform(postRotationBack);
-
-                Shape fixer = new Shape(rod, false, "connector");
-                EntityList.Add(fixer);
-
-                #endregion
-
-
-                #region Cut the bottom part
-
-                Plane cutoutPln = new Plane(InnerCavity.GetBoundingBox(true).Center, new Vector3d(0,0,1));
-
-                Vector3d co_xp = (InnerCavity.GetBoundingBox(true).Max.X - InnerCavity.GetBoundingBox(true).Min.X) * cutoutPln.XAxis;
-                Vector3d co_xn = (-1) * (InnerCavity.GetBoundingBox(true).Max.X - InnerCavity.GetBoundingBox(true).Min.X) * cutoutPln.XAxis;
-                Vector3d co_yp = (totalThickness*0.35) * cutoutPln.YAxis;
-                Vector3d co_yn = (-1) * (totalThickness*0.35) * cutoutPln.YAxis;
-
-                Point3d[] cutoutPts = new Point3d[5];
-                cutoutPts[0] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yp;
-                cutoutPts[1] = InnerCavity.GetBoundingBox(true).Center + co_xn + co_yp;
-                cutoutPts[2] = InnerCavity.GetBoundingBox(true).Center + co_xn + co_yn;
-                cutoutPts[3] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yn;
-                cutoutPts[4] = InnerCavity.GetBoundingBox(true).Center + co_xp + co_yp;
-                Curve cutoutRect = new Polyline(cutoutPts).ToNurbsCurve();
-
-
-                Point3d[] cutoutRailPts = new Point3d[2];
-                Vector3d dirCO = new Vector3d(0, 0, -1);
-                cutoutRailPts[0] = InnerCavity.GetBoundingBox(true).Center + dirCO * 100;
-                cutoutRailPts[1] = InnerCavity.GetBoundingBox(true).Center ;
-                Curve coRail = new Polyline(cutoutRailPts).ToNurbsCurve();
-
-                Brep coutoutBrep = new Brep();
-
-                coutoutBrep = sweep.PerformSweep(coRail, cutoutRect)[0];
-                coutoutBrep = coutoutBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-                coutoutBrep.Flip();
-
-                // Drill the holes for the output gear shaft (connecting to the two wheels)
-                shDiffRodSpiral.Transform(translateBack);
-                shDiffRodSpiral.Transform(rotationBack);
-                shDiffRodSpiral.Transform(postRotationBack);
-
-                var outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRodSpiral, MyDoc.ModelAbsoluteTolerance);
-                if (outputAxleModelBreps == null)
-                {
-                    shDiffRodSpiral.Flip();
-                    outputAxleModelBreps = Brep.CreateBooleanDifference(Model, shDiffRodSpiral, MyDoc.ModelAbsoluteTolerance);
-                }
-                Brep outputAxleModelBrep = outputAxleModelBreps[0];
-                Model = outputAxleModelBrep.DuplicateBrep();
-
-
-                // Drill the hole for the key and the revolute joint
-                shaftCutoutBrep.Transform(translateBack);
-                shaftCutoutBrep.Transform(rotationBack);
-                shaftCutoutBrep.Transform(postRotationBack);
-
-                var drillers = Brep.CreateBooleanDifference(Model, shaftCutoutBrep, MyDoc.ModelAbsoluteTolerance);
-                if (drillers == null)
-                {
-                    shaftCutoutBrep.Flip();
-                    drillers = Brep.CreateBooleanDifference(Model, shaftCutoutBrep, MyDoc.ModelAbsoluteTolerance);
-                }
-                Model = drillers[0].DuplicateBrep();
-
-
-                //modelDiffLaterUsedBrep.Transform(translateBack);
-                //modelDiffLaterUsedBrep.Transform(rotationBack);
-                //modelDiffLaterUsedBrep.Transform(postRotationBack);
-
-                //var placeBreps = Brep.CreateBooleanDifference(Model, modelDiffLaterUsedBrep, MyDoc.ModelAbsoluteTolerance);
-                //if (placeBreps == null)
-                //{
-                //    modelDiffLaterUsedBrep.Flip();
-                //    placeBreps = Brep.CreateBooleanDifference(Model, modelDiffLaterUsedBrep, MyDoc.ModelAbsoluteTolerance);
-                //}
-                //Model = placeBreps[0].DuplicateBrep();
-
-                // Cut off the bottom of the main body
-                coutoutBrep.Transform(translateBack);
-                coutoutBrep.Transform(rotationBack);
-                coutoutBrep.Transform(postRotationBack);
-
-                Brep[] finalModels = Brep.CreateBooleanDifference(Model, coutoutBrep, MyDoc.ModelAbsoluteTolerance);
-                if (finalModels == null)
-                {
-                    coutoutBrep.Flip();
-                    finalModels = Brep.CreateBooleanDifference(Model, coutoutBrep, MyDoc.ModelAbsoluteTolerance);
-                }
-                Model = finalModels[0].DuplicateBrep();
-
-                ModelShape = new Shape(Model, false, "main body");
-                EntityList.Add(ModelShape);
-
-                #endregion
-
-            }
-            #endregion
-
 
         }
 

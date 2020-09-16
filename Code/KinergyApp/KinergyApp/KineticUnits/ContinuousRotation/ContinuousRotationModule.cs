@@ -309,11 +309,11 @@ namespace ConRotation
                     if (PlaneSelected)
                     {
                         // Call out the waiting window
-                        processingwin.Show();
+                        //processingwin.Show();
 
                         Plane p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
                         //p1Reverse.ExtendThroughBox(box, out _, out _);
-                        Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+                        Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), v);
 
                         //p2Reverse.ExtendThroughBox(box, out _, out _);
                         /*Brep[] Cut_Brep1 = m.Trim(pl1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
@@ -328,7 +328,8 @@ namespace ConRotation
                         {
                             BrepRest = model;
                         }
-                        Brep[] Cut_Brep2 = BrepRest.Trim(pl2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+
+                        Brep[] Cut_Brep2 = BrepRest.Trim(p2Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
                         Brep Brep2 = null;
                         try
                         {
@@ -338,6 +339,7 @@ namespace ConRotation
                         {
                             Brep2 = BrepRest;
                         }
+                        
                         try
                         {
                             Brep2 = Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
@@ -348,63 +350,69 @@ namespace ConRotation
                         Brep Brep3 = Cut_Brep3[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
                         Rhino.Input.Custom.GetPoint ctrl_first_pt_sel = new Rhino.Input.Custom.GetPoint();*/
 
-                        BoxLike b = new BoxLike(Brep2, v);
-                        double volumn = 0;
-                        Brep result1 = null;
-                        Cylinder result2 = Cylinder.Unset;
-                        Brep b2 = null;
-                        double v_box = 0.0, v_cylinder = 0.0;
-                        //if (type == 1)
-                        //{
 
-                        // Calculate the volume of the inner box
-                        for (double i = 0.2; i <= 0.8; i += 0.1)
-                        {
-                            if (b.GetInnerEmptySpaceBox(i))
-                            {
-                                BoundingBox bbox = b.InnerEmptySpaceBbox;
-                                if (volumn < bbox.Volume)
-                                {
-                                    volumn = bbox.Volume;
-                                    result1 = b.InnerEmptySpaceBoxBrep;
-                                    result1.Transform(b.RotateBack);
-                                    v_box = result1.GetVolume();
-                                    // DA.SetData(1, result1);
-                                }
-                            }
-                        }
-                        //}
-                        //else if (type == 2)
-                        //{
 
-                        // Calculate the volume of the inner cylinder 
-                        if (b.GetInnerEmptySpaceCylinder())
-                        {
-                            Cylinder c = b.InnerEmptyCylinder;
-                            //result2 = c.ToBrep(true,true);
-                            result2 = c;
-                            b2 = result2.ToBrep(true, true);
-                            b2.Transform(b.RotateBack);
-                            v_cylinder = b2.GetVolume();
-                            //DA.SetData(2, b2);
-                        }
+                        #region XS's code
+                        //BoxLike b = new BoxLike(Brep2, v);
+                        //double volumn = 0;
+                        //Brep result1 = null;
+                        //Cylinder result2 = Cylinder.Unset;
+                        //Brep b2 = null;
+                        //double v_box = 0.0, v_cylinder = 0.0;
+                        ////if (type == 1)
+                        ////{
+
+                        //// Calculate the volume of the inner box
+                        //for (double i = 0.2; i <= 0.8; i += 0.1)
+                        //{
+                        //    if (b.GetInnerEmptySpaceBox(i))
+                        //    {
+                        //        BoundingBox bbox = b.InnerEmptySpaceBbox;
+                        //        if (volumn < bbox.Volume)
+                        //        {
+                        //            volumn = bbox.Volume;
+                        //            result1 = b.InnerEmptySpaceBoxBrep;
+                        //            result1.Transform(b.RotateBack);
+                        //            v_box = result1.GetVolume();
+                        //            // DA.SetData(1, result1);
+                        //        }
+                        //    }
                         //}
+                        ////}
+                        ////else if (type == 2)
+                        ////{
+
+                        //// Calculate the volume of the inner cylinder 
+                        //if (b.GetInnerEmptySpaceCylinder())
+                        //{
+                        //    Cylinder c = b.InnerEmptyCylinder;
+                        //    //result2 = c.ToBrep(true,true);
+                        //    result2 = c;
+                        //    b2 = result2.ToBrep(true, true);
+                        //    b2.Transform(b.RotateBack);
+                        //    v_cylinder = b2.GetVolume();
+                        //    //DA.SetData(2, b2);
+                        //}
+                        ////}
+                        ////else
+                        ////    throw new Exception("Invalid type");
+
+                        //if (v_box >= v_cylinder)
+                        //    innerCavity = result1;
                         //else
-                        //    throw new Exception("Invalid type");
+                        //    innerCavity = b2;
+                        //conBrep = Brep2;
+                        //direction = v;
+                        ////DA.SetData(0, Brep2);
+                        ////DA.SetData(2, skeleton);
+                        ////DA.SetData(3, v);
+                        //processingwin.Hide();
 
-                        if (v_box >= v_cylinder)
-                            innerCavity = result1;
-                        else
-                            innerCavity = b2;
-                        conBrep = Brep2;
-                        direction = v;
-                        //DA.SetData(0, Brep2);
-                        //DA.SetData(2, skeleton);
-                        //DA.SetData(3, v);
-                        processingwin.Hide();
+                        #endregion
 
-                        Transform cavityTranslation = Transform.Translation(Brep2.GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
-                        innerCavity.Transform(cavityTranslation);
+                        innerCavity = Brep2;
+                        //Transform cavityTranslation = Transform.Translation(Brep2.GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
+                        //innerCavity.Transform(cavityTranslation);
                     }
 
                     #endregion
@@ -548,7 +556,7 @@ namespace ConRotation
 
                     #region Parse energy and the speed
 
-                    speed = 3;
+                    speed = speedLevel;
                     // Parse the energy to 0.1-1
                     energy = (energyLevel + 1) / 10;
 
@@ -618,14 +626,8 @@ namespace ConRotation
 
                     motion.ConstructGearTrain(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
                         dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
-
-                    //// transform the generated brep of the gear train back to the orientation and placement of the kinetic unit
-                    //foreach(Brep g in brepGearTrain)
-                    //{
-                    //    g.Transform(dirToXTranlationBack);
-                    //    g.Transform(dirToXRotationBack);
-                    //    g.Transform(yToPoseRotation);
-                    //}
+                    motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
+                        dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
 
                     #endregion
 
@@ -709,7 +711,7 @@ namespace ConRotation
                     tarPt.Transform(skeletonTranslate);
                     springPosPt.Transform(skeletonTranslate);
 
-                    speed = 1;
+                    speed = speedLevel;
                     // Parse the energy to 0.1-1
                     energy = (energyLevel + 1) / 10;
 
@@ -761,20 +763,6 @@ namespace ConRotation
                         totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y);
                     //double outDiameter = Double.MaxValue;
 
-                    //foreach(var v in modelDup.Vertices)
-                    //{
-                    //    if (Math.Abs(v.Location.Z) < outDiameter / 2)
-                    //        outDiameter = Math.Abs(v.Location.Z) * 2;
-                    //}
-
-                    //double totalThickness = Double.MaxValue;
-
-                    //foreach(var v in modelDup.Vertices)
-                    //{
-                    //    if (Math.Abs(v.Location.Y) < totalThickness / 2)
-                    //        totalThickness = Math.Abs(v.Location.Y) * 2;
-                    //}
-
                     Brep innerCavityBrep = innerCavity.DuplicateBrep();
                     innerCavityBrep.Transform(dirToXTranlation);
                     innerCavityBrep.Transform(dirToXRotation);
@@ -782,6 +770,9 @@ namespace ConRotation
                     double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
 
                     motion.ConstructGearTrain(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
+                        dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
+
+                    motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
                         dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
                 }
 
@@ -801,7 +792,7 @@ namespace ConRotation
             if (toAdjustParam)
             {
                 //if (motion != null)
-                    //Just reconstruct spiral
+                   // Reconstruct spiral and the gear train
                     //motion.AdjustParameter(energyLevel, speedLevel);
             }
 
