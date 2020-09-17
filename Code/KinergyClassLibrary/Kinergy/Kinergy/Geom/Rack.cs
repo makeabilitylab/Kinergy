@@ -261,7 +261,7 @@ namespace Kinergy
             {
                 GenerateBaseCurve();
                 RhinoApp.WriteLine("ready to transform rack");
-                faceWidth = 2.6;
+                faceWidth = 1.6;
                 //Plane currPlane = new Plane();
                 //base.BaseCurve.TryGetPlane(out currPlane);
                 //RhinoApp.WriteLine("curr y Axis" + currPlane.YAxis);

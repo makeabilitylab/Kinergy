@@ -230,7 +230,7 @@ namespace Kinergy.KineticUnit
                 sweep.ClosedSweep = false;
                 sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
 
-
+  
                 Plane hookPln = new Plane(hookStPt, yPos);
 
                 Vector3d hk_xp = 0 * hookPln.XAxis;
