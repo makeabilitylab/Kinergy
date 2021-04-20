@@ -2,5 +2,5 @@
 
 This is the repository of project Kinergy.
 
-To launch Kinergy, remove the default HumanUI.gha file under `C:\Users\<username>\AppData\Roaming\Grasshopper\Libraries\HumanUI\HumanUI.gha`.
+To launch Kinergy, remove the default HumanUI.gha file under `C:\Users\<username>\AppData\Roaming\Grasshopper\Libraries\HumanUI\HumanUI.gha` and add `KinergyApp\bin\` folder to GrasshopperDeveloperSetting in Rhino.
 
