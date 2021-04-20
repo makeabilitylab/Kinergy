@@ -114,7 +114,6 @@
   <ItemGroup>
     <Compile Include="Components\SpiralSpring\SpiralSpringComponent.cs" />
     <Compile Include="Components\SpiralSpring\SpiralSpringComponentNew.cs" />
-    <Compile Include="HumanUIforKinergy\Components\Testing - Troubleshooting\ElemFromGuid_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateBorder_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateExpander_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateGrid_Component.cs" />

@@ -121,6 +121,10 @@ namespace Kinergy.KineticUnit
                 {
                     if (EntityList.Contains(g))
                     {
+                        while (g.Constraints.Count > 0)
+                        {
+                            g.Constraints[0].Release();
+                        }
                         EntityList.Remove(g);
                     }
                 }
@@ -131,6 +135,10 @@ namespace Kinergy.KineticUnit
                 {
                     if (EntityList.Contains(sh))
                     {
+                        while (sh.Constraints.Count > 0)
+                        {
+                            sh.Constraints[0].Release();
+                        }
                         EntityList.Remove(sh);
                     }
                 }
@@ -154,6 +162,10 @@ namespace Kinergy.KineticUnit
 
                 if(shaftRodShape != null)
                 {
+                    while (shaftRodShape.Constraints.Count > 0)
+                    {
+                        shaftRodShape.Constraints[0].Release();
+                    }
                     EntityList.Remove(shaftRodShape);
                 }
 
@@ -937,6 +949,28 @@ namespace Kinergy.KineticUnit
             #endregion
         }
 
+        public class gearSetDesign
+        {
+            private double _module;
+            private double _gearRatio;
+            private double _pinionRadius;
+            private int _numSet;
+            private double _grUnit;
+
+            public gearSetDesign(double m, double gr, double pr, int num, double grU) {
+                _module = m;
+                _gearRatio = gr;
+                _pinionRadius = pr;
+                _numSet = num;
+                _grUnit = grU;
+            }
+
+            public double Module { get => _module; set => _module = value; }
+            public double GearRatio { get => _gearRatio; set => _gearRatio = value; }
+            public double PinionRadius { get => _pinionRadius; set => _pinionRadius = value; }
+            public int NumSet { get => _numSet; set => _numSet = value; }
+            public double GrUnit { get => _grUnit; set => _grUnit = value; }
+        }
         
 
         /// <summary>
@@ -966,14 +1000,15 @@ namespace Kinergy.KineticUnit
             List<Brep> result = new List<Brep>();
 
             #region Step 0: Create a shell
-
+            double shellThickness = 1.6;
             if(innerShell == null)
             {
                 Brep[] innerShells;
                 Brep[] innerWalls;
 
+                processingwin.BringToFront();
                 processingwin.Show();
-                Brep[] shells = Brep.CreateOffsetBrep(Model, -1.6, false, true, MyDoc.ModelRelativeTolerance, out innerShells, out innerWalls);
+                Brep[] shells = Brep.CreateOffsetBrep(Model, (-1) * shellThickness, false, true, MyDoc.ModelRelativeTolerance, out innerShells, out innerWalls);
 
                 innerShell = shells[0];
                 processingwin.Hide();
@@ -1013,15 +1048,16 @@ namespace Kinergy.KineticUnit
                 Brep finalShellBrep = finalShellBreps[0];
 
                 Model = finalShellBrep.DuplicateBrep();
+
+                #region test by LH
+                //MyDoc.Objects.AddBrep(finalShellBrep);
+                //MyDoc.Views.Redraw();
+                #endregion
             }
 
-            #region test by LH
-            //MyDoc.Objects.AddBrep(finalShellBrep);
-            //MyDoc.Views.Redraw();
             #endregion
 
-            #endregion
-
+            // As now, *Model* is the shell brep
 
             #region Step 1: construct the gear train 
 
@@ -1038,111 +1074,239 @@ namespace Kinergy.KineticUnit
 
             double xStart = gearTrainStPos.X;
             double xLength = xEnd - xStart;
-            double gap = 0.6;
-            int pinionTeethNum = 10; //fixed
-            double minRatio = 1.1; //to ensure that the gear teeth number is integral
-            double module0 = 0.75;
-            double addendum = module0;
+            double gap = 0.7;   // the distance between components
+            int pinionTeethNum = 13; //intial number is 13
+            double minRatio = 14/13.0; //to ensure that the gear teeth number is integral
+            double module0 = 0.75; //inintial gear module
             double pitch = Math.PI * module0;
             //gear facewidth = min(1.6, pitch*3)  
-            double thickness = Math.Min(2, 3 * pitch);
+            double thickness = 3;
             double backlash = 0.6;
-            double backlashGap = 1.374;
-            double maxGearDiameter = outDiameter * 1;
+            double backlashGap = 1.374; // old: 1.374
+            double maxGearDiameter = outDiameter - 2 * gap;
             double pairGearRatio = minRatio;
             double module = module0;
-            double pressureAngle = 20;
-            double tolerance = 0.6;
-            double discThickness = 1;
-            double shaftRadius = 1.6;
-            double discRadius = 2.5;
+            double pressureAngle = 20; // for 3D printing, a 20-25 degree angle is suggested
+            double tolerance = 0.5;
+            double discThickness = 2;
+            double shaftRadius = Math.Max(1.6, pinionTeethNum * module / 6.1);
+            double discRadius = shaftRadius + 2 * tolerance;
 
             if (xLength < 0) return;
 
-            #region New version by LH
+            #region new version by LH
 
-            int numPairMax = -1; // the max num of two-gear pair can be added
+            #region Step 1: calcualte the possible gear sets
 
-            //numPairMax = (int)(xLength / (backlash * backlashGap
-            //                + module0 * pinionTeethNum * (minRatio + 1) / 2));
+            List<gearSetDesign> gearSets = new List<gearSetDesign>();
+            int numSet = 1;
+            double gearRadius = pairGearRatio * (module * pinionTeethNum / 2);
+            int gearTeethNum = (int)(pairGearRatio * pinionTeethNum);
+            double totalLenGearSet = 0;
+            double totalThicknessGearSet = 0;
 
-
-            numPairMax = (int)(xLength / (backlash * backlashGap
-                            + Math.Min(module0 * pinionTeethNum * 5 / 2, maxGearDiameter/2) + module0 * pinionTeethNum / 2));
-            // find the range of number of two-gear pairs that can be added in this space
-            int numPairMin = 100;
-            numPairMax = (int)Math.Min(numPairMax, (totalThickness - 2 * gap) / (gap + thickness));
-
-            if(numPairMax >= 1)
+            do
             {
-                
-                for(int num = 1; num <= numPairMax; num++)
+                pairGearRatio = gearTeethNum * 1.0 / pinionTeethNum;
+                gearRadius = gearTeethNum * module / 2;
+                // totalLenGearSet = numSet * (gearRadius + backlash * backlashGap + pinionTeethNum * module / 2);
+                // totalThicknessGearSet = numSet * (thickness + tolerance) + 2 * gap;
+
+                if((gearRadius <= maxGearDiameter/2))
                 {
-                    double r = (xLength / num - backlash * backlashGap) * 2 / (module0 * pinionTeethNum) - 1;
-                    if (r > 5)
+                    // the current gear set is acceptable, increase the teeth number of the gear
+                    int maxNum = (int)Math.Floor(xLength / (gearRadius + backlash * backlashGap + pinionTeethNum * module / 2));
+
+                    if(maxNum >= 1)
                     {
-                        numPairMin = num + 1;
+                        if(maxNum * (thickness + tolerance) + 2 * gap <= totalThickness)
+                        {
+                            gearSetDesign possibleGearSet = new gearSetDesign(module, Math.Pow(pairGearRatio, maxNum), pinionTeethNum * module / 2, maxNum, pairGearRatio);
+                            gearSets.Add(possibleGearSet);
+                            gearTeethNum++;
+                        } 
                     }
                     else
                     {
-                        numPairMin = num;
                         break;
                     }
-                    //double p_radius = xLength / num - backlash * backlashGap - maxGearDiameter / 2;
-                    //if(p_radius > maxGearDiameter / 2)
-                    //{
-                    //    numPairMin = num + 1;
-                    //}
-                    //else
-                    //{
-                    //    break;
-                    //}
+                }
+                else
+                {
+                    module += 0.15;
+                    if(module >3)
+                    {
+                        module -= 0.15;
+                        break;
+                    }
+                    else
+                    {
+                        gearTeethNum = 14;
+                    }
+                }
+
+            } while(true);
+
+            // re-order the list in an ascending order of gear ratio
+            int len = gearSets.Count;
+            for (int i = 0; i < len - 1; i++)
+            {
+                for (int j = 0; j < len - 1 - i; j++)
+                {
+                    if (gearSets.ElementAt(j).GearRatio > gearSets.ElementAt(j + 1).GearRatio)
+                    { 
+                        gearSetDesign temp = new gearSetDesign(gearSets.ElementAt(j + 1).Module, gearSets.ElementAt(j + 1).GearRatio, 
+                            gearSets.ElementAt(j + 1).PinionRadius, gearSets.ElementAt(j + 1).NumSet, gearSets.ElementAt(j + 1).GrUnit);
+
+                        gearSets.ElementAt(j + 1).Module = gearSets.ElementAt(j).Module;
+                        gearSets.ElementAt(j + 1).GearRatio = gearSets.ElementAt(j).GearRatio;
+                        gearSets.ElementAt(j + 1).NumSet = gearSets.ElementAt(j).NumSet;
+                        gearSets.ElementAt(j + 1).PinionRadius = gearSets.ElementAt(j).PinionRadius;
+                        gearSets.ElementAt(j + 1).GrUnit = gearSets.ElementAt(j).GrUnit;
+
+                        gearSets.ElementAt(j).GearRatio = temp.GearRatio;
+                        gearSets.ElementAt(j).Module = temp.Module;
+                        gearSets.ElementAt(j).NumSet = temp.NumSet;
+                        gearSets.ElementAt(j).PinionRadius = temp.PinionRadius;
+                        gearSets.ElementAt(j).GrUnit = temp.GrUnit;
+                    }
                 }
             }
 
-            if (numPairMax < numPairMin) return;
-            int numSection = numPairMax - numPairMin + 1;
-            int currNum = (int)Math.Floor(Speed / (10.0 / numSection)) + numPairMin;
+            #endregion
 
-            int baseSpeed = (int)Math.Ceiling((currNum - numPairMin) * (10.0 / numSection));
-            int iterationNum = (int)Speed - baseSpeed + 1;
+            #region Step 2: map the input speed to the proper gear set
+            gearSetDesign targetGearSet = null;
 
-            // start from two identical gears: R = 1
-
-            double mgr = (xLength / currNum - backlash * backlashGap);
-
-            int teethMax = (int)(mgr / module0);
-            teethEqualInt = (teethMax + pinionTeethNum) / 2;
-
-            double mNew = mgr / teethEqualInt;
-            grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
-
-            for (int i = 1; i <= iterationNum; ++i)
+            if (len > 10)
             {
-                double newMGR = mgr - (mgr - module0 * pinionTeethNum) * i / iterationNum;
+                // select 10 sets to match the speed input
+                int fromSource = 0;
+                int toSource = 9;
+                int fromTarget = 0;
+                int toTarget = len - 1;
+                int sel_idx = (int)(((int)Speed - fromSource + 1) * 1.0 / (toSource - fromSource + 1) * (toTarget - fromTarget + 1) + fromTarget);
 
-                teethMax = (int)(newMGR / module0);
-
-                teethEqualInt = (teethMax + pinionTeethNum) / 2;
-
-                mNew = newMGR / teethEqualInt;
-                grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
+                targetGearSet = new gearSetDesign(gearSets.ElementAt(sel_idx).Module, gearSets.ElementAt(sel_idx).GearRatio,
+                                                    gearSets.ElementAt(sel_idx).PinionRadius, gearSets.ElementAt(sel_idx).NumSet, gearSets.ElementAt(sel_idx).GrUnit);
+            }
+            else if(len == 10)
+            {
+                targetGearSet = new gearSetDesign(gearSets.ElementAt((int)Speed).Module, gearSets.ElementAt((int)Speed).GearRatio,
+                                                    gearSets.ElementAt((int)Speed).PinionRadius, gearSets.ElementAt((int)Speed).NumSet, gearSets.ElementAt((int)Speed).GrUnit);
+            }
+            else
+            {
+                // set the highest speed input the same
+                if((int)Speed >= len)
+                {
+                    targetGearSet = new gearSetDesign(gearSets.ElementAt(len-1).Module, gearSets.ElementAt(len - 1).GearRatio,
+                                                    gearSets.ElementAt(len - 1).PinionRadius, gearSets.ElementAt(len - 1).NumSet, gearSets.ElementAt(len - 1).GrUnit);
+                }
+                else
+                {
+                    targetGearSet = new gearSetDesign(gearSets.ElementAt((int)Speed).Module, gearSets.ElementAt((int)Speed).GearRatio,
+                                                    gearSets.ElementAt((int)Speed).PinionRadius, gearSets.ElementAt((int)Speed).NumSet, gearSets.ElementAt((int)Speed).GrUnit);
+                }
             }
 
-            currModule = (xLength - currNum * backlashGap * backlash) / (currNum * teethEqualInt * (1 + grNew) / 2);
-            int gearTeethNum = (int)(teethEqualInt * grNew);
 
-            double gearDistance = teethEqualInt * (1 + grNew) * currModule / 2 + backlash * backlashGap;
+            #region old code
+            //int numPairMax = -1; // the max num of two-gear pair can be added
 
-    
+            ////numPairMax = (int)(xLength / (backlash * backlashGap
+            ////                + module0 * pinionTeethNum * (minRatio + 1) / 2));
+
+
+            //numPairMax = (int)(xLength / (backlash * backlashGap
+            //                + Math.Min(module0 * pinionTeethNum * 5 / 2, maxGearDiameter/2) + module0 * pinionTeethNum / 2));
+            //// find the range of number of two-gear pairs that can be added in this space
+            //int numPairMin = 100;
+            //numPairMax = (int)Math.Min(numPairMax, (totalThickness - 2 * gap) / (gap + thickness));
+
+            //if(numPairMax >= 1)
+            //{
+                
+            //    for(int num = 1; num <= numPairMax; num++)
+            //    {
+            //        double r = (xLength / num - backlash * backlashGap) * 2 / (module0 * pinionTeethNum) - 1;
+            //        if (r > 5)
+            //        {
+            //            numPairMin = num + 1;
+            //        }
+            //        else
+            //        {
+            //            numPairMin = num;
+            //            break;
+            //        }
+            //        //double p_radius = xLength / num - backlash * backlashGap - maxGearDiameter / 2;
+            //        //if(p_radius > maxGearDiameter / 2)
+            //        //{
+            //        //    numPairMin = num + 1;
+            //        //}
+            //        //else
+            //        //{
+            //        //    break;
+            //        //}
+            //    }
+            //}
+
+            //if (numPairMax < numPairMin) return;
+            //int numSection = numPairMax - numPairMin + 1;
+            //int currNum = (int)Math.Floor(Speed / (10.0 / numSection)) + numPairMin;
+
+            //int baseSpeed = (int)Math.Ceiling((currNum - numPairMin) * (10.0 / numSection));
+            //int iterationNum = (int)Speed - baseSpeed + 1;
+
+            //// start from two identical gears: R = 1
+
+            //double mgr = (xLength / currNum - backlash * backlashGap);
+
+            //int teethMax = (int)(mgr / module0);
+            //teethEqualInt = (teethMax + pinionTeethNum) / 2;
+
+            //double mNew = mgr / teethEqualInt;
+            //grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
+
+            //for (int i = 1; i <= iterationNum; ++i)
+            //{
+            //    double newMGR = mgr - (mgr - module0 * pinionTeethNum) * i / iterationNum;
+
+            //    teethMax = (int)(newMGR / module0);
+
+            //    teethEqualInt = (teethMax + pinionTeethNum) / 2;
+
+            //    mNew = newMGR / teethEqualInt;
+            //    grNew = (xLength / currNum - backlash * backlashGap) * 2 / (mNew * teethEqualInt) - 1;
+            //}
+
+            //currModule = (xLength - currNum * backlashGap * backlash) / (currNum * teethEqualInt * (1 + grNew) / 2);
+            //int gearTeethNum = (int)(teethEqualInt * grNew);
+
+            #endregion
+
+            currModule = targetGearSet.Module;
+            grNew = targetGearSet.GrUnit;
+            int currNum = targetGearSet.NumSet;
+            
+            double gearDistance = pinionTeethNum * (1 + grNew) * currModule / 2 + backlash * backlashGap;
+
+            #endregion
+
             // shift all the gears to one side, which is the Y postive side
-            double maxshift = (totalThickness - 2 * gap) / 2 - currNum * (thickness + gap); 
-            double yOriginal = 0;
-            if(maxshift > 0)
-            {
-                yOriginal -= maxshift/2;
-            }
+            // to find the smallest Y offset to start the gear center positions
+            BoundingBox innerShellBoundingBox = innerShell.GetBoundingBox(true);
 
+            //double maxshift = (totalThickness - 2 * gap - 2 * shellThickness) - currNum * (2 * thickness + tolerance); 
+            double yOriginal = 0;
+            //if(maxshift > 0)
+            //{
+            //    yOriginal -= maxshift/2;
+            //}
+
+            yOriginal = innerShellBoundingBox.Min.Y + 2 * gap;
+
+            // configure all the gear centers
             List<Point3d> gearCenters = new List<Point3d>();
             double xPos = xEnd;
             double yPos = yOriginal;
@@ -1150,10 +1314,11 @@ namespace Kinergy.KineticUnit
             {
                 gearCenters.Add(new Point3d(xPos, yPos, 0));
                 xPos -= gearDistance;
-                yPos += gap;
+                yPos += tolerance;
                 gearCenters.Add(new Point3d(xPos, yPos, 0));
                 yPos += thickness;
             }
+
             Vector3d gearDir = new Vector3d();
             
             List<Brep> gears = new List<Brep>();
@@ -1164,21 +1329,28 @@ namespace Kinergy.KineticUnit
             {
                 if(gearCenters.IndexOf(pt) %2 == 0)
                 {
-                    // create the pinion from the output gear end
+
+                    #region Step 1: create the pinion from the output gear end
                     gearDir = gearCenters.ElementAt(gearCenters.IndexOf(pt) + 1) - pt;
-                    Gear PinionGear = new Gear(pt, gearDir, teethEqualInt, currModule, pressureAngle,thickness+gap);
+                    Gear PinionGear = new Gear(pt, gearDir, pinionTeethNum, currModule, pressureAngle, thickness + tolerance);
                     Brep pinion = PinionGear.Model;
 
                     gearEntities.Add(PinionGear);
-
-                    #region test by LH
-                    //MyDoc.Objects.AddBrep(pinion);
-                    //MyDoc.Views.Redraw();
-                    #endregion
-
                     gears.Add(pinion);
 
-                    // create the shaft for the coaxial pinion and big gear
+
+                    #endregion
+
+                    #region test by LH
+                    MyDoc.Objects.AddBrep(innerShell);
+                    MyDoc.Views.Redraw();
+                    MyDoc.Objects.AddPoint(pt);
+                    MyDoc.Views.Redraw(); 
+                    MyDoc.Objects.AddBrep(pinion);
+                    MyDoc.Views.Redraw();
+                    #endregion
+
+                    #region Step 2: create the shaft for the coaxial pinion and big gear
 
                     // first, get the projected points of the center point on the innershell
                     List<Brep> bs = new List<Brep>();
@@ -1206,6 +1378,7 @@ namespace Kinergy.KineticUnit
                             pt1 = projBrepPts[1] + projDir * 0.2;
                             pt2 = projBrepPts[0] - projDir * 0.2;
                         }
+
                         Line shaftRailLine = new Line(pt2, pt1);
                         Curve shaftRail = shaftRailLine.ToNurbsCurve();
                         Brep[] shaftRods = Brep.CreatePipe(shaftRail, shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
@@ -1216,14 +1389,14 @@ namespace Kinergy.KineticUnit
                             // create a brep to different the gears
                             Brep bDiffPart = new Brep();
 
-                            Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                            Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                             bDiffPart = bDiffParts[0];
 
                             partsForShaftDifference.Add(bDiffPart);
 
                             // add two discs around the gear
-                            Point3d disc_first_pt1 = pt - projDir * (thickness + tolerance + discThickness);
-                            Point3d disc_first_pt2 = pt - projDir * (thickness + tolerance);
+                            Point3d disc_first_pt1 = pt - projDir * (thickness + gap + discThickness);
+                            Point3d disc_first_pt2 = pt - projDir * (thickness + gap);
                             Point3d disc_second_pt1 = pt + projDir * (thickness + gap + tolerance);
                             Point3d disc_second_pt2 = pt + projDir * (thickness + gap + tolerance + discThickness);
 
@@ -1266,14 +1439,14 @@ namespace Kinergy.KineticUnit
                                 // create a brep to different the gears
                                 Brep bDiffPart = new Brep();
 
-                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 bDiffPart = bDiffParts[0];
 
                                 partsForShaftDifference.Add(bDiffPart);
 
                                 // add two discs around the gear
-                                Point3d disc_first_pt1 = pt - projDir * (tolerance + discThickness);
-                                Point3d disc_first_pt2 = pt - projDir * (tolerance);
+                                Point3d disc_first_pt1 = pt - projDir * (gap + discThickness);
+                                Point3d disc_first_pt2 = pt - projDir * (gap);
                                 Point3d disc_second_pt1 = pt + projDir * (thickness + gap + tolerance);
                                 Point3d disc_second_pt2 = pt + projDir * (thickness + gap + tolerance + discThickness);
 
@@ -1312,7 +1485,7 @@ namespace Kinergy.KineticUnit
                                 shaftEntities.Add(shaftShape);
 
                                 // difference with the model brep
-                                Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] shDiffRods = Brep.CreatePipe(shRail, shaftRadius + tolerance * 5/4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 shDiffRodSpiral = shDiffRods[0];
 
                                 Vector3d translateDrivenPart = shRailLine.ToNurbsCurve().PointAtNormalizedLength(0.5) - DrivenPart.Direction.ToNurbsCurve().PointAtNormalizedLength(0.5);
@@ -1328,11 +1501,13 @@ namespace Kinergy.KineticUnit
                         }
                     }
 
+                    #endregion
                 }
                 else
                 {
                     // create the big gear 
                     gearDir = pt - gearCenters.ElementAt(gearCenters.IndexOf(pt) - 1);
+                    gearTeethNum = (int)(pinionTeethNum * grNew);
                     Gear BigGear = new Gear(pt, gearDir, gearTeethNum, currModule, pressureAngle, thickness);
                     Brep bigGear = BigGear.Model;
 
@@ -1349,19 +1524,19 @@ namespace Kinergy.KineticUnit
                     //Vector3d normalVec = new Vector3d(planeVec.Y * gearDir.Z - gearDir.Y * planeVec.Z,
                     //    planeVec.Z * gearDir.X - gearDir.Z * planeVec.X,
                     //    planeVec.X * gearDir.Y - gearDir.X * planeVec.Y);
-                    double meshAngle = Math.PI / (teethEqualInt * grNew);
+                    double meshAngle = Math.PI / (pinionTeethNum * grNew);
                     Transform rotat = Transform.Rotation(meshAngle, new Vector3d(0,-1,0), pt);
-                    //if (teethEqualInt % 2 == 0)
-                    //{
+                    if(pinionTeethNum %2 == 1 && (pinionTeethNum * grNew) % 2 == 0)
+                    {
                         bigGear.Transform(rotat);
-                    //}
+                    }
+
                     BigGear.SetModel(bigGear);
                     gearEntities.Add(BigGear);
                     gears.Add(bigGear);
 
                     if(gearCenters.IndexOf(pt) == gearCenters.Count() - 1)
                     {   
-
                         // create the last shaft
                         List<Brep> bs = new List<Brep>();
                         lastGearPos = pt;
@@ -1395,6 +1570,18 @@ namespace Kinergy.KineticUnit
                                     pt1 = projBrepPts[1] + projDir * 0.2;
                                     pt2 = projBrepPts[0] - projDir * 0.2;
                                 }
+
+                                // create the small pinion that engages with the rack
+                                Point3d pinionPt = pt + new Vector3d(0, 1, 0) * (thickness + tolerance);
+                                Gear pinion = new Gear(pinionPt, -gearDir, pinionTeethNum, currModule, pressureAngle, thickness+tolerance);
+                                Brep pinionGear = pinion.Model;
+
+                                _ = new Fixation(pinion, gearEntities.Last());
+                                gearEntities.Add(pinion);
+                                gears.Add(pinionGear);
+
+                                
+                                // create the shaft
                                 Line shaftRailLine = new Line(pt2, pt1);
                                 Curve shaftRail = shaftRailLine.ToNurbsCurve();
                                 Brep[] shaftRods = Brep.CreatePipe(shaftRail, shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
@@ -1404,16 +1591,16 @@ namespace Kinergy.KineticUnit
                                 // create a brep to different the gears
                                 Brep bDiffPart = new Brep();
 
-                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance-0.2, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
+                                Brep[] bDiffParts = Brep.CreatePipe(shaftRail, shaftRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians);
                                 bDiffPart = bDiffParts[0];
 
                                 partsForShaftDifference.Add(bDiffPart);
 
                                 // add two discs around the gear
-                                Point3d disc_first_pt1 = pt - projDir * (tolerance + discThickness);
-                                Point3d disc_first_pt2 = pt - projDir * (tolerance);
-                                Point3d disc_second_pt1 = pt + projDir * (thickness + tolerance);
-                                Point3d disc_second_pt2 = pt + projDir * (thickness + tolerance + discThickness);
+                                Point3d disc_first_pt1 = pt - projDir * (gap + discThickness);
+                                Point3d disc_first_pt2 = pt - projDir * (gap);
+                                Point3d disc_second_pt1 = pt + projDir * (thickness * 2 + tolerance + gap);
+                                Point3d disc_second_pt2 = pt + projDir * (thickness * 2 + tolerance + gap + discThickness);
 
                                 Line discFirstRailLine = new Line(disc_first_pt1, disc_first_pt2);
                                 Line discSecondRailLine = new Line(disc_second_pt1, disc_second_pt2);
@@ -1440,8 +1627,8 @@ namespace Kinergy.KineticUnit
                                 // Generate the revolute joint
 
                                 #region Step 1: geneate the central rod
-                                Point3d pt1 = new Point3d();    // the point on the postive side
-                                Point3d pt2 = new Point3d();    // the point on the negative side
+                                Point3d pt1 = new Point3d();    // the point on the negative side
+                                Point3d pt2 = new Point3d();    // the point on the postive side
 
 
                                 if (projBrepPts[0].Y > projBrepPts[1].Y)
@@ -1508,15 +1695,15 @@ namespace Kinergy.KineticUnit
 
                                 #region Step 3: generate the bearing
 
-                                Point3d pt4 = pt2 + projDir * ((tolerance-0.2) * 2 + 0.2);
-                                Point3d pt5 = pt3 - projDir * (tolerance-0.2) * 2;
+                                Point3d pt4 = pt2 + projDir;
+                                Point3d pt5 = pt3 - projDir * gap;
 
                                 Line bearingLine = new Line(pt5, pt4);
                                 Curve bearingRail = bearingLine.ToNurbsCurve();
-                                Brep bearingExterior = Brep.CreatePipe(bearingRail, 5.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-                                Brep bearingInterior = Brep.CreatePipe(bearingRail, 4, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep bearingExterior = Brep.CreatePipe(bearingRail, shaftRadius * 2 + gap + shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep bearingInterior = Brep.CreatePipe(bearingRail, shaftRadius * 2 + gap, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
-                                Brep laterUsedBrep = Brep.CreatePipe(bearingRail, 3, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep laterUsedBrep = Brep.CreatePipe(bearingRail, shaftRadius + gap, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
                                 modelDiffLaterUsedBrep = bearingExterior.DuplicateBrep();
 
 
@@ -1528,11 +1715,12 @@ namespace Kinergy.KineticUnit
                                 }
                                 Brep bearingBrep = bearingBreps[0];
 
-                                Point3d pt6 = pt5 - projDir * 1.2;
+                                double capThickness = 1.2;
+                                Point3d pt6 = pt5 - projDir * capThickness;
                                 Line capLine = new Line(pt6, pt5);
                                 Curve capRail = capLine.ToNurbsCurve();
-                                Brep capBrep = Brep.CreatePipe(capRail, 5.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-                                Brep capDiffBrep = Brep.CreatePipe(capRail, 2.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep capBrep = Brep.CreatePipe(capRail, shaftRadius * 2 + gap + shaftRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                                Brep capDiffBrep = Brep.CreatePipe(capRail, shaftRadius + gap, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
 
                                 Brep capBrep1 = Brep.CreateBooleanDifference(capBrep, capDiffBrep, MyDoc.ModelAbsoluteTolerance)[0];
 
@@ -1626,14 +1814,14 @@ namespace Kinergy.KineticUnit
             }
 
 
-            // so far, finalGears has all the gears, shafts has all the gear shafts (w/ or w/out discs)
+            #region Last step: add all objects to the entitylist
+            //// so far, finalGears has all the gears, shafts has all the gear shafts (w/ or w/out discs)
 
-            foreach(Brep s in shafts)
-            {
-                //MyDoc.Objects.AddBrep(s);
-                //MyDoc.Views.Redraw();
-
-            }
+            //foreach(Brep s in shafts)
+            //{
+            //    MyDoc.Objects.AddBrep(s);
+            //    MyDoc.Views.Redraw();
+            //}
 
             int idx = 0;
             foreach(Brep g in finalGears)
@@ -1665,6 +1853,9 @@ namespace Kinergy.KineticUnit
 
                 EntityList.Add(g);
             }
+            //if (springS != null)
+            //    _ = new Fixation(shaftRodShape, SpringS);
+            #endregion
 
             #endregion
 

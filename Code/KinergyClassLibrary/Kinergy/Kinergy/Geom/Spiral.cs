@@ -104,8 +104,8 @@ namespace Kinergy
                 double maxDegree = D;
                 double theta = maxDegree;
                 int bestN = 1;
-                thicknessX = 1.2;
-                thicknessY = 8;
+                thicknessX = 0.8;
+                thicknessY = 7;
                 /*double bestMatchingLoss = double.MaxValue;
                 for (int i = 1; i < 10; i++)
                 {
@@ -124,7 +124,7 @@ namespace Kinergy
                 //Then calculate thicknessY&X with energy
                 //double Len = roundNum * (outerRadius + innerRadius) * Math.PI;
                 //Maybe just simplify it by turning the 1-10 M to the power of 0.25, and 0.75, then expand Y&X respectively
-                double energy033 = Math.Pow((e + 1) , 0.33);
+                double energy033 = Math.Pow((e + 2)/ 2, 0.33);
                 thicknessX *= energy033;
                 
                 LoadSpiral(0);

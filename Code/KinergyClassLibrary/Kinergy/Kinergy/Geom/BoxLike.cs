@@ -54,10 +54,10 @@ namespace Kinergy
             {
                 model = M.DuplicateBrep();
                 direction = d;
-                Transform rotateB = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
-                Transform rotateX = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);
-                model.Transform(rotateX);
-                base.RotateBack = rotateB;
+                //Transform rotateB = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
+                //Transform rotateX = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);
+                //model.Transform(rotateX);
+                //base.RotateBack = rotateB;
                 bbox = model.GetBoundingBox(true);
                 centerPoint = bbox.Center;
                 CalculateSkeleton();
@@ -72,8 +72,27 @@ namespace Kinergy
             }
             private void CalculateSkeleton()
             {
-                Point3d a = bbox.PointAt(0, 0.5, 0.5), b = bbox.PointAt(1, 0.5, 0.5);
-                skeleton = new Line(a, b).ToNurbsCurve();
+                if(direction == Vector3d.XAxis)
+                {
+                    // aligned with X axis
+                    skeleton = new Line(bbox.Center - direction * (bbox.Max.X - bbox.Min.X) /2, direction, bbox.Max.X - bbox.Min.X).ToNurbsCurve();
+                }
+                else if (direction == Vector3d.YAxis)
+                {
+                    // aligned with Y axis
+                    skeleton = new Line(bbox.Center - direction * (bbox.Max.Y - bbox.Min.Y) / 2, direction, bbox.Max.Y - bbox.Min.Y).ToNurbsCurve();
+
+                }
+                else if (direction == Vector3d.ZAxis)
+                {
+                    // aligned with Z axis
+                    skeleton = new Line(bbox.Center - direction * (bbox.Max.Z - bbox.Min.Z) / 2, direction, bbox.Max.Z - bbox.Min.Z).ToNurbsCurve();
+                }
+                else
+                {
+                    skeleton = null;
+                }
+                
             }
             public List<Vector3d> GetSurroundingDirections(Vector3d direction)
             {
