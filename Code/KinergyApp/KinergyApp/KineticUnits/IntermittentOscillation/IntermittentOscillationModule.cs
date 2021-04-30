@@ -62,7 +62,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentOscillation
         public IntermittentOscillationModule()
           : base("IntermittentOscillation", "IOModule",
               "The kinetic unit for intermittent oscillation",
-              "Kinergy", "IntermittentOscillation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();

@@ -93,7 +93,7 @@ namespace ConRotation
         public ContinuousRotationModule()
           : base("ContinuousRotationModule", "CRModule",
               "The kinetic unit for continuous rotation",
-              "Kinergy", "ContinuousRotation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();

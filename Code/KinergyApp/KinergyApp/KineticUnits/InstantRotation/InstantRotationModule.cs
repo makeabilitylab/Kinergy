@@ -61,7 +61,7 @@ namespace InstRotation
         public InstantRotationModule()
           : base("InstantRotationModule", "IRMoudle",
               "The kinetic unit for instant rotation",
-              "Kinergy", "InstantRotation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();

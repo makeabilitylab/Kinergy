@@ -241,6 +241,7 @@
     <Compile Include="HumanUIforKinergy\HUI_PriorityLoad.cs" />
     <Compile Include="HumanUIforKinergy\HUI_Util.cs" />
     <Compile Include="HumanUIforKinergy\HumanUIInfo.cs" />
+    <Compile Include="InterfaceLogic\BtnSelectionComponent.cs" />
     <Compile Include="KinergyUtilities\CalculateSkeletonOfBrep.cs" />
     <Compile Include="KinergyUtilities\EntityReader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitLoader.cs" />

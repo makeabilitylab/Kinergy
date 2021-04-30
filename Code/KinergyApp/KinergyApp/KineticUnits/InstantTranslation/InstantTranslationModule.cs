@@ -63,7 +63,7 @@ namespace InstTranslation
         public InstantTranslationModule()
           : base("InstantTranslationModule", "ITMoudle",
               "The kinetic unit for instant translation",
-              "Kinergy", "InstantTranslation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();
@@ -96,7 +96,8 @@ namespace InstTranslation
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             // User triggers for actions
-            pManager.AddBooleanParameter("RegionSelection", "Reg", "Enabling region selection and direction calculation", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("RegionSelection", "Reg", "Enabling region selection", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("AxisSelection", "Axis", "Enabling the selection of the translating axis", GH_ParamAccess.item);
             pManager.AddBooleanParameter("EndeffectorSetting", "EE", "Enabling the selection of the end-effector", GH_ParamAccess.item);
             pManager.AddBooleanParameter("AddLock", "L", "Enabling locking", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Preview", "Pre", "Enabling preview", GH_ParamAccess.item);

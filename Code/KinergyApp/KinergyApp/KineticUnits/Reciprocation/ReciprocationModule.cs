@@ -63,7 +63,7 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         public ReciprocationModule()
           : base("ReciprocationModule", "RModule",
               "The kinetic unit for reciprocation",
-              "Kinergy", "Reciprocation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();

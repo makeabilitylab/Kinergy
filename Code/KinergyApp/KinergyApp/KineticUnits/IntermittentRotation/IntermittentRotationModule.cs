@@ -62,7 +62,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         public IntermittentRotationModule()
           : base("IntermittentRotationModule", "IRModule",
               "The kinetic unit for intermittent rotation",
-              "Kinergy", "IntermittentRotation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();

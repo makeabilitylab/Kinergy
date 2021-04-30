@@ -62,7 +62,7 @@ namespace HumanUIforKinergy.KineticUnits.ContinuousTranslation
         public ContinuousTranslationModule()
           : base("ContinuousTranslationModule", "CTModule",
               "The kinetic unit for continuous translation",
-              "Kinergy", "ContinuousTranslation")
+              "Kinergy", "KineticUnits")
         {
             model = null;
             conBrep = new Brep();
