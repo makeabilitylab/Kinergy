@@ -109,8 +109,20 @@ namespace InstTranslation
                 #region Parse energy and displacement
 
                 // Parse the dispalcement (in percentage) based on the spring length and the posible max compression dispacement
-                Point3d ptS = skt.PointAtNormalizedLength(t1);
-                Point3d ptE = skt.PointAtNormalizedLength(t2);
+                Point3d ptS = new Point3d();
+                Point3d ptE = new Point3d();
+
+                if (t1 >= t2)
+                {
+                    ptS = skt.PointAtNormalizedLength(t2);
+                    ptE = skt.PointAtNormalizedLength(t1);
+                }
+                else
+                {
+                    ptS = skt.PointAtNormalizedLength(t1);
+                    ptE = skt.PointAtNormalizedLength(t2);
+                }
+
                 double s_len = ptS.DistanceTo(ptE);
                 double maxDisp = Math.Max(s_len - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
                 displacement = (displacementLevel + 1) / 10 * maxDisp / s_len;     // convert the input displacement level into percentage
@@ -130,7 +142,7 @@ namespace InstTranslation
                 }
                 else
                 {
-                    motion.CalculateStraightSkeleton(t1, t2, model);
+                    motion.CalculateStraightSkeleton(ptS, ptE, model);
                 }
 
                 // List<Point3d> pts = motion.GetSpringPositionCandidates();

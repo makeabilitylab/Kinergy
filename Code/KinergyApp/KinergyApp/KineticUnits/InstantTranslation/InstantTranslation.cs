@@ -81,123 +81,21 @@ namespace Kinergy.KineticUnit
             myDoc = RhinoDoc.ActiveDoc;
             locks = new List<Lock>();
         }
-        
-        /// <summary> Call this method to  </summary>
-        /// <returns> Returns bool value showing whether all processes go well</returns>
-        public bool Process()
-        {
-            string path3 = System.IO.Directory.GetCurrentDirectory();
-            RhinoApp.WriteLine(path3);
-            RhinoApp.WriteLine(FileOperation.FindComponentFolderDirectory());
+       
 
-            if (CalculateStraightSkeleton(0,1,model) == false)
-            { throw new Exception("Unable to process this model,please provide valid model and vector"); }
-
-            if (SetSpringPosition() == false)
-            { throw new Exception("Failed to set spring position."); }
-
-            if (CutModelForSpring() == false)
-            { throw new Exception("Failed to cut model."); }
-
-            if (ConstructSpring() == false)
-            { throw new Exception("Failed to build spring."); }
-
-            if (addLock)
-            {
-                if (SetLockDirection() == false)
-                { throw new Exception("Failed to select lock direction."); }
-
-                if (SetLockPosition() == false)
-                { throw new Exception("Failed to select lock position."); }
-
-                if (lockPosition == Point3d.Unset)
-                { return true; }
-
-                if (CutModelForLock() == false)
-                { throw new Exception("Failed to select cut holes for lock."); }
-
-                //if (ConstructLock(1) == false)
-                //{ throw new Exception("Failed to build lock structure."); }
-            }
-            return true;
-        }
-        public bool SetSpringPosition()
-        {
-            List<Point3d> points = new List<Point3d>();
-            for (int i = 0; i <= 20; i++)
-            {
-                points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20));
-
-            }
-
-            Point3d selectedPosition = points[UserSelection.UserSelectPointInRhino(points, myDoc)];
-            springPosition = selectedPosition;
-            double T = 0;
-            skeleton.ClosestPoint(springPosition, out T);
-            springT = skeleton.Domain.NormalizedParameterAt(T);
-            springStart = springT - springLength / 2 / skeleton.GetLength();
-            springEnd = springT + springLength / 2 / skeleton.GetLength();
-
-            if (springPosition != Point3d.Unset)
-            { return true; }
-            else
-            { return false; }
-        }
         public bool SetSpringPosition(Point3d pos)
         {
             springPosition = pos;
             double T = 0;
-            skeleton.ClosestPoint(springPosition, out T,0.5);
+            skeleton.ClosestPoint(springPosition, out T,1);
             springT = skeleton.Domain.NormalizedParameterAt(T);
             // springLength= GetSectionRadius(springT) / 7.5 * 25;
-            springStart = springT - springLength / 2 / skeleton.GetLength();
-            springEnd = springT + springLength / 2 / skeleton.GetLength();
+            springStart = (springT - springLength / 2 / skeleton.GetLength()) < 0? 0 : springT - springLength / 2 / skeleton.GetLength();
+            springEnd = (springT + springLength / 2 / skeleton.GetLength()) > 1 ? 1: springT + springLength / 2 / skeleton.GetLength();
 
             return true;
         }
-        public List<Point3d> GetSpringPositionCandidates()
-        {
-            List<Point3d> points = new List<Point3d>();
-            if(curved)
-            {
-                for (int i = 0; i <= 20; i++)
-                {
-                    Vector3d d = GeometryMethods.AverageTangent(skeleton, skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20);
-                    if (Math.Abs(d * direction / d.Length / direction.Length) > 0.8)
-                    { points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20)); }
-                }
-            }
-            else
-            {
-                for (int i = 0; i <= 20; i++)
-                {
-                    points.Add(skeleton.PointAtNormalizedLength(skeletonAvailableRange.Min + skeletonAvailableRange.Length * i / 20));
-                }
-            }
-            
-            return points;
-        }
-        public bool SetLockDirection()
-        {
-            var xrotate1 = Transform.Rotation(Vector3d.XAxis, -Vector3d.XAxis, Point3d.Origin);
-            var move = Transform.Translation(new Vector3d(springLength / 2, springLength, 0));
-            Curve A1 = Arrow.ConstructArrow();
-            Curve A2 = Arrow.ConstructArrow();
-            A1.Transform(move);
-            A2.Transform(move);
-            A1.Transform(xrotate1);
-            //move arrows to spring position
-            Transform toSpringCoordinate = Transform.Multiply(Transform.Translation(new Vector3d(springPosition)), Transform.Rotation(Vector3d.XAxis, skeletonVector, springPosition));
-            A1.Transform(toSpringCoordinate);
-            A2.Transform(toSpringCoordinate);
-            List<Curve> crvs = new List<Curve>();
-            crvs.Add(A1);
-            crvs.Add(A2);
-            RhinoApp.WriteLine("Please select the direction of spring Lock");
-            lockDirection = UserSelection.UserSelectCurveInRhino(crvs, myDoc) + 1;
 
-            return true;
-        }
         public bool SetLockDirection(Arrow d)
         {
             Point3d p1 = skeleton.PointAtNormalizedLength(0);
@@ -211,53 +109,6 @@ namespace Kinergy.KineticUnit
             {
                 lockDirection = 2;
             }
-            return true;
-        }
-        public bool SetLockPosition()
-        {
-
-            Vector3d v = skeletonVector;
-            double start = 0, end = 0;
-            Brep B;
-            if (lockDirection == 1)//the lock structure start from the left and stick into the right part
-            {
-                start = springEnd + 5 / skeleton.GetLength();
-                end = 1 - 5 / skeleton.GetLength();
-                B = modelCut[1].Model;
-                //In this case, the moving end of spring should be reversed.
-            }
-            else if (lockDirection == 2)//the lock structure start from the right and stick into the left part
-            {
-                end = springStart - 5 / skeleton.GetLength();
-                start = 5 / skeleton.GetLength();
-                B = modelCut[0].Model;
-            }
-            else { return false; }
-            double span = end - start, span_len = span * skeleton.GetLength();
-            List<Point3d> candidates = new List<Point3d>();
-            for (int i = 0; i < span_len / 2; i++)
-            {
-                Point3d p = skeleton.PointAtNormalizedLength(start + i * 2 / skeleton.GetLength());
-                Plane plane = new Plane(p, v);
-                Curve[] c;
-                Point3d[] pt;
-                Rhino.Geometry.Intersect.Intersection.BrepPlane(B, plane, 0.0000001, out c, out pt);
-                for (int j = 0; j < 10; j++)
-                {
-                    candidates.Add(c[0].PointAtNormalizedLength(j * 0.1));
-                }
-            }
-            if (candidates.Count == 0)
-            {
-                RhinoApp.WriteLine("No space for lock!");
-                return true;
-            }
-
-            int selectedIndex = UserSelection.UserSelectPointInRhino(candidates, myDoc);
-            lockPosition = candidates[selectedIndex];
-            skeleton.ClosestPoint(candidates[selectedIndex], out lockT);
-            if (lockPosition == Point3d.Unset)
-            { return false; }
             return true;
         }
         public List<Point3d> GetLockPositionCandidates()
@@ -351,54 +202,26 @@ namespace Kinergy.KineticUnit
             }
             
         }
-        public bool CalculateStraightSkeleton(double t1, double t2, Brep selectedModel)
+
+        /// <summary>
+        /// Compute the helical spring skeleton
+        /// </summary>
+        /// <param name="ptS">start point of the spring</param>
+        /// <param name="ptE">end point of the spring</param>
+        /// <param name="selectedModel">body to be converted</param>
+        /// <returns></returns>
+        public bool CalculateStraightSkeleton(Point3d ptS, Point3d ptE, Brep selectedModel)
         {
-            Transform xrotate = Transform.Rotation(direction, Vector3d.XAxis, Point3d.Origin);//Deprecated. Too ambiguous and indirect.
-            Transform xrotateBack = Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin);
-            //here skeleton is calculated using bbox. Spring parameters are now determined by shape and ratio of bbox. energy and distance havn't been adopted.
-            model.Transform(xrotate);
-            selectedModel.Transform(xrotate);
-            BoundingBox box = model.GetBoundingBox(true);
-            BoundingBox box_sel = selectedModel.GetBoundingBox(true);
-            model.Transform(xrotateBack);
-            selectedModel.Transform(xrotateBack);
-            Point3d p1 = new Point3d(box.Min.X, (box.Min.Y + box.Max.Y) / 2, (box.Min.Z + box.Max.Z) / 2), p2 = new Point3d(box.Max.X, (box.Min.Y + box.Max.Y) / 2, (box.Min.Z + box.Max.Z) / 2);
-            Line l = new Line(p1, p2);
-
-            #region old spring length and diameter
-            //springLength = springRadius / 7.5 * 25;
-            //if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
-            //{
-            //    springLength = l.Length * 0.5;
-            //    springRadius = springLength * 7.5 / 25 * 0.9;
-            //}
-            #endregion
-
-            /*
-            if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
-            {
-                springLength = l.Length * 0.7;
-                springRadius = springLength * 7.5 / 25 * 0.9;
-            }
-            if (springLength > l.Length * 0.5)//the model is too short,so decrease spring radius
-            {
-                springLength = l.Length * 0.8;
-                springRadius = springLength * 7.5 / 25 * 0.9;
-            }*/
-            
-
+            Line l = new Line(ptS, ptE);
             skeleton = l.ToNurbsCurve();
-            skeleton.Transform(xrotateBack);
 
-            Point3d stPt = skeleton.PointAtNormalizedLength(t1);
-            Point3d endPt = skeleton.PointAtNormalizedLength(t2);
-            springLength = stPt.DistanceTo(endPt);
+            springLength = ptS.DistanceTo(ptE);
 
             //springRadius = Math.Min(box_sel.Max.Y - box_sel.Min.Y, box_sel.Max.Z - box_sel.Min.Z) * 0.9;
             //springRadius = Math.Min(model.ClosestPoint(stPt).DistanceTo(stPt), model.ClosestPoint(endPt).DistanceTo(endPt)) * 2;
-            Vector3d planeNormal= new Vector3d(stPt - endPt);
-            Plane firstPtPlane = new Plane(stPt, planeNormal);
-            Plane secondPtPlane = new Plane(endPt, planeNormal);
+            Vector3d planeNormal= direction;
+            Plane firstPtPlane = new Plane(ptS, planeNormal);
+            Plane secondPtPlane = new Plane(ptE, planeNormal);
 
             Curve[] intersectStart;
             Point3d[] intersectStartPts;
@@ -421,26 +244,17 @@ namespace Kinergy.KineticUnit
             #endregion
 
             double pos1, pos2;
-            strCrv.ClosestPoint(stPt, out pos1);
-            endCrv.ClosestPoint(endPt, out pos2);
+            strCrv.ClosestPoint(ptS, out pos1);
+            endCrv.ClosestPoint(ptE, out pos2);
 
-            springRadius = Math.Min(strCrv.PointAt(pos1).DistanceTo(stPt), endCrv.PointAt(pos2).DistanceTo(endPt)) * 1.5;
-
-
+            springRadius = Math.Min(strCrv.PointAt(pos1).DistanceTo(ptS), endCrv.PointAt(pos2).DistanceTo(ptE)) * 1.5;
             //wireRadius = springRadius / 7.5 * 1;
             wireRadius = 2.8;
-            skeletonAvailableRange = new Interval((springLength / 2 + 5) / l.Length, 1 - (springLength / 2 + 5) / l.Length);
 
-
-            string body = string.Format("The skeleton is from {0},{1},{2} to {3},{4},{5}", skeleton.PointAtStart.X, skeleton.PointAtStart.Y, skeleton.PointAtStart.Z, skeleton.PointAtEnd.X, skeleton.PointAtEnd.Y, skeleton.PointAtEnd.Z);
-            RhinoApp.WriteLine(body);
-            body = string.Format("The skeletonAvailableRange is from {0} to {1},length is {2}", skeletonAvailableRange.Min, skeletonAvailableRange.Max, skeletonAvailableRange.Length);
-            RhinoApp.WriteLine(body);
             skeletonVector = new Vector3d(skeleton.PointAtEnd) - new Vector3d(skeleton.PointAtStart);
             if (skeleton.GetLength() > 0)
             {
                 return true;
-
             }
             return false;
         }
@@ -480,24 +294,18 @@ namespace Kinergy.KineticUnit
             plane1.ExtendThroughBox(box, out Interval s1, out Interval t1);
             plane2.ExtendThroughBox(box, out Interval s2, out Interval t2);
 
-            //int redIndex = myDoc.Materials.Add();
-            //Rhino.DocObjects.Material redMat = myDoc.Materials[redIndex];
-            //redMat.DiffuseColor = System.Drawing.Color.Red;
-            //redMat.SpecularColor = System.Drawing.Color.Red;
-            //redMat.CommitChanges();
-            //ObjectAttributes redAttribute;
-            //redAttribute = new ObjectAttributes();
-            //redAttribute.LayerIndex = 1;
-            //redAttribute.MaterialIndex = redIndex;
-            //redAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
-            //myDoc.Objects.AddBrep(model, redAttribute);
-            //myDoc.Views.Redraw();
-
             Brep[] Cut_Brep1 = model.Trim(plane1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
             Brep[] Cut_Brep2 = model.Trim(plane2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
 
-            Shape mc1 = new Shape(Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance), false, "model");
-            Shape mc2 = new Shape(Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance), false, "model");
+            #region Test by LH
+            //myDoc.Objects.AddBrep(Cut_Brep1[0]);
+            //myDoc.Views.Redraw();
+            //myDoc.Objects.AddBrep(Cut_Brep2[0]);
+            //myDoc.Views.Redraw();
+            #endregion
+
+            Shape mc1 = new Shape(Cut_Brep1[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance), false, "model-rest1");
+            Shape mc2 = new Shape(Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance), false, "model-rest2");
             modelCut.Add(mc1);
             modelCut.Add(mc2);
             entityList.Add(mc1);
@@ -506,19 +314,10 @@ namespace Kinergy.KineticUnit
         }
         public bool ConstructSpring()
         {
-            if(curved==true)
-            {
-                Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
-                Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
-                spring = new Helix(skeleton, springStart, springEnd, springRadius, wireRadius, roundNum, distance,energy);
-            }
-            else
-            {
-                Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
-                Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
-                spring = new Helix(startPoint, endPoint, springRadius, wireRadius, roundNum, distance,energy);
-                //spring = new Helix(skeleton, springStart, springEnd, springRadius, wireRadius, roundNum, distance, energy);
-            }
+            Point3d startPoint = skeleton.PointAtNormalizedLength(springStart);
+            Point3d endPoint = skeleton.PointAtNormalizedLength(springEnd);
+            spring = new Helix(startPoint, endPoint, springRadius, wireRadius, roundNum, distance,energy);
+            
             EntityList.Add(spring);
             if (spring.Model != null)
             {

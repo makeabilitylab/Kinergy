@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace HumanUIforKinergy.KinergyUtilities
 {
-    public partial class ProcessingWin : MetroFramework.Forms.MetroForm
+    public partial class ProcessingWin : Form
     {
         public ProcessingWin()
         {
