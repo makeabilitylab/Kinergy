@@ -12,7 +12,7 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
-using Kinergy.Utilities;
+using KinergyUtilities;
 using Kinergy.Geom;
 using Kinergy.Relationship;
 using Kinergy.KineticUnit;

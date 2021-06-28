@@ -4,9 +4,8 @@ using System.Collections.Generic;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using Kinergy.KineticUnit;
-using Kinergy.Utilities;
+using KinergyUtilities;
 using Rhino;
-using Rhino.Geometry;
 using Rhino.DocObjects;
 using Rhino.Input;
 using HumanUIforKinergy.KinergyUtilities;
@@ -28,8 +27,9 @@ namespace InstTranslation
         double displacementLevel;   // value of the displacement slide bar
         Vector3d direction;             // motion direction
         InstantTranslation motion;
-        List<Arrow> lockDirCandidates;
-        Arrow p;
+        List<Guid> lockPosPointIDs;
+        Guid endEffectorID;
+        double innerSpaceRadius;
 
         // Variables used for different functions
         bool lockState;
@@ -41,10 +41,11 @@ namespace InstTranslation
         bool isLockSet;
         Guid selObjId;
         List<Guid> toBeBaked;
+        List<Guid> endEffectorCandidates;
 
         // Region selection related variables
         Point3d center = Point3d.Unset;
-        Guid guide1, guide2, ArrowCurve;
+        Guid guide1, guide2;
         bool OperatingArrow = false;
         bool PlaneGenerated = false;
         bool ArrowGenerated = false;
@@ -61,6 +62,14 @@ namespace InstTranslation
         RhinoDoc myDoc;
         Guid xArrowID, yArrowID, zArrowID;
         int selectedAxis;
+        List<Point3d> lockPosCandidates;
+        Point3d lockPostion;
+
+        bool testBodySelBtn;
+        bool testAxisSelBtn;
+        bool testEndEffectorBtn;
+        bool testPreBtn;
+        bool testBakeBtn;
 
         /// <summary>
         /// Initializes a new instance of the InstantTranslationModule class.
@@ -80,8 +89,8 @@ namespace InstTranslation
             displacementLevel = 4;
             direction = new Vector3d();
             motion = null;
-            lockDirCandidates = new List<Arrow>();
-            p = null;
+            endEffectorID = Guid.Empty;
+            innerSpaceRadius = 0;
 
             lockState = false;
             min_wire_diamter = 2.8;
@@ -93,12 +102,18 @@ namespace InstTranslation
             isLockSet = false;
             selObjId = Guid.Empty;
             toBeBaked = new List<Guid>();
+            endEffectorCandidates = new List<Guid>();
+            lockPosPointIDs = new List<Guid>();
 
             myDoc = RhinoDoc.ActiveDoc;
             xArrowID = Guid.Empty;
             yArrowID = Guid.Empty;
             zArrowID = Guid.Empty;
             selectedAxis = -1; // 1 - x axis, 2 - y axis, 3 - z axis 
+            lockPosCandidates = new List<Point3d>();
+            lockPostion = new Point3d();
+            guide1 = Guid.Empty;
+            guide2 = Guid.Empty;
 
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
@@ -166,6 +181,12 @@ namespace InstTranslation
             greenAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
             greenAttribute.ObjectColor = Color.FromArgb(72, 232, 88);
             greenAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            testBodySelBtn = false;
+            testAxisSelBtn = false;
+            testEndEffectorBtn = false;
+            testPreBtn = false;
+            testBakeBtn = false;
         }
 
         /// <summary>
@@ -232,18 +253,37 @@ namespace InstTranslation
             bool toSelectRegion = false, toSetAxis = false, toAdjustParam = false, toSetEndEffector = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
 
             #region Input check. This determines how the cell respond to changed params
-            if (reg_input)//This applies to starting situation and when u change the input model
+
+            if (!reg_input && testBodySelBtn)//This applies to starting situation and when u change the input model
             {
                 toSelectRegion = true;
+                testBodySelBtn = false;
             }
-            if (axis_input)
+            else if (reg_input)
+            {
+                testBodySelBtn = true;
+            }
+
+            if (!axis_input && testAxisSelBtn)
             {
                 toSetAxis = true;
+                testAxisSelBtn = false;
             }
-            if (end_input)
+            else if (axis_input)
+            {
+                testAxisSelBtn = true;
+            }
+
+            if (!end_input && testEndEffectorBtn)
             {
                 toSetEndEffector = true;
+                testEndEffectorBtn = false;
             }
+            else if (end_input)
+            {
+                testEndEffectorBtn = true;
+            }
+
             if (lockState != addlock_input)
             {
                 lockState = addlock_input;
@@ -252,10 +292,10 @@ namespace InstTranslation
                 else
                     toRemoveLock = true;
             }
+
             if (pre_input)
-            {
                 toPreview = true;
-            }
+
             if(energyLevel == energy_input && displacementLevel == disp_input)
             {
                 toAdjustParam = false;
@@ -266,23 +306,47 @@ namespace InstTranslation
                 displacementLevel = disp_input;
                 toAdjustParam = true;
             }
-            if (bake_input)
+
+            if (!bake_input && testBakeBtn)
             {
                 toBake = true;
+                testBakeBtn = false;
             }
+            else if (bake_input)
+            {
+                testBakeBtn = true;
+            }
+
             #endregion
+
             if (toBake)
             {
                 if(motion != null)
                 {
-                    if(motion.EntityList != null)
+                    //Guid springID = myDoc.Objects.AddBrep(motion.Spring.GetModelinWorldCoordinate(), orangeAttribute);
+                    //toBeBaked.Add(springID);
+
+                    //myDoc.Objects.Hide(springID, true);
+
+                    //foreach (Guid id in toBeBaked)
+                    //{
+                    //    myDoc.Objects.Show(id, true);
+                    //}
+
+                    foreach(Guid id in endEffectorCandidates)
                     {
-                        foreach(Entity b in motion.EntityList)
+                        myDoc.Objects.Hide(id, true);
+                    }
+
+
+                    if (motion.EntityList != null)
+                    {
+                        foreach (Entity b in motion.EntityList)
                         {
                             Brep tempB = b.GetModelinWorldCoordinate();
-                            RhinoDoc.ActiveDoc.Objects.AddBrep(tempB);
+                            myDoc.Objects.AddBrep(tempB);
                         }
-                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        myDoc.Views.Redraw();
                         this.ExpirePreview(true);
                     }
                 }
@@ -292,8 +356,8 @@ namespace InstTranslation
             {
                 if(selObjId != Guid.Empty)
                 {
-                    RhinoDoc.ActiveDoc.Objects.Show(selObjId, true);
-                    RhinoDoc.ActiveDoc.Views.Redraw();
+                    myDoc.Objects.Show(selObjId, true);
+                    myDoc.Views.Redraw();
                     toBeBaked.Clear();
                     selObjId = Guid.Empty;
                 }
@@ -306,6 +370,7 @@ namespace InstTranslation
 
                     selObjId = objSel_ref.ObjectId;
                     ObjRef currObj = new ObjRef(selObjId);
+                    myDoc.Objects.Select(currObj);
 
                     model = currObj.Brep();
 
@@ -374,9 +439,9 @@ namespace InstTranslation
                         r2 = gp2.Get(true);
 
                     } while (r2 != Rhino.Input.GetResult.Nothing);
-                    RhinoDoc.ActiveDoc.Objects.Delete(ArrowCurve, true);
-                    RhinoDoc.ActiveDoc.Objects.Delete(guide1, true);
-                    RhinoDoc.ActiveDoc.Objects.Delete(guide2, true);
+                    //RhinoDoc.ActiveDoc.Objects.Delete(ArrowCurve, true);
+                    myDoc.Objects.Delete(guide1, true);
+                    myDoc.Objects.Delete(guide2, true);
                     myDoc.Views.Redraw();
                     PlaneGenerated = false;
                     PlaneSelected = true;
@@ -497,8 +562,8 @@ namespace InstTranslation
                     motion.CalculateStraightSkeleton(ptS, ptE, model);
                     Point3d springPos = motion.Skeleton.PointAtNormalizedLength((t1 + t2) / 2);
 
-                    myDoc.Objects.AddPoint(springPos);
-                    myDoc.Views.Redraw();
+                    //myDoc.Objects.AddPoint(springPos);
+                    //myDoc.Views.Redraw();
 
                     #endregion
 
@@ -506,19 +571,21 @@ namespace InstTranslation
 
                     motion.SetSpringPosition(springPos);
                     motion.CutModelForSpring();
-                    motion.ConstructSpring();
+                    motion.ConstructSpring(out innerSpaceRadius);
 
                     // Generate the arrows but reserved for the end-effector step to confirm the lock position
-                    lockDirCandidates = motion.GetLockDirectionCandidates();
+                    
                     foreach (Shape s in motion.ModelCut)
                     {
                         Brep tempB = s.GetModelinWorldCoordinate();
-                        Guid bID = RhinoDoc.ActiveDoc.Objects.AddBrep(tempB);
+                        Guid bID = myDoc.Objects.AddBrep(tempB);
                         toBeBaked.Add(bID);
+                        endEffectorCandidates.Add(bID);
                     }
-                    Guid springID = RhinoDoc.ActiveDoc.Objects.AddBrep(motion.Spring.GetModelinWorldCoordinate());
-                    myDoc.Objects.Hide(springID, true);
-                    toBeBaked.Add(springID);
+                    //Guid springID = myDoc.Objects.AddBrep(motion.Spring.GetModelinWorldCoordinate(), orangeAttribute);
+                    //toBeBaked.Add(springID);
+
+                    //myDoc.Objects.Hide(springID, true);
                     myDoc.Objects.Hide(selObjId, true);
                     myDoc.Views.Redraw();
                     #endregion
@@ -527,15 +594,9 @@ namespace InstTranslation
 
             if (toSetEndEffector)
             {
-                if(lockDirCandidates.Count != 0)
+                if(endEffectorCandidates.Count != 0)
                 {
-                    List<Curve> arrowCurves = new List<Curve>();
-                    foreach (Arrow a in lockDirCandidates)
-                    {
-                        arrowCurves.Add(a.ArrowCurve);
-                    }
-
-                    // Ask the user to select a Brep and calculate which arrow is closer to the selected Brep
+                    // Ask the user to select a Brep
                     ObjRef objSel_ref;
                     Guid selObjId = Guid.Empty;
                     var rc = RhinoGet.GetOneObject("Select a surface or polysurface as the end-effector", false, ObjectType.AnyObject, out objSel_ref);
@@ -543,24 +604,101 @@ namespace InstTranslation
                     {
                         // select a brep
                         selObjId = objSel_ref.ObjectId;
-                        ObjRef currObj = new ObjRef(selObjId);
+                        endEffectorID = selObjId;
 
-                        Brep endeffector = currObj.Brep();
+                        #region Parse energy and displacement
 
-                        Point3d ee_cen = endeffector.GetBoundingBox(true).Center;
-                        Point3d arrow1_cen = arrowCurves[0].GetBoundingBox(true).Center;
-                        Point3d arrow2_cen = arrowCurves[1].GetBoundingBox(true).Center;
+                        // Parse the dispalcement (in percentage) based on the spring length and the posible max compression dispacement
+                        Point3d ptS = new Point3d();
+                        Point3d ptE = new Point3d();
 
-                        if (ee_cen.DistanceTo(arrow1_cen) <= ee_cen.DistanceTo(arrow2_cen))
+                        Brep eeBrep = (Brep)myDoc.Objects.FindId(endEffectorID).Geometry;
+                        double stationarySegLen = 0;
+                        double stationaryConstraintLen = 14;
+
+                        Point3d skeStartPt = skeleton.PointAtNormalizedLength(0);
+                        Point3d skeEndPt = skeleton.PointAtNormalizedLength(1);
+
+                        if (t1 >= t2)
                         {
-                            // select arrow2
-                            p = lockDirCandidates[1];
+                            ptS = skeleton.PointAtNormalizedLength(t2);
+                            ptE = skeleton.PointAtNormalizedLength(t1);
+
+                            if (eeBrep.ClosestPoint(ptS).DistanceTo(ptS) <= eeBrep.ClosestPoint(ptE).DistanceTo(ptE))
+                            {
+                                // ptE is closer to the stationary segment
+                                stationarySegLen = skeleton.GetLength() * (1 - t1);
+
+                                if (stationarySegLen < stationaryConstraintLen)
+                                {
+                                    ptE= skeleton.PointAtLength(skeleton.GetLength() - stationaryConstraintLen);
+                                    t1 = ptE.DistanceTo(skeStartPt) / skeStartPt.DistanceTo(skeEndPt);
+                                }
+                            }
+                            else
+                            {
+                                // ptS is closer to the stationary segment
+                                stationarySegLen = skeleton.GetLength() * t2;
+
+                                if (stationarySegLen < stationaryConstraintLen)
+                                {
+                                    ptS = skeleton.PointAtLength(stationaryConstraintLen);
+                                    t2 = ptS.DistanceTo(skeStartPt) / skeStartPt.DistanceTo(skeEndPt);
+                                }
+                            }
                         }
                         else
                         {
-                            // select arrow1
-                            p = lockDirCandidates[0];
+                            ptS = skeleton.PointAtNormalizedLength(t1);
+                            ptE = skeleton.PointAtNormalizedLength(t2);
+
+                            if (eeBrep.ClosestPoint(ptS).DistanceTo(ptS) <= eeBrep.ClosestPoint(ptE).DistanceTo(ptE))
+                            {
+                                // ptE is closer to the stationary segment
+                                stationarySegLen = skeleton.GetLength() * (1 - t2);
+
+                                if (stationarySegLen < stationaryConstraintLen)
+                                {
+                                    ptE = skeleton.PointAtLength(skeleton.GetLength() - stationaryConstraintLen);
+                                    t2 = ptE.DistanceTo(skeStartPt) / skeStartPt.DistanceTo(skeEndPt);
+                                }
+                            }
+                            else
+                            {
+                                // ptS is closer to the stationary segment
+                                stationarySegLen = skeleton.GetLength() * t1;
+
+                                if (stationarySegLen < stationaryConstraintLen)
+                                {
+                                    ptS = skeleton.PointAtLength(stationaryConstraintLen);
+                                    t1 = ptS.DistanceTo(skeStartPt) / skeStartPt.DistanceTo(skeEndPt);
+                                }
+                            }
                         }
+                        double s_len = ptS.DistanceTo(ptE);
+
+                        double maxDisp = Math.Max(s_len - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
+                        displacement = (displacementLevel + 1) / 10 * maxDisp / s_len;     // convert the input displacement level into percentage
+
+                        // Parse the energy based on E ~= d^4/n * x^2
+                        double x = displacement * s_len;
+                        energy = (energyLevel + 1) / 10;
+
+                        #endregion
+
+                        motion = new InstantTranslation(model, false, direction, energy, displacement);      // the second argument represents if the skeleton is curved
+
+                        #region update the helical spring
+
+                        motion.CalculateStraightSkeleton(ptS, ptE, model);
+                        Point3d springPos = motion.Skeleton.PointAtNormalizedLength((t1 + t2) / 2);
+
+                        motion.SetSpringPosition(springPos);
+                        motion.CutModelForSpring();
+                        double springDia = 0;
+                        motion.ConstructSpring(out springDia);
+
+                        #endregion
                     }
                 }
                 else
@@ -571,8 +709,8 @@ namespace InstTranslation
 
             if (toAddLock)
             {
-                List<Point3d> pts = new List<Point3d>();
-                if( motion != null && p != null)
+                
+                if( motion != null && endEffectorID != Guid.Empty)
                 {
                     #region show the original brep and hide temparily generated parts by GH
                     
@@ -585,42 +723,50 @@ namespace InstTranslation
 
                     #endregion
 
-
-                    #region Set the lock inside or outside
-
-                    //RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent1;
-                    //Rhino.Input.Custom.GetPoint gp1 = new Rhino.Input.Custom.GetPoint();
-                    //gp1.SetCommandPrompt("Press \'1\' or \'2\' to set the lock inside or outside the body. Press enter to continue.");
-                    //gp1.AcceptNothing(true);
-                    //Rhino.Input.GetResult lock_pos_res;
-                    //isLockSet = true;
-                    //do
-                    //{
-                    //    lock_pos_res = gp1.Get(true);
-                    //} while (lock_pos_res != Rhino.Input.GetResult.Nothing);
-                    //isLockSet = false;
-                    
-                    #endregion
-
                     #region Generate the lock position candidates and the user select the postion
 
-                    motion.SetLockDirection(p);
-                    pts = motion.GetLockPositionCandidates();
+                    //motion.SetLockDirection(p);
+                    lockPosCandidates.Clear();
+                    lockPosCandidates = motion.GetLockPositionCandidates(endEffectorID);
 
-                    Point3d pt;
-                    pt = pts[UserSelection.UserSelectPointInRhino(pts, RhinoDoc.ActiveDoc)];
+                    foreach(Point3d p in lockPosCandidates)
+                    {
+                       Guid ptID = myDoc.Objects.AddPoint(p);
+                        lockPosPointIDs.Add(ptID);
+                    }
+                    myDoc.Views.Redraw();
+
+                    Rhino.Input.Custom.GetPoint gp_lock = new Rhino.Input.Custom.GetPoint();
+                    gp_lock.SetCommandPrompt("Select a point to confirm the lock button position.");
+                    gp_lock.DynamicDraw += Gp_lock_DynamicDraw;
+                    gp_lock.MouseMove += Gp_lock_MouseMove;
+                    Rhino.Input.GetResult r_lock;
+                    r_lock = gp_lock.Get(true);
+
+                    //Point3d pt;
+                    //pt = pts[UserSelection.UserSelectPointInRhino(pts, RhinoDoc.ActiveDoc)];
                     
                     #endregion
 
                     #region Construct the lock based on the set position and type
 
-                    motion.SetLockPosition(pt);  // is this step redundant?
+                    //motion.SetLockPosition(lockPostion);  // is this step redundant? Yes, it is.
                     //motion.CutModelForLock();
                     GH_Document gh_d = this.OnPingDocument();
-                    motion.ConstructLock(lockPos, gh_d);  // lockPos=1: inside; lockPos=2: outside
+                    motion.ConstructLock(lockPostion, gh_d, innerSpaceRadius, endEffectorID);  // lockPos=1: inside; lockPos=2: outside
 
-                    RhinoDoc.ActiveDoc.Objects.Hide(selObjId, true);
-                    RhinoDoc.ActiveDoc.Views.Redraw();
+                    myDoc.Objects.Hide(selObjId, true);
+                    foreach (Guid id in toBeBaked)
+                    {
+                        RhinoDoc.ActiveDoc.Objects.Show(id, true);
+                    }
+                    foreach(Guid id in lockPosPointIDs)
+                    {
+                        myDoc.Objects.Delete(id, true);
+                    }
+                    lockPosPointIDs.Clear();
+                
+                    myDoc.Views.Redraw();
                     #endregion
                 }
             }
@@ -671,10 +817,11 @@ namespace InstTranslation
 
                 motion.SetSpringPosition(springPos);
                 motion.CutModelForSpring();
-                motion.ConstructSpring();
+                double springDia = 0;
+                motion.ConstructSpring(out springDia);
 
                 // Generate the arrows but reserved for the end-effector step to confirm the lock position
-                lockDirCandidates = motion.GetLockDirectionCandidates();
+                //lockDirCandidates = motion.GetLockDirectionCandidates();
 
                 #endregion
             }
@@ -687,6 +834,23 @@ namespace InstTranslation
                 DA.SetDataList(1, motion.GetModel());
             DA.SetData(2, toPreview);
         }
+
+        private void Gp_lock_DynamicDraw(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        {
+            e.Display.DrawSphere(new Sphere(lockPostion, 5), Color.FromArgb(16, 150, 206));
+        }
+
+        private void Gp_lock_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            foreach(Point3d pt in lockPosCandidates)
+            {
+                if(e.Point.DistanceTo(pt) <= 3)
+                {
+                    lockPostion = pt;
+                }
+            }
+        }
+
 
         private void Gp1_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
@@ -746,26 +910,6 @@ namespace InstTranslation
             else
             {
                 selectedAxis = -1;
-            }
-        }
-
-        private void RhinoApp_KeyboardEvent1(int key)
-        {
-            if (!isLockSet) return;
-
-            if (key == 49) //"1"
-            {
-                // set the lock inside
-                lockPos = 1;
-            }
-            else if (key == 50) //"2"
-            {
-                // set the lock outside
-                lockPos = 2;
-            }
-            else
-            {
-               
             }
         }
 
@@ -886,48 +1030,7 @@ namespace InstTranslation
             }
             
         }
-        private void RhinoApp_KeyboardEvent(int key)
-        {
-            if (!OperatingArrow)
-                return;
-
-            if (key == 0x51)//Q
-            {
-                v.Transform(Transform.Rotation(Math.PI / 180*2.5, Vector3d.ZAxis, Point3d.Origin));
-                PlaneGenerated = false;
-                GenerateArrow();
-            }
-            else if (key == 0x57)//W
-            {
-                v.Transform(Transform.Rotation(-Math.PI / 180 * 2.5, Vector3d.ZAxis, Point3d.Origin));
-                PlaneGenerated = false;
-                GenerateArrow();
-            }
-            else if (key == 0x41)//A
-            {
-                v.Transform(Transform.Rotation(Math.PI / 180 * 2.5, Vector3d.XAxis, Point3d.Origin));
-                PlaneGenerated = false;
-                GenerateArrow();
-            }
-            else if (key == 0x53)//S
-            {
-                v.Transform(Transform.Rotation(-Math.PI / 180 * 2.5, Vector3d.XAxis, Point3d.Origin));
-                PlaneGenerated = false;
-                GenerateArrow();
-            }
-            else if (key == 0x5A)//Z
-            {
-                v.Transform(Transform.Rotation(Math.PI / 180 * 2.5, Vector3d.YAxis, Point3d.Origin));
-                PlaneGenerated = false;
-                GenerateArrow();
-            }
-            else if (key == 0x58)//X
-            {
-                v.Transform(Transform.Rotation(-Math.PI / 180 * 2.5, Vector3d.YAxis, Point3d.Origin));
-                PlaneGenerated = false;
-                GenerateArrow();
-            }
-        }
+        
         private void Gp_SelectionMouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             if (selected != Guid.Empty)
@@ -988,7 +1091,7 @@ namespace InstTranslation
                 //calculate where is the mouse and change t
                 if (Math.Abs(t2 - tn) > 0.01)
                 {
-                    //move and update t1
+                    //move and update t2
                     Transform m = Transform.Translation(skeletonVec * (tn - t2));
                     guide2 = myDoc.Objects.Transform(guide2, m, true);
                     myDoc.Objects.UnselectAll();

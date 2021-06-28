@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using Kinergy.KineticUnit;
-using Kinergy.Utilities;
+using KinergyUtilities;
 
 // In order to load the result of this wizard, you will also need to
 // add the output bin/ folder of this project to the list of loaded
@@ -65,7 +65,7 @@ namespace InstTranslation
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("InstantTranslationKineticUnit", "KU", "Motion instance generated in motion solver.", GH_ParamAccess.item);
-            pManager.AddGenericParameter("LockDirectionCandidates", "DC", "Available directions of lock as arrows", GH_ParamAccess.list);
+            pManager.AddGenericParameter("EndEffectorCandidates", "EECan", "Available end-effectors", GH_ParamAccess.list);
             pManager.AddBooleanParameter("End-EffectorReady", "EN", "enable the end-effector battery", GH_ParamAccess.item);
         }
 
@@ -181,11 +181,12 @@ namespace InstTranslation
                 #region Step 3: Construct the spring based on the input energy and distance
                 motion.SetSpringPosition(springPos);
                 motion.CutModelForSpring();
-                motion.ConstructSpring();
+                double springDia = 0;
+                motion.ConstructSpring(out springDia);
 
                 // Generate the arrows but reserved for the end-effector step to confirm the lock position
 
-                lockDirCandidates = motion.GetLockDirectionCandidates();
+                //lockDirCandidates = motion.GetLockDirectionCandidates();
                 #endregion
 
                 DA.SetData(0, motion);

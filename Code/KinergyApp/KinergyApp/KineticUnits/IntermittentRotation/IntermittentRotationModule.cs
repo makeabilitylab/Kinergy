@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using Kinergy.KineticUnit;
-using Kinergy.Utilities;
+using KinergyUtilities;
 using Rhino;
 using Rhino.Geometry;
 using Rhino.DocObjects;

@@ -44,10 +44,6 @@
     <Reference Include="HumanUIBaseApp">
       <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\HumanUIBaseApp.dll</HintPath>
     </Reference>
-    <Reference Include="Kinergy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\KinergyClassLibrary\Kinergy\Kinergy\bin\Debug\Kinergy.dll</HintPath>
-    </Reference>
     <Reference Include="MahApps.Metro">
       <HintPath>..\..\HumanUI\humanui\HumanUI\HumanUI\bin\MahApps.Metro.dll</HintPath>
     </Reference>
@@ -114,6 +110,20 @@
   <ItemGroup>
     <Compile Include="Components\SpiralSpring\SpiralSpringComponent.cs" />
     <Compile Include="Components\SpiralSpring\SpiralSpringComponentNew.cs" />
+    <Compile Include="Geometry\BoxLike.cs" />
+    <Compile Include="Geometry\Cam.cs" />
+    <Compile Include="Geometry\Component.cs" />
+    <Compile Include="Geometry\Entity.cs" />
+    <Compile Include="Geometry\Follower.cs" />
+    <Compile Include="Geometry\Gear.cs" />
+    <Compile Include="Geometry\Helix.cs" />
+    <Compile Include="Geometry\Lock.cs" />
+    <Compile Include="Geometry\Rack.cs" />
+    <Compile Include="Geometry\RodLike.cs" />
+    <Compile Include="Geometry\Shape.cs" />
+    <Compile Include="Geometry\Socket.cs" />
+    <Compile Include="Geometry\Spiral.cs" />
+    <Compile Include="Geometry\Wheel.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateBorder_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateExpander_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateGrid_Component.cs" />
@@ -242,8 +252,11 @@
     <Compile Include="HumanUIforKinergy\HUI_Util.cs" />
     <Compile Include="HumanUIforKinergy\HumanUIInfo.cs" />
     <Compile Include="InterfaceLogic\BtnSelectionComponent.cs" />
+    <Compile Include="KinergyUtilities\Arrow.cs" />
     <Compile Include="KinergyUtilities\CalculateSkeletonOfBrep.cs" />
     <Compile Include="KinergyUtilities\EntityReader.cs" />
+    <Compile Include="KinergyUtilities\FileOperation.cs" />
+    <Compile Include="KinergyUtilities\GeometryMethods.cs" />
     <Compile Include="KinergyUtilities\KineticUnitLoader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitReader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitSimulator.cs" />
@@ -263,6 +276,7 @@
     <Compile Include="KinergyUtilities\SetDirection.cs" />
     <Compile Include="Components\CamAndFollower\CamAndFollowerComponent.cs" />
     <Compile Include="KinergyUtilities\TestingComponentForBrepOffset.cs" />
+    <Compile Include="KinergyUtilities\UserSelection.cs" />
     <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotation.cs" />
     <Compile Include="KineticUnits\ContinuousRotation\ContinuousRotationModule.cs" />
     <Compile Include="KineticUnits\ContinuousTranslation\ContinuousTranslation.cs" />
@@ -282,8 +296,11 @@
     <Compile Include="KineticUnits\IntermittentOscillation\IntermittentOscillationModule.cs" />
     <Compile Include="KineticUnits\IntermittentRotation\IntermittentRotation.cs" />
     <Compile Include="KineticUnits\IntermittentRotation\IntermittentRotationModule.cs" />
+    <Compile Include="KineticUnits\KineticUnit.cs" />
     <Compile Include="KineticUnits\Reciprocation\Reciprocation.cs" />
     <Compile Include="KineticUnits\Reciprocation\ReciprocationModule.cs" />
+    <Compile Include="MovementRelated\Connector.cs" />
+    <Compile Include="MovementRelated\Movement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\UpgradeSliderComponent.cs" />
     <Compile Include="HumanUIforKinergy\Upgraders\Upgrade_AdjustElementAppearance.cs" />
@@ -299,6 +316,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Relationship\Engagement.cs" />
+    <Compile Include="Relationship\Fixation.cs" />
+    <Compile Include="Relationship\Hinge.cs" />
+    <Compile Include="Relationship\Locking.cs" />
+    <Compile Include="Relationship\Relationship.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="HumanUIforKinergy\Icon-16.png" />

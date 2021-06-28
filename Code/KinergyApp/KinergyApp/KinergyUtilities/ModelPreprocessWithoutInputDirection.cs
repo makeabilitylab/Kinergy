@@ -9,7 +9,7 @@ using Rhino;
 using Rhino.Commands;
 using MahApps.Metro.Controls;
 using System.Linq;
-using Kinergy.Utilities;
+using KinergyUtilities;
 namespace HumanUIforKinergy.KinergyUtilities
 {
     public class ModelPreprocessWithoutInputDirection : GH_Component
@@ -256,12 +256,12 @@ namespace HumanUIforKinergy.KinergyUtilities
             {
                 var p = e.Point;
                 double dis1 = Math.Abs(pl1.DistanceTo(p)), dis2 = Math.Abs(pl2.DistanceTo(p));
-                double disX1 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveX1, p);
-                double disX2 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveX2, p);
-                double disY1 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveY1, p);
-                double disY2 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveY2, p);
-                double disZ1 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveZ1, p);
-                double disZ2 = Kinergy.Utilities.GeometryMethods.CurveDistanceToPoint(arrowCurveZ2, p);
+                double disX1 = GeometryMethods.CurveDistanceToPoint(arrowCurveX1, p);
+                double disX2 = GeometryMethods.CurveDistanceToPoint(arrowCurveX2, p);
+                double disY1 = GeometryMethods.CurveDistanceToPoint(arrowCurveY1, p);
+                double disY2 = GeometryMethods.CurveDistanceToPoint(arrowCurveY2, p);
+                double disZ1 = GeometryMethods.CurveDistanceToPoint(arrowCurveZ1, p);
+                double disZ2 = GeometryMethods.CurveDistanceToPoint(arrowCurveZ2, p);
                 List<double> distances = new List<double> { dis1, dis2, disX1, disX2, disY1, disY2, disZ1, disZ2 };
                 double min = distances.Min();
                 if (min > 5)

@@ -11,6 +11,8 @@ namespace HumanUIforKinergy.Components.UI_Output
 {
     public class KineticUnitSimulatorForHumanUI : GH_Component
     {
+        bool isFirstTime;
+        Movement move;
         /// <summary>
         /// Initializes a new instance of the KinergyMotionSimulatorForHumanUI class.
         /// </summary>
@@ -19,6 +21,8 @@ namespace HumanUIforKinergy.Components.UI_Output
               "Allows you to simulate a motion and show it in an existing 3D view",
               "Human UI", "UI Output")
         {
+            move = null;
+            isFirstTime = true;
         }
 
         /// <summary>
@@ -56,14 +60,13 @@ namespace HumanUIforKinergy.Components.UI_Output
             bool release = false;
             bool load = false;
             List<System.Drawing.Color> cols = new List<System.Drawing.Color>();
-            if (!DA.GetData<object>("3D View", ref o)) return;
+            if (!DA.GetData<object>(0, ref o)) return;
             //if(!DA.GetData(1, ref m)) return;
             DA.GetData(3, ref start);
-            if(start==false)
-            { return; }
+            if(!start) return; 
             DA.GetData(1, ref k);
             k.CastTo(out m);
-            DA.GetDataList("Mesh Colors", cols);
+            DA.GetDataList(2, cols);
             
             DA.GetData(4, ref load);
             DA.GetData(5, ref release);
@@ -72,7 +75,7 @@ namespace HumanUIforKinergy.Components.UI_Output
             ModelVisual3D mv3 = GetModelVisual3D(vp3);
             List<ModelVisual3D> mv3s = GetModels(vp3);
 
-            if (start)
+            if (start && isFirstTime)
             {
                 models = m.GetMeshModel();
                 vp3.Children.Clear();
@@ -83,8 +86,9 @@ namespace HumanUIforKinergy.Components.UI_Output
                 vp3.Children.Add(mv3);
 
                 //vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
-                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - b.Diagonal.Length * 2.5, b.Center.Z);
+                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y, b.Center.Z);
                 vp3.Camera.LookDirection = new Vector3D(0, 1, 0);
+                isFirstTime = false;
             }
 
             if (load && m.Loaded==false)
@@ -98,30 +102,28 @@ namespace HumanUIforKinergy.Components.UI_Output
                 mv3.Content = new _3DViewModel(models, cols).Model;
                 BoundingBox b = m.GetKineticUnitBoundingBox();
                 vp3.Children.Add(mv3);
-                
-                vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - b.Diagonal.Length * 2.5, b.Center.Z);
-                vp3.Camera.LookDirection = new Vector3D(0, 1, 0);
+
+                //vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y + b.Diagonal.Length * 10, b.Center.Z);
+                //vp3.Camera.LookDirection = new Vector3D(0, 1, 0);
+                vp3.UpdateLayout();
                 ////vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
                 //vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 1.5, b.Center.Z);
                 //vp3.Camera.LookDirection = new Vector3D(0,1,0);
                 return;
             }
-            if(m.Loaded==false)
-            { return; }
-            if (release==false)
-            { return; }
-            
+            if(m.Loaded==false) return;
+            if (release==false) return; 
             
             //iterate the simulation loop. Update the view every frame
             m.TriggerWithoutInteraction();
             int times = 0;
-            int interval = 100;
-            Movement move;
+            int interval = 50;
+
             do
             {
                 times++;
-                string body = string.Format("The simulation run for {0} time", times);
-                Rhino.RhinoApp.WriteLine(body);
+                //string body = string.Format("The simulation run for {0} time", times);
+                //Rhino.RhinoApp.WriteLine(body);
                 move = m.Simulate(interval);
                 models = m.GetMeshModel();
 
@@ -129,12 +131,13 @@ namespace HumanUIforKinergy.Components.UI_Output
                 vp3.Children.Add(new SunLight());
 
                 mv3.Content = new _3DViewModel(models, cols).Model;
-                
+
                 vp3.Children.Add(mv3);
+                vp3.UpdateLayout();
 
                 Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw();//This line redraws view
                 Rhino.RhinoApp.Wait();//This line make sure that the rhino interface is operatable and always rendering.
-                                      //Thread.Sleep(interval-30);//wait for some time to match the actual frame speed. Since calculation takes time, the sleeping time is 30ms shorter than interval.
+                Thread.Sleep(interval-30);//wait for some time to match the actual frame speed. Since calculation takes time, the sleeping time is 30ms shorter than interval.
 
             } while (move.Converge == false);
             Rhino.RhinoApp.Wait();
@@ -157,7 +160,6 @@ namespace HumanUIforKinergy.Components.UI_Output
                 }
             }
             return null;
-
         }
 
         List<ModelVisual3D> GetModels(HelixViewport3D vp3)

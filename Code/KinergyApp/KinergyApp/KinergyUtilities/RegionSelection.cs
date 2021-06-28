@@ -5,7 +5,7 @@ using Grasshopper.Kernel;
 using Rhino;
 using Rhino.Geometry;
 using System.Linq;
-using Kinergy.Utilities;
+using KinergyUtilities;
 using Rhino.DocObjects;
 using Rhino.Input;
 
