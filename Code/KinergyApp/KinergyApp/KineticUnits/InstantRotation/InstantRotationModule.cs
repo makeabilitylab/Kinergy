@@ -88,7 +88,6 @@ namespace InstRotation
             t2 = 1;
             skeleton = null;
             energyLevel = 4;
-            displacement = 4;
             direction = new Vector3d();
             motion = null;
 
@@ -115,6 +114,8 @@ namespace InstRotation
             lockPostion = new Point3d();
             guide1 = Guid.Empty;
             guide2 = Guid.Empty;
+
+            myDoc = RhinoDoc.ActiveDoc;
 
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
@@ -183,7 +184,6 @@ namespace InstRotation
             greenAttribute.ObjectColor = Color.FromArgb(72, 232, 88);
             greenAttribute.ColorSource = ObjectColorSource.ColorFromObject;
 
-            myDoc = RhinoDoc.ActiveDoc;
             testBodySelBtn = false;
             testAxisSelBtn = false;
             testEndEffectorBtn = false;
@@ -321,9 +321,14 @@ namespace InstRotation
                 else
                     toRemoveLock = true;
             }
-            if (pre_input)
+            if (!pre_input && testPreBtn)
             {
                 toPreview = true;
+                testPreBtn = false;
+            }
+            else if (pre_input)
+            {
+                testPreBtn = true;
             }
 
             if (energyLevel == energy_input && displacement== ConvertInputAngleToDoubleType(angle_input))
@@ -374,8 +379,8 @@ namespace InstRotation
             {
                 if (selObjId != Guid.Empty)
                 {
-                    RhinoDoc.ActiveDoc.Objects.Show(selObjId, true);
-                    RhinoDoc.ActiveDoc.Views.Redraw();
+                    myDoc.Objects.Show(selObjId, true);
+                    myDoc.Views.Redraw();
                     toBeBaked.Clear();
                     selObjId = Guid.Empty;
                 }
@@ -464,7 +469,8 @@ namespace InstRotation
                     #endregion
 
                     #region Step 3: calculate and generate the inner cavity
-
+         
+                    List<Brep> brepCut = new List<Brep>();
                     if (PlaneSelected)
                     {
                         // Call out the waiting window
@@ -475,20 +481,52 @@ namespace InstRotation
                         {
                             p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), v);
                             p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+
+                            pl1 = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
+                            pl2 = new Plane(skeleton.PointAtNormalizedLength(t2), v);
                         }
                         else
                         {
                             p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), v);
                             p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
+
+                            pl1 = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+                            pl2 = new Plane(skeleton.PointAtNormalizedLength(t1), v);
                         }
 
-                        Brep[] Cut_Brep1 = model.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                        Brep BrepRest = Cut_Brep1[0];
+                        Brep[] Cut_Brep1 = model.Trim(pl1, myDoc.ModelAbsoluteTolerance);
+                        Brep Brep1 = Cut_Brep1[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                        brepCut.Add(Brep1);
 
-                        Brep[] Cut_Brep2 = BrepRest.Trim(p2Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                        Brep BrepPortion = Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                        Brep[] Cut_Brep1rest = model.Trim(p1Reverse, myDoc.ModelAbsoluteTolerance);
+                        Brep BrepRest = null;
+                        try
+                        {
+                            BrepRest = Cut_Brep1rest[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                        }
+                        catch
+                        {
+                            BrepRest = model;
+                        }
+                        Brep[] Cut_Brep2 = BrepRest.Trim(pl2, myDoc.ModelAbsoluteTolerance);
+                        Brep Brep2 = null;
+                        try
+                        {
+                            Brep2 = Cut_Brep2[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                        }
+                        catch
+                        {
+                            Brep2 = BrepRest;
+                        }
 
-                        BoxLike b = new BoxLike(BrepPortion, v);
+                        Brep[] Cut_Brep3 = BrepRest.Trim(p2Reverse, myDoc.ModelAbsoluteTolerance);
+                        Brep Brep3 = Cut_Brep3[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                        brepCut.Add(Brep3);
+                        brepCut.Add(Brep2);
+                        
+                        //Rhino.Input.Custom.GetPoint ctrl_first_pt_sel = new Rhino.Input.Custom.GetPoint();
+
+                        BoxLike b = new BoxLike(Brep3, v);
                         double volumn = 0;
                         Brep result1 = null;
                         Cylinder result2 = Cylinder.Unset;
@@ -510,7 +548,7 @@ namespace InstRotation
                                 }
                             }
                         }
-
+   
                         // Calculate the volume of the inner cylinder 
                         if (b.GetInnerEmptySpaceCylinder())
                         {
@@ -523,17 +561,15 @@ namespace InstRotation
                             //DA.SetData(2, b2);
                         }
 
-
                         if (v_box >= v_cylinder)
                             innerCavity = result1;
                         else
                             innerCavity = b2;
-                        conBrep = BrepPortion;
+                        conBrep = Brep3;
                         direction = v;
 
                         processingwin.Hide();
-
-                        Transform cavityTranslation = Transform.Translation(BrepPortion.GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
+                        Transform cavityTranslation = Transform.Translation(Brep3.GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
                         innerCavity.Transform(cavityTranslation);
                     }
 
@@ -542,52 +578,18 @@ namespace InstRotation
                     #region Step 4: create an instance of InstantRotation class
 
                     motion = new InstantRotation(model, direction, innerCavity, energyLevel, displacement, true);      // the second argument represents if the skeleton is curved
-                    DirCandidates = motion.GetDirectionCandidates();
+                    //DirCandidates = motion.GetDirectionCandidates();
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
                     Brep tempB = brepCut[0];
-                    Guid bID = RhinoDoc.ActiveDoc.Objects.AddBrep(tempB);
+                    Guid bID = myDoc.Objects.AddBrep(tempB);
                     toBeBaked.Add(bID);
                     Brep tempB2 = brepCut[2];
-                    Guid bID2 = RhinoDoc.ActiveDoc.Objects.AddBrep(tempB2);
+                    Guid bID2 = myDoc.Objects.AddBrep(tempB2);
                     toBeBaked.Add(bID2);
 
-                    RhinoDoc.ActiveDoc.Objects.Hide(selObjId, true);
-                    RhinoDoc.ActiveDoc.Views.Redraw();
-                    #endregion
-
-
-                    #region Step 4: create an instance of InstantTranslation class
-
-                    #region Parse energy and displacement
-
-                    // Parse the dispalcement (in percentage) based on the spring length and the posible max compression dispacement
-                    Point3d ptS = new Point3d();
-                    Point3d ptE = new Point3d();
-
-                    if (t1 >= t2)
-                    {
-                        ptS = skeleton.PointAtNormalizedLength(t2);
-                        ptE = skeleton.PointAtNormalizedLength(t1);
-                    }
-                    else
-                    {
-                        ptS = skeleton.PointAtNormalizedLength(t1);
-                        ptE = skeleton.PointAtNormalizedLength(t2);
-                    }
-
-                    double s_len = ptS.DistanceTo(ptE);
-                    double maxDisp = Math.Max(s_len - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
-                    displacement = (displacementLevel + 1) / 10 * maxDisp / s_len;     // convert the input displacement level into percentage
-
-                    // Parse the energy based on E ~= d^4/n * x^2
-                    double x = displacement * s_len;
-                    energy = (energyLevel + 1) / 10;
-
-                    #endregion
-
-                    motion = new InstantRotation(model, false, direction, energy, displacement);      // the second argument represents if the skeleton is curved
-
+                    myDoc.Objects.Hide(selObjId, true);
+                    myDoc.Views.Redraw();
                     #endregion
                 }
 
@@ -597,53 +599,53 @@ namespace InstRotation
             if (toSetEndEffector)
             {
                 //select between 2 side objects to set the end-effector
-                bool success = false;
-                if (DirCandidates.Count != 0)
-                {
-                    List<Curve> arrowCurves = new List<Curve>();
-                    foreach (Arrow a in DirCandidates)
-                    {
-                        arrowCurves.Add(a.ArrowCurve);
-                    }
+                //bool success = false;
+                //if (DirCandidates.Count != 0)
+                //{
+                //    List<Curve> arrowCurves = new List<Curve>();
+                //    foreach (Arrow a in DirCandidates)
+                //    {
+                //        arrowCurves.Add(a.ArrowCurve);
+                //    }
 
-                    // Ask the user to select a Brep and calculate which arrow is closer to the selected Brep
-                    ObjRef objSel_ref;
-                    Guid selObjId = Guid.Empty;
-                    var rc = RhinoGet.GetOneObject("Select a surface or polysurface as the end-effector", false, ObjectType.AnyObject, out objSel_ref);
-                    if (rc == Rhino.Commands.Result.Success)
-                    {
-                        // select a brep
-                        selObjId = objSel_ref.ObjectId;
-                        ObjRef currObj = new ObjRef(selObjId);
+                //    // Ask the user to select a Brep and calculate which arrow is closer to the selected Brep
+                //    ObjRef objSel_ref;
+                //    Guid selObjId = Guid.Empty;
+                //    var rc = RhinoGet.GetOneObject("Select a surface or polysurface as the end-effector", false, ObjectType.AnyObject, out objSel_ref);
+                //    if (rc == Rhino.Commands.Result.Success)
+                //    {
+                //        // select a brep
+                //        selObjId = objSel_ref.ObjectId;
+                //        ObjRef currObj = new ObjRef(selObjId);
 
-                        Brep endeffector = currObj.Brep();
+                //        Brep endeffector = currObj.Brep();
 
-                        Point3d ee_cen = endeffector.GetBoundingBox(true).Center;
-                        Point3d arrow1_cen = arrowCurves[0].GetBoundingBox(true).Center;
-                        Point3d arrow2_cen = arrowCurves[1].GetBoundingBox(true).Center;
+                //        Point3d ee_cen = endeffector.GetBoundingBox(true).Center;
+                //        Point3d arrow1_cen = arrowCurves[0].GetBoundingBox(true).Center;
+                //        Point3d arrow2_cen = arrowCurves[1].GetBoundingBox(true).Center;
 
-                        if (ee_cen.DistanceTo(arrow1_cen) <= ee_cen.DistanceTo(arrow2_cen))
-                        {
-                            // select arrow2
-                            p = DirCandidates[1];
-                            success = true;
-                        }
-                        else
-                        {
-                            // select arrow1
-                            p = DirCandidates[0];
-                            success = true;
-                        }
-                    }
-                }
-                else
-                {
-                    RhinoApp.CommandPrompt = "Please select a region first!";
-                }
-                if(success)
-                {
-                    motion.GenerateSpiralAndAxis(p);
-                }
+                //        if (ee_cen.DistanceTo(arrow1_cen) <= ee_cen.DistanceTo(arrow2_cen))
+                //        {
+                //            // select arrow2
+                //            p = DirCandidates[1];
+                //            success = true;
+                //        }
+                //        else
+                //        {
+                //            // select arrow1
+                //            p = DirCandidates[0];
+                //            success = true;
+                //        }
+                //    }
+                //}
+                //else
+                //{
+                //    RhinoApp.CommandPrompt = "Please select a region first!";
+                //}
+                //if(success)
+                //{
+                //    motion.GenerateSpiralAndAxis(p);
+                //}
             }
 
             if (toAddLock)
@@ -794,8 +796,8 @@ namespace InstRotation
         {
             PlaneGenerated = true;
             //Delete these before generating new ones
-            RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
-            RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
+            myDoc.Objects.Delete(guide1, true);
+            myDoc.Objects.Delete(guide2, true);
 
             switch (selectedAxis)
             {

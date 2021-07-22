@@ -58,7 +58,7 @@ namespace Kinergy.KineticUnit
                     m.Transform(Translation);
                     if (m.IsValid)
                     {
-                        Mesh[] ms = Mesh.CreateFromBrep(m, MeshingParameters.FastRenderMesh);
+                        Mesh[] ms = Mesh.CreateFromBrep(m, MeshingParameters.Coarse);
                         foreach (Mesh me in ms)
                         {
                             if (me.Faces.Count > 0)

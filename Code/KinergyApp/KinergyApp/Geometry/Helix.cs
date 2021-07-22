@@ -242,7 +242,7 @@ namespace Kinergy
                     
                     base.BaseCurve = s;
                     //Brep[] new_Spring = Rhino.Geometry.Brep.CreateFromSweep(s, cc, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    Brep[] new_Spring = Brep.CreatePipe(s,wireRadius,false,PipeCapMode.Round,true,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,RhinoDoc.ActiveDoc.ModelAngleToleranceRadians);
+                    Brep[] new_Spring = Brep.CreatePipe(s,wireRadius/2,false,PipeCapMode.Round,true,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,RhinoDoc.ActiveDoc.ModelAngleToleranceRadians);
                     base.Model = new_Spring[0];
                 }
 
@@ -366,7 +366,11 @@ namespace Kinergy
             }
             public Movement Activate(double interval,double damp=0.05)
             {
-                velocity += -travel*10 ;//TODO adjust these parameters
+                double G = 2.4 * Math.Pow(10,9);
+                double mass = 0.5;
+                //velocity += -travel*10 ;// k * travel  / mass * interval / 1000
+                double delta = (G * Math.Pow(wireRadius / 2 / 1000, 4) / (8 * roundNum * Math.Pow(SpringRadius / 1000, 3))) / mass * interval / 1000;
+                velocity += -travel * delta;
                 velocity *= Math.Pow(1 - damp,interval/10);
                 Movement m = new Movement(this, 3, velocity * interval / 1000);
                 SetMovement(m);

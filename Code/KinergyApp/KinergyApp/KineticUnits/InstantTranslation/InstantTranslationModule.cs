@@ -293,10 +293,19 @@ namespace InstTranslation
                     toRemoveLock = true;
             }
 
-            if (pre_input)
+            if (!pre_input && testPreBtn)
+            {
                 toPreview = true;
+                testPreBtn = false;
+            }
+            else if (pre_input)
+            {
+                testPreBtn = true;
+            }
+            //if (pre_input)
+            //    toPreview = true;
 
-            if(energyLevel == energy_input && displacementLevel == disp_input)
+            if (energyLevel == energy_input && displacementLevel == disp_input)
             {
                 toAdjustParam = false;
             }
@@ -467,11 +476,11 @@ namespace InstTranslation
                             p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
                         }
                         
-                        Brep[] Cut_Brep1 = model.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                        Brep BrepRest = Cut_Brep1[0];
+                        Brep[] Cut_Brep1 = model.Trim(p1Reverse, myDoc.ModelAbsoluteTolerance);
+                        Brep BrepRest = Cut_Brep1[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
                         
-                        Brep[] Cut_Brep2 = BrepRest.Trim(p2Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                        Brep BrepPortion = Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                        Brep[] Cut_Brep2 = BrepRest.Trim(p2Reverse, myDoc.ModelAbsoluteTolerance);
+                        Brep BrepPortion = Cut_Brep2[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
                         BoxLike b = new BoxLike(BrepPortion, v);
                         double volumn = 0;
@@ -507,7 +516,6 @@ namespace InstTranslation
                             v_cylinder = b2.GetVolume();
                             //DA.SetData(2, b2);
                         }
-
 
                         if (v_box >= v_cylinder)
                             innerCavity = result1;
@@ -614,7 +622,7 @@ namespace InstTranslation
 
                         Brep eeBrep = (Brep)myDoc.Objects.FindId(endEffectorID).Geometry;
                         double stationarySegLen = 0;
-                        double stationaryConstraintLen = 14;
+                        double stationaryConstraintLen = 16;
 
                         Point3d skeStartPt = skeleton.PointAtNormalizedLength(0);
                         Point3d skeEndPt = skeleton.PointAtNormalizedLength(1);
@@ -732,7 +740,7 @@ namespace InstTranslation
                     foreach(Point3d p in lockPosCandidates)
                     {
                        Guid ptID = myDoc.Objects.AddPoint(p);
-                        lockPosPointIDs.Add(ptID);
+                       lockPosPointIDs.Add(ptID);
                     }
                     myDoc.Views.Redraw();
 
@@ -771,9 +779,13 @@ namespace InstTranslation
                 }
             }
 
-            if (toPreview)
+            if (toRemoveLock)
             {
-
+                if (motion != null && endEffectorID != Guid.Empty)
+                {
+                    GH_Document gh_d = this.OnPingDocument();
+                    motion.DeleteLock(gh_d, endEffectorID);
+                }
             }
 
             if (toAdjustParam)

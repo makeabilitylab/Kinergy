@@ -75,6 +75,7 @@ namespace HumanUIforKinergy.Components.UI_Output
             ModelVisual3D mv3 = GetModelVisual3D(vp3);
             List<ModelVisual3D> mv3s = GetModels(vp3);
 
+
             if (start && isFirstTime)
             {
                 models = m.GetMeshModel();
@@ -89,6 +90,20 @@ namespace HumanUIforKinergy.Components.UI_Output
                 vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y, b.Center.Z);
                 vp3.Camera.LookDirection = new Vector3D(0, 1, 0);
                 isFirstTime = false;
+            }
+            else if (start)
+            {
+                models = m.GetMeshModel();
+                vp3.Children.Clear();
+                vp3.Children.Add(new SunLight());
+
+                mv3.Content = new _3DViewModel(models, cols).Model;
+                BoundingBox b = m.GetKineticUnitBoundingBox();
+                vp3.Children.Add(mv3);
+
+                //vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
+                //vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y, b.Center.Z);
+                //vp3.Camera.LookDirection = new Vector3D(0, 1, 0);
             }
 
             if (load && m.Loaded==false)
@@ -109,6 +124,7 @@ namespace HumanUIforKinergy.Components.UI_Output
                 ////vp3.Camera.Position = new Point3D(b.Center.X,b.Center.Y-(b.Max.Y-b.Min.Y)*1.5,b.Center.Z);
                 //vp3.Camera.Position = new Point3D(b.Center.X, b.Center.Y - (b.Max.Y - b.Min.Y) * 1.5, b.Center.Z);
                 //vp3.Camera.LookDirection = new Vector3D(0,1,0);
+                
                 return;
             }
             if(m.Loaded==false) return;
@@ -117,7 +133,7 @@ namespace HumanUIforKinergy.Components.UI_Output
             //iterate the simulation loop. Update the view every frame
             m.TriggerWithoutInteraction();
             int times = 0;
-            int interval = 50;
+            int interval = 42;
 
             do
             {
@@ -137,7 +153,7 @@ namespace HumanUIforKinergy.Components.UI_Output
 
                 Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw();//This line redraws view
                 Rhino.RhinoApp.Wait();//This line make sure that the rhino interface is operatable and always rendering.
-                Thread.Sleep(interval-30);//wait for some time to match the actual frame speed. Since calculation takes time, the sleeping time is 30ms shorter than interval.
+                //Thread.Sleep(interval-30);//wait for some time to match the actual frame speed. Since calculation takes time, the sleeping time is 30ms shorter than interval.
 
             } while (move.Converge == false);
             Rhino.RhinoApp.Wait();

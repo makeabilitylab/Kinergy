@@ -65,6 +65,8 @@ namespace Kinergy.KineticUnit
         public Brep Model { get => model; set => model = value; }
         public List<Shape> ModelCut { get => modelCut; set => modelCut = value; }
 
+        List<int> lockShapeIndexes = new List<int>(); 
+
         /// <summary> Default constructor without basic input parameter </summary>
         /// <returns> Returns empty instance</returns>
 
@@ -400,6 +402,57 @@ namespace Kinergy.KineticUnit
             }
 
             return result;
+        }
+
+        public bool DeleteLock(GH_Document gh_d, Guid eeID)
+        {
+            Point3d springS = skeleton.PointAtNormalizedLength(0);
+            Point3d springE = skeleton.PointAtNormalizedLength(1);
+
+            Brep stationary_brep = new Brep();
+            Brep ee_brep = (Brep)myDoc.Objects.Find(eeID).Geometry;
+            int stationaryIdx = 0;
+            if (ee_brep.ClosestPoint(springS).DistanceTo(springS) <= ee_brep.ClosestPoint(springE).DistanceTo(springE))
+            {
+                // the end-effector is near the start point of the spring
+                stationary_brep = modelCut[1].GetModelinWorldCoordinate();
+                stationaryIdx = 1;
+            }
+            else
+            {
+                // the end-effector is near the end point of the spring
+                stationary_brep = modelCut[0].GetModelinWorldCoordinate();
+                stationaryIdx = 0;
+            }
+
+            if(lockShapeIndexes.Count > 0)
+            {
+                lockShapeIndexes.Sort((a, b) => b.CompareTo(a)); // descending sorting
+                foreach(int idx in lockShapeIndexes)
+                {
+                    entityList.RemoveAt(idx);
+                }
+            }
+
+            Lock lockHeadShape = new Lock(stationary_brep, true, false);
+            Lock lockBaseShape = new Lock(ee_brep, false, false);
+
+            lockHeadShape.RegisterOtherPart(lockBaseShape);
+
+            _ = new Fixation(lockBaseShape, modelCut[1 - stationaryIdx]);
+            _ = new Fixation(lockHeadShape, modelCut[stationaryIdx]);
+
+            lockShapeIndexes.Add(entityList.Count);
+            lockShapeIndexes.Add(entityList.Count + 1);
+
+            entityList.Add(lockHeadShape);
+            entityList.Add(lockBaseShape);
+
+            locks.Clear();
+            locks.Add(lockHeadShape);
+            locks.Add(lockBaseShape);
+
+            return true;
         }
         public bool ConstructLock(Point3d lockButtonPos, GH_Document gh_d, double innerSpringDia, Guid eeID)
         {
@@ -884,6 +937,32 @@ namespace Kinergy.KineticUnit
 
             double clearance = 0.4;
 
+            // ring
+
+            Point3d ringBottomPt = p_ee + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
+            Point3d ringTopPt = ringBottomPt - extrusionDir * 2;
+            Line ringLn = new Line(ringBottomPt, ringTopPt);
+            Curve ringCrv = ringLn.ToNurbsCurve();
+
+            double outerR = Math.Sqrt(Math.Pow(lockQuarterSphereRadius / 2 + clearance * 3, 2) + Math.Pow(spring.SpringRadius - gap_beam_wall - beamThickness - gap_beam_spring, 2));
+
+            Brep ringOuter = Brep.CreatePipe(ringCrv, outerR, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Brep ringInner = Brep.CreatePipe(ringCrv, outerR - lockQuarterSphereRadius / 3, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            ringOuter.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == ringOuter.SolidOrientation)
+                ringOuter.Flip();
+
+            ringInner.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == ringInner.SolidOrientation)
+                ringInner.Flip();
+
+            Brep ring = Brep.CreateBooleanDifference(ringOuter, ringInner, myDoc.ModelAbsoluteTolerance)[0];
+
+            ring.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == ring.SolidOrientation)
+                ring.Flip();
+
             // right notch
 
             Point3d notchRightStartPt = p_ee + bridgeRightDir * (spring.SpringRadius - gap_beam_wall - beamThickness - gap_beam_spring);
@@ -894,8 +973,8 @@ namespace Kinergy.KineticUnit
 
             Point3d nr0 = notchRightStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
             Point3d nr1 = notchRightStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
-            Point3d nr2 = notchRightStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight);
-            Point3d nr3 = notchRightStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight);
+            Point3d nr2 = notchRightStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
+            Point3d nr3 = notchRightStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
             Point3d nr4 = nr0;
             List<Point3d> notchRightRectCorners = new List<Point3d>();
             notchRightRectCorners.Add(nr0);
@@ -911,17 +990,9 @@ namespace Kinergy.KineticUnit
             Brep notchRightBrep = notchRightBreps[0];
             Brep notchRightFirst = notchRightBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-            Point3d notchRightHookCen = notchRightStartPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight) 
-                                        + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance) + bridgeRightDir * gap_beam_spring;
-            Brep hookRightOffset = createQuaterSphere(notchRightHookCen, lockQuarterSphereRadius + clearance * 2, -extrusionDir, bridgeLeftDir, -lockBtnDir);
-
-            var notchRights = Brep.CreateBooleanDifference(notchRightFirst, hookRightOffset, myDoc.ModelAbsoluteTolerance);
-            if(notchRights == null)
-            {
-                hookRightOffset.Flip();
-                notchRights = Brep.CreateBooleanDifference(notchRightFirst, hookRightOffset, myDoc.ModelAbsoluteTolerance);
-            }
-            Brep notchRight = notchRights[0];
+            notchRightFirst.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == notchRightFirst.SolidOrientation)
+                notchRightFirst.Flip();
 
             // left notch
 
@@ -932,8 +1003,8 @@ namespace Kinergy.KineticUnit
 
             Point3d nl0 = notchLeftStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
             Point3d nl1 = notchLeftStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
-            Point3d nl2 = notchLeftStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight);
-            Point3d nl3 = notchLeftStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight);
+            Point3d nl2 = notchLeftStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
+            Point3d nl3 = notchLeftStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
             Point3d nl4 = nl0;
             List<Point3d> notchLeftRectCorners = new List<Point3d>();
             notchLeftRectCorners.Add(nl0);
@@ -949,34 +1020,70 @@ namespace Kinergy.KineticUnit
             Brep notchLeftBrep = notchLefttBreps[0];
             Brep notchLeftFirst = notchLeftBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
+            notchLeftFirst.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == notchLeftFirst.SolidOrientation)
+                notchLeftFirst.Flip();
 
-            Point3d notchLeftHookCen = notchLeftEndPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight) 
+            // create the notches
+
+            Brep latch = Brep.CreateBooleanUnion(new List<Brep> { notchRightFirst, notchLeftFirst, ring }, myDoc.ModelAbsoluteTolerance)[0];
+            latch.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == latch.SolidOrientation)
+                latch.Flip();
+
+            Point3d notchRightHookCen = notchRightStartPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight + spring.RoundNum * bottom_clearance)
+                                       + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance) + bridgeRightDir * gap_beam_spring;
+            Brep hookRightOffset = createQuaterSphere(notchRightHookCen, lockQuarterSphereRadius + clearance * 2, -extrusionDir, bridgeLeftDir, -lockBtnDir);
+
+            hookRightOffset.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookRightOffset.SolidOrientation)
+                hookRightOffset.Flip();
+
+            //var notchRights = Brep.CreateBooleanDifference(notchRightFirst, hookRightOffset, myDoc.ModelAbsoluteTolerance);
+            //if (notchRights == null)
+            //{
+            //    hookRightOffset.Flip();
+            //    notchRights = Brep.CreateBooleanDifference(notchRightFirst, hookRightOffset, myDoc.ModelAbsoluteTolerance);
+            //}
+            //Brep notchRight = notchRights[0];
+
+            Point3d notchLeftHookCen = notchLeftEndPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight + spring.RoundNum * bottom_clearance) 
                                             + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance) + bridgeLeftDir * gap_beam_spring;
             Brep hookLeftOffset = createQuaterSphere(notchLeftHookCen, lockQuarterSphereRadius + clearance * 2, -extrusionDir, -bridgeLeftDir, -lockBtnDir);
 
-            var notchLefts = Brep.CreateBooleanDifference(notchLeftFirst, hookLeftOffset, myDoc.ModelAbsoluteTolerance);
-            if (notchLefts == null)
-            {
+            hookLeftOffset.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookLeftOffset.SolidOrientation)
                 hookLeftOffset.Flip();
-                notchLefts = Brep.CreateBooleanDifference(notchLeftFirst, hookLeftOffset, myDoc.ModelAbsoluteTolerance);
-            }
-            Brep notchLeft = notchLefts[0];
+
+            //var notchLefts = Brep.CreateBooleanDifference(notchLeftFirst, hookLeftOffset, myDoc.ModelAbsoluteTolerance);
+            //if (notchLefts == null)
+            //{
+            //    hookLeftOffset.Flip();
+            //    notchLefts = Brep.CreateBooleanDifference(notchLeftFirst, hookLeftOffset, myDoc.ModelAbsoluteTolerance);
+            //}
+            //Brep notchLeft = notchLefts[0];
+
+            List<Brep> latches = new List<Brep>();
+            latches.Add(latch);
+            List<Brep> hooks = new List<Brep>();
+            hooks.Add(hookRightOffset);
+            hooks.Add(hookLeftOffset);
+
+            Brep latchBrep = Brep.CreateBooleanDifference(latches, hooks, myDoc.ModelAbsoluteTolerance)[0];
 
             #endregion
 
             #region Step 7: create the cavity for the locking
 
-            Point3d cavProjEndPt = p_stationary + extrusionDir * 0.4;
-            Line cavProjPath = new Line(p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + holderHeight / 2 + bottom_clearance), cavProjEndPt);
+            Point3d cavProjEndPt = p_stationary + extrusionDir * 0.8;
+            Line cavProjPath = new Line(p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + bottom_clearance), cavProjEndPt);
             Curve capProjCrv = cavProjPath.ToNurbsCurve();
 
             Point3d cavProjEndPt1 = p_stationary - extrusionDir * lockOffset;
-            Line cavProjPath1 = new Line(p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + holderHeight / 2 + bottom_clearance), cavProjEndPt1);
+            Line cavProjPath1 = new Line(p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + bottom_clearance), cavProjEndPt1);
             Curve capProjCrv1 = cavProjPath1.ToNurbsCurve();
-            Brep cavCylinder = Brep.CreatePipe(capProjCrv1, spring.SpringRadius - gap_beam_wall + clearance * 2, 
+            Brep cavCylinder = Brep.CreatePipe(capProjCrv1, outerR /*spring.SpringRadius - gap_beam_wall*/ + clearance * 2, 
                                     false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-
-
 
             Point3d cavityCen = p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + bottom_clearance);
 
@@ -1052,14 +1159,7 @@ namespace Kinergy.KineticUnit
 
             #endregion
 
-            #region register lock heads and bases
-
-            lockBridge.Flip();
-
-            //Brep lockHeadPart1 = Brep.CreateBooleanUnion(new List<Brep> { lockBtnBrep, lockBtnPipeArm }, myDoc.ModelAbsoluteTolerance)[0];
-            //Brep lockHeadPart2 = Brep.CreateBooleanUnion(new List<Brep> { lockBridge, stopperRight, stopperLeft, wallRight, wallLeft }, myDoc.ModelAbsoluteTolerance)[0];
-            //Brep lockHeadPart3 = Brep.CreateBooleanUnion(new List<Brep> { beamRight, hookRight }, myDoc.ModelAbsoluteTolerance)[0];
-            //Brep lockHeadPart4 = Brep.CreateBooleanUnion(new List<Brep> { beamLeft, hookLeft }, myDoc.ModelAbsoluteTolerance)[0];
+            #region Step 8: register lock heads and bases
 
             lockBtnBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == lockBtnBrep.SolidOrientation)
@@ -1105,22 +1205,6 @@ namespace Kinergy.KineticUnit
             if (BrepSolidOrientation.Inward == hookLeft.SolidOrientation)
                 hookLeft.Flip();
 
-            //lockHeadPart1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            //if(BrepSolidOrientation.Inward == lockHeadPart1.SolidOrientation)
-            //    lockHeadPart1.Flip();
-
-            //lockHeadPart2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            //if (BrepSolidOrientation.Inward == lockHeadPart2.SolidOrientation)
-            //    lockHeadPart2.Flip();
-
-            //lockHeadPart3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            //if (BrepSolidOrientation.Inward == lockHeadPart3.SolidOrientation)
-            //    lockHeadPart3.Flip();
-
-            //lockHeadPart4.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            //if (BrepSolidOrientation.Inward == lockHeadPart4.SolidOrientation)
-            //    lockHeadPart4.Flip();
-
             linkRightBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == linkRightBrep.SolidOrientation)
                 linkRightBrep.Flip();
@@ -1133,6 +1217,15 @@ namespace Kinergy.KineticUnit
             if (BrepSolidOrientation.Inward == cavFinal.SolidOrientation)
                 cavFinal.Flip();
 
+            if (lockShapeIndexes.Count > 0)
+            {
+                lockShapeIndexes.Sort((a, b) => b.CompareTo(a)); // descending sorting
+                foreach (int idx in lockShapeIndexes)
+                {
+                    entityList.RemoveAt(idx);
+                }
+            }
+
             Brep[] lockHeads = Brep.CreateBooleanUnion(new List<Brep> { lockBtnBrep, lockBtnPipeArm, lockBridge,
                                                     stopperRight, stopperLeft, wallRight, wallLeft,
                                                     beamRight, hookRight, beamLeft, hookLeft, linkRightBrep,
@@ -1143,15 +1236,19 @@ namespace Kinergy.KineticUnit
             if (BrepSolidOrientation.Inward == ee_brep.SolidOrientation)
                 ee_brep.Flip();
 
-            notchLeft.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == notchLeft.SolidOrientation)
-                notchLeft.Flip();
+            latchBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == latchBrep.SolidOrientation)
+                latchBrep.Flip();
 
-            notchRight.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == notchRight.SolidOrientation)
-                notchRight.Flip();
+            //notchLeft.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == notchLeft.SolidOrientation)
+            //    notchLeft.Flip();
 
-            Brep[] lockBases = Brep.CreateBooleanUnion(new List<Brep> { ee_brep, notchRight, notchLeft }, myDoc.ModelAbsoluteTolerance);
+            //notchRight.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == notchRight.SolidOrientation)
+            //    notchRight.Flip();
+
+            Brep[] lockBases = Brep.CreateBooleanUnion(new List<Brep> { ee_brep, latchBrep /*notchRight, notchLeft*/ }, myDoc.ModelAbsoluteTolerance);
             Brep lockBase = lockBases[0];
 
             Lock lockHeadShape = new Lock(lockHead, true, false);
@@ -1162,823 +1259,18 @@ namespace Kinergy.KineticUnit
             _ = new Fixation(lockBaseShape, modelCut[1-stationaryIdx]);
             _ = new Fixation(lockHeadShape, modelCut[stationaryIdx]);
 
+            lockShapeIndexes.Add(entityList.Count);
+            lockShapeIndexes.Add(entityList.Count + 1);
+
             entityList.Add(lockHeadShape);
             entityList.Add(lockBaseShape);
 
+            locks.Clear();
             locks.Add(lockHeadShape);
             locks.Add(lockBaseShape);
 
             #endregion
-
-
-            #endregion
-
-            #region commented
-
-            //#region old version: buckle-like lock
-
-            //Point3d p_inside = skeleton.PointAtNormalizedLength(lockT);
-            //double lock_length;
-
-            //Point3d stPt = skeleton.PointAtNormalizedLength(springEnd + 0.01);
-            //Point3d endPt = skeleton.PointAtNormalizedLength(springStart - 0.01);
-
-            //Vector3d planeNormal = new Vector3d(stPt - endPt);
-            //Plane stPtPlane = new Plane(stPt, planeNormal);
-            //Plane endPtPlane = new Plane(endPt, planeNormal);
-
-            //Curve[] intersectStart;
-            //Point3d[] intersectStartPts;
-            //Rhino.Geometry.Intersect.Intersection.BrepPlane(model, stPtPlane, myDoc.ModelAbsoluteTolerance, out intersectStart, out intersectStartPts);
-            //Curve strCrv = intersectStart[0];
-
-            //Curve[] intersectEnd;
-            //Point3d[] intersectEndPts;
-            //Rhino.Geometry.Intersect.Intersection.BrepPlane(model, endPtPlane, myDoc.ModelAbsoluteTolerance, out intersectEnd, out intersectEndPts);
-            //Curve endCrv = intersectEnd[0];
-
-            //double pos1, pos2;
-            //strCrv.ClosestPoint(stPt, out pos1);
-            //endCrv.ClosestPoint(endPt, out pos2);
-
-            //double offset = Math.Max(strCrv.PointAt(pos1).DistanceTo(stPt), endCrv.PointAt(pos2).DistanceTo(endPt)) + 1.5;
-
-
-            //Vector3d lockBaseVector = new Vector3d(lockPosition) - new Vector3d(p_inside);
-            //lockBaseVector = lockBaseVector / lockBaseVector.Length * offset;
-
-            //string path = "";
-            //string path_base = "";
-            //if (gh_d.IsFilePathDefined)
-            //{
-            //    path = gh_d.FilePath;
-            //    path_base = gh_d.FilePath;
-
-            //    int idx = path.IndexOf("KinergyMainInterface.gh");
-            //    path = path.Substring(0, idx) + @"KinergyApp\KinergyApp\Resources\lockhead2.3dm";
-            //    path_base = path.Substring(0, idx) + @"KinergyApp\KinergyApp\Resources\bucket.3dm";
-
-            //}
-
-            //RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\lockhead2.3dm");
-            ////Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() +
-            ////                    "\\LockHeadInstantTranslation2.3dm");
-
-            //Brep LockHead = FileOperation.SingleBrepFromResourceFileDirectory(path);
-
-            //RhinoApp.WriteLine(FileOperation.FindCurrentFolderResourceDirectory() + "\\bucket.3dm");
-
-            //Brep LockBase = FileOperation.SingleBrepFromResourceFileDirectory(path_base);
-
-            //// The origin of the imported lock head
-            //Point3d lockHeadCenOrig = new Point3d(0, 0, 0);
-            //Point3d lockBaseCenOrig = new Point3d(0, 0, 0);
-
-            //// create sweep function
-
-            //Brep hookBarBrep = new Brep();
-            //Brep firstHookBaseBrep = new Brep();
-            //Brep secondHookBaseBrep = new Brep();
-            //Brep secondHookBaseCavBrep = new Brep();
-            //Brep lockbaseBrep = new Brep();
-            //Brep secondHookBaseCavPtBrep = new Brep();
-
-            //Brep secondHookBaseTakeOutBrep = new Brep();
-            //Brep hookbarBrep = new Brep();
-
-            //Brep partForCutModelBoolean = new Brep();
-            //Brep partForCutModelBooleanMirror = new Brep();
-
-            //if (lockT < springStart)
-            //{
-
-            //    lock_length = skeleton.GetLength() * (springEnd - springStart);
-            //    lock_length += skeleton.GetLength() * (springStart - lockT);
-            //    lock_length -= skeleton.GetLength() * (springEnd - springStart) * distance;
-
-            //    Point3d endPointHook = skeleton.PointAtNormalizedLength(springEnd + 0.01);
-            //    Point3d endPointSlot = skeleton.PointAtNormalizedLength(springStart - 0.01);
-
-            //    Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001)) -
-            //        new Vector3d(endPointHook);
-            //    Plane firstPtPlane = new Plane(endPointHook, normal);     // the plane at the end of the skeleton
-            //    Plane secondPtPlane = new Plane(endPointSlot, normal);  // the plane at the start of the skeleton
-
-            //    #region construct the hook bar for lock
-
-            //    Vector3d f_xp = 4 / 2 * firstPtPlane.XAxis;
-            //    Vector3d f_xn = -4 / 2 * firstPtPlane.XAxis;
-            //    Vector3d f_yp = 1.2 / 2 * firstPtPlane.YAxis;
-            //    Vector3d f_yn = -1.2 / 2 * firstPtPlane.YAxis;
-
-            //    Point3d[] hookBarPts = new Point3d[5];
-            //    hookBarPts[0] = endPointHook + f_xp + f_yp;
-            //    hookBarPts[1] = endPointHook + f_xn + f_yp;
-            //    hookBarPts[2] = endPointHook + f_xn + f_yn;
-            //    hookBarPts[3] = endPointHook + f_xp + f_yn;
-            //    hookBarPts[4] = endPointHook + f_xp + f_yp;
-            //    Curve hookBarRect = new Polyline(hookBarPts).ToNurbsCurve();
-
-            //    Transform rectAreaRotate = Transform.Rotation(firstPtPlane.YAxis, lockBaseVector, endPointHook);
-            //    hookBarRect.Transform(rectAreaRotate);
-
-            //    Point3d sweepFirstPt = endPointHook;
-            //    Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength() - 0.001) - lockBaseVector / lockBaseVector.Length * 1.2 / 2;
-            //    Point3d[] railPts = new Point3d[2];
-            //    railPts[0] = sweepFirstPt;
-            //    railPts[1] = sweepSecondPt;
-            //    Curve rail = new Polyline(railPts).ToNurbsCurve();
-
-            //    hookBarBrep = sweep.PerformSweep(rail, hookBarRect)[0];
-            //    hookBarBrep = hookBarBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-
-            //    Transform hookBarBrepMove = Transform.Translation(lockBaseVector);
-            //    hookBarBrep.Transform(hookBarBrepMove);
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(hookBarBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    #region construct the hook base at the end of the skeleton
-
-            //    Vector3d fb_xp = 6.33 / 2 * firstPtPlane.XAxis;
-            //    Vector3d fb_xn = -6.33 / 2 * firstPtPlane.XAxis;
-            //    Vector3d fb_yp = 6 / 2 * firstPtPlane.YAxis;
-            //    Vector3d fb_yn = -6 / 2 * firstPtPlane.YAxis;
-
-            //    Point3d[] firstHookBasePts = new Point3d[5];
-            //    firstHookBasePts[0] = endPointHook + fb_xp + fb_yp;
-            //    firstHookBasePts[1] = endPointHook + fb_xn + fb_yp;
-            //    firstHookBasePts[2] = endPointHook + fb_xn + fb_yn;
-            //    firstHookBasePts[3] = endPointHook + fb_xp + fb_yn;
-            //    firstHookBasePts[4] = endPointHook + fb_xp + fb_yp;
-            //    Curve firstHookBaseRect = new Polyline(firstHookBasePts).ToNurbsCurve();
-
-            //    firstHookBaseRect.Transform(rectAreaRotate);
-
-            //    Point3d sweepFirstBaseFirstPt = endPointHook;
-            //    Vector3d extVec = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
-            //    Point3d sweepFirstBaseSecondPt = sweepFirstBaseFirstPt + extVec / extVec.Length * 2;
-            //    Point3d[] firstBasePts = new Point3d[2];
-            //    firstBasePts[0] = sweepFirstBaseFirstPt;
-            //    firstBasePts[1] = sweepFirstBaseSecondPt;
-            //    Curve firstBaseRail = new Polyline(firstBasePts).ToNurbsCurve();
-
-            //    firstHookBaseBrep = sweep.PerformSweep(firstBaseRail, firstHookBaseRect)[0];
-            //    firstHookBaseBrep = firstHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    firstHookBaseBrep.Transform(hookBarBrepMove);
-            //    firstHookBaseBrep.Flip();
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(firstHookBaseBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    #region transform the lock head
-
-            //    Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()) - lockHeadCenOrig));
-            //    LockHead.Transform(move1);
-            //    Vector3d new_Xaxis = Vector3d.XAxis;
-            //    Vector3d new_Yaxis = Vector3d.YAxis;
-            //    new_Xaxis.Transform(move1);
-            //    new_Yaxis.Transform(move1);
-
-            //    Vector3d skeXAxis = skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength());
-            //    Transform rotate1 = Transform.Rotation(Vector3d.XAxis, skeXAxis, skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()));
-            //    LockHead.Transform(rotate1);
-            //    new_Xaxis.Transform(rotate1);
-            //    new_Yaxis.Transform(rotate1);
-
-            //    Transform rotate2 = Transform.Rotation(new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength()));
-            //    LockHead.Transform(rotate2);
-            //    new_Xaxis.Transform(rotate2);
-            //    new_Yaxis.Transform(rotate2);
-
-            //    Transform move2 = Transform.Translation(lockBaseVector);
-            //    LockHead.Transform(move2);
-            //    new_Xaxis.Transform(move2);
-            //    new_Yaxis.Transform(move2);
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(LockHead);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    #region construct the hood base at the start of the skeleton
-            //    //Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
-            //    //Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
-
-            //    //Point3d[] secondHookBasePts = new Point3d[5];
-            //    //secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
-            //    //secondHookBasePts[1] = endPointSlot + sb_xn + sb_yp;
-            //    //secondHookBasePts[2] = endPointSlot + sb_xn + sb_yn;
-            //    //secondHookBasePts[3] = endPointSlot + sb_xp + sb_yn;
-            //    //secondHookBasePts[4] = endPointSlot + sb_xp + sb_yp;
-            //    //Curve secondHookBaseRect = new Polyline(secondHookBasePts).ToNurbsCurve();
-
-            //    //secondHookBaseRect.Transform(rectAreaRotate);
-
-            //    //Point3d sweepSecondBaseFirstPt = endPointSlot;
-            //    //Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
-            //    //Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
-            //    //Point3d[] secondBasePts = new Point3d[2];
-            //    //secondBasePts[0] = sweepSecondBaseFirstPt;
-            //    //secondBasePts[1] = sweepSecondBaseSecondPt;
-            //    //Curve secondBaseRail = new Polyline(secondBasePts).ToNurbsCurve();
-
-            //    //secondHookBaseBrep = sweep.PerformSweep(secondBaseRail, secondHookBaseRect)[0];
-            //    //secondHookBaseBrep = secondHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    //secondHookBaseBrep.Transform(hookBarBrepMove);
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(secondHookBaseBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    // create the cavity part1 for the lock head
-            //    Vector3d ca_xp = 6 / 2 * secondPtPlane.XAxis;
-            //    Vector3d ca_xn = -6 / 2 * secondPtPlane.XAxis;
-            //    Vector3d ca_yp = 2.6 * secondPtPlane.YAxis;
-            //    Vector3d ca_yn = -10 / 2 * secondPtPlane.YAxis;
-
-            //    Point3d[] secondHookBaseCavPts = new Point3d[5];
-            //    secondHookBaseCavPts[0] = endPointSlot + ca_xp + ca_yp;
-            //    secondHookBaseCavPts[1] = endPointSlot + ca_xn + ca_yp;
-            //    secondHookBaseCavPts[2] = endPointSlot + ca_xn + ca_yn;
-            //    secondHookBaseCavPts[3] = endPointSlot + ca_xp + ca_yn;
-            //    secondHookBaseCavPts[4] = endPointSlot + ca_xp + ca_yp;
-            //    Curve secondHookBaseCavRect = new Polyline(secondHookBaseCavPts).ToNurbsCurve();
-
-            //    secondHookBaseCavRect.Transform(rectAreaRotate);
-
-            //    Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
-            //    Point3d sweepSecondBaseCavFirstPt = endPointSlot;
-            //    Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 12;
-            //    Point3d[] secondBaseCavPts = new Point3d[2];
-            //    secondBaseCavPts[0] = sweepSecondBaseCavFirstPt;
-            //    secondBaseCavPts[1] = sweepSecondBaseCavSecondPt;
-            //    Curve secondBaseCavRail = new Polyline(secondBaseCavPts).ToNurbsCurve();
-
-            //    secondHookBaseCavBrep = sweep.PerformSweep(secondBaseCavRail, secondHookBaseCavRect)[0];
-            //    secondHookBaseCavBrep = secondHookBaseCavBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    secondHookBaseCavBrep.Transform(hookBarBrepMove);
-
-            //    // Add an extension for Boolean different from the main body
-            //    Brep partForCutModelBooleanInitial = secondHookBaseCavBrep.DuplicateBrep();
-
-            //    Point3d portForBooleanExtensionFirstPt = endPointSlot;
-            //    Point3d portForBooleanExtensionSecondPt = portForBooleanExtensionFirstPt - extVec1 / extVec1.Length * 40;
-            //    Point3d[] partForBooleanExtensionPts = new Point3d[2];
-            //    partForBooleanExtensionPts[0] = portForBooleanExtensionFirstPt;
-            //    partForBooleanExtensionPts[1] = portForBooleanExtensionSecondPt;
-            //    Curve partForBooleanExtensionRail = new Polyline(partForBooleanExtensionPts).ToNurbsCurve();
-
-            //    Brep partForBooleanExtensionBrep = sweep.PerformSweep(partForBooleanExtensionRail, secondHookBaseCavRect)[0];
-            //    partForBooleanExtensionBrep = partForBooleanExtensionBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    partForBooleanExtensionBrep.Transform(hookBarBrepMove);
-            //    partForBooleanExtensionBrep.Flip();
-
-            //    var brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
-            //                    myDoc.ModelAbsoluteTolerance);
-
-            //    if (brepsForBooleanExtension == null)
-            //    {
-            //        partForBooleanExtensionBrep.Flip();
-            //        brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
-            //                    myDoc.ModelAbsoluteTolerance);
-            //    }
-            //    partForCutModelBoolean = brepsForBooleanExtension[0];
-
-            //    partForCutModelBooleanMirror = partForCutModelBoolean.DuplicateBrep();
-            //    Transform mirrorTrans = Transform.Mirror(p_inside, lockBaseVector);
-            //    partForCutModelBooleanMirror.Transform(mirrorTrans);
-            //    partForCutModelBooleanMirror.Flip();
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(secondHookBaseCavBrep);
-            //    //myDoc.Views.Redraw();
-            //    //myDoc.Objects.AddBrep(partForCutModelBoolean);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    // create the cavity part2 for the lock head
-            //    //Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
-            //    //Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
-
-            //    //Point3d[] secondHookBaseCavPtPts = new Point3d[5];
-            //    //secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-            //    //secondHookBaseCavPtPts[1] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yp;
-            //    //secondHookBaseCavPtPts[2] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yn;
-            //    //secondHookBaseCavPtPts[3] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yn;
-            //    //secondHookBaseCavPtPts[4] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-            //    //Curve secondHookBaseCavPtRect = new Polyline(secondHookBaseCavPtPts).ToNurbsCurve();
-
-            //    //secondHookBaseCavPtRect.Transform(rectAreaRotate);
-
-            //    //Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
-            //    //Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
-            //    //Point3d[] secondBaseCavPtPts = new Point3d[2];
-            //    //secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
-            //    //secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
-            //    //Curve secondBaseCavPtRail = new Polyline(secondBaseCavPtPts).ToNurbsCurve();
-
-            //    //secondHookBaseCavPtBrep = sweep.PerformSweep(secondBaseCavPtRail, secondHookBaseCavPtRect)[0];
-            //    //secondHookBaseCavPtBrep = secondHookBaseCavPtBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    //secondHookBaseCavPtBrep.Transform(hookBarBrepMove);
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(secondHookBaseCavPtBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    //var allCavities = Brep.CreateBooleanUnion(new List<Brep> { secondHookBaseCavBrep, secondHookBaseCavPtBrep },
-            //    //                myDoc.ModelRelativeTolerance);
-            //    //Brep allCavity = allCavities[0];
-
-            //    //var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, allCavity, myDoc.ModelAbsoluteTolerance);
-            //    //if (lockbaseBreps == null)
-            //    //{
-            //    //    secondHookBaseCavPtBrep.Flip();
-            //    //    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, allCavity, myDoc.ModelAbsoluteTolerance);
-            //    //}
-            //    //lockbaseBrep = lockbaseBreps[0];
-
-
-            //    //var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-            //    //if (secondHookBaseTakeOutBreps == null)
-            //    //{
-            //    //    secondHookBaseCavBrep.Flip();
-            //    //    secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-            //    //}
-            //    //secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
-
-            //    //#region test by LH
-            //    ////myDoc.Objects.AddBrep(secondHookBaseTakeOutBrep);
-            //    ////myDoc.Views.Redraw();
-            //    //#endregion
-
-            //    //var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-            //    //if (lockbaseBreps == null)
-            //    //{
-            //    //    secondHookBaseCavPtBrep.Flip();
-            //    //    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-            //    //}
-            //    //lockbaseBrep = lockbaseBreps[0];
-
-            //    #region transform lock base from bucket.3dm
-            //    Vector3d se = skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart);
-            //    Transform bs_move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springStart) - lockBaseCenOrig));
-            //    LockBase.Transform(bs_move1);
-            //    Vector3d bs_new_Xaxis = Vector3d.XAxis;
-            //    Vector3d bs_new_Yaxis = Vector3d.YAxis;
-            //    bs_new_Xaxis.Transform(bs_move1);
-            //    bs_new_Yaxis.Transform(bs_move1);
-
-            //    Vector3d bs_skeXAxis = skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springEnd - lock_length / skeleton.GetLength());
-            //    Transform bs_rotate1 = Transform.Rotation(Vector3d.XAxis, bs_skeXAxis, skeleton.PointAtNormalizedLength(springEnd));
-            //    LockBase.Transform(bs_rotate1);
-            //    bs_new_Xaxis.Transform(bs_rotate1);
-            //    bs_new_Yaxis.Transform(bs_rotate1);
-
-            //    Transform bs_rotate2 = Transform.Rotation(bs_new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd));
-            //    LockBase.Transform(bs_rotate2);
-            //    bs_new_Xaxis.Transform(bs_rotate2);
-            //    bs_new_Yaxis.Transform(bs_rotate2);
-
-            //    Transform bs_move2 = Transform.Translation(lockBaseVector);
-            //    LockBase.Transform(bs_move2);
-            //    bs_new_Xaxis.Transform(bs_move2);
-            //    bs_new_Yaxis.Transform(bs_move2);
-
-            //    lockbaseBrep = LockBase;
-
-            //    #endregion
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(lockbaseBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //}
-            //else
-            //{
-            //    lock_length = skeleton.GetLength() * (springEnd - springStart);
-            //    lock_length += skeleton.GetLength() * (lockT - springEnd);
-            //    lock_length -= skeleton.GetLength() * (springEnd - springStart) * distance;
-
-            //    Point3d endPointSlot = skeleton.PointAtNormalizedLength(springEnd + 0.01);
-            //    Point3d endPointHook = skeleton.PointAtNormalizedLength(springStart - 0.01);
-
-            //    Vector3d normal = new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength() + 0.001)) - new Vector3d(endPointHook);
-
-            //    Plane firstPtPlane = new Plane(endPointHook, normal);     // the plane at the end of the skeleton
-            //    Plane secondPtPlane = new Plane(endPointSlot, normal);  // the plane at the start of the skeleton
-
-            //    #region construct the hook bar for lock
-
-            //    Vector3d f_xp = 4 / 2 * firstPtPlane.XAxis;
-            //    Vector3d f_xn = -4 / 2 * firstPtPlane.XAxis;
-            //    Vector3d f_yp = 1.2 / 2 * firstPtPlane.YAxis;
-            //    Vector3d f_yn = -1.2 / 2 * firstPtPlane.YAxis;
-
-            //    Point3d[] hookBarPts = new Point3d[5];
-            //    hookBarPts[0] = endPointHook + f_xp + f_yp;
-            //    hookBarPts[1] = endPointHook + f_xn + f_yp;
-            //    hookBarPts[2] = endPointHook + f_xn + f_yn;
-            //    hookBarPts[3] = endPointHook + f_xp + f_yn;
-            //    hookBarPts[4] = endPointHook + f_xp + f_yp;
-            //    Curve hookBarRect = new Polyline(hookBarPts).ToNurbsCurve();
-
-            //    Transform rectAreaRotate = Transform.Rotation(firstPtPlane.YAxis, lockBaseVector, endPointHook);
-            //    hookBarRect.Transform(rectAreaRotate);
-
-            //    Point3d sweepFirstPt = endPointHook;
-            //    Point3d sweepSecondPt = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength() + 0.001) - lockBaseVector / lockBaseVector.Length * 1.2 / 2;
-            //    Point3d[] railPts = new Point3d[2];
-            //    railPts[0] = sweepFirstPt;
-            //    railPts[1] = sweepSecondPt;
-            //    Curve rail = new Polyline(railPts).ToNurbsCurve();
-
-            //    hookBarBrep = sweep.PerformSweep(rail, hookBarRect)[0];
-            //    hookBarBrep = hookBarBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    Transform hookBarBrepMove = Transform.Translation(lockBaseVector);
-            //    hookBarBrep.Transform(hookBarBrepMove);
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(hookBarBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    #region construct the hook base at the end of the skeleton
-
-            //    Vector3d fb_xp = 6.33 / 2 * firstPtPlane.XAxis;
-            //    Vector3d fb_xn = -6.33 / 2 * firstPtPlane.XAxis;
-            //    Vector3d fb_yp = 6 / 2 * firstPtPlane.YAxis;
-            //    Vector3d fb_yn = -6 / 2 * firstPtPlane.YAxis;
-
-            //    Point3d[] firstHookBasePts = new Point3d[5];
-            //    firstHookBasePts[0] = endPointHook + fb_xp + fb_yp;
-            //    firstHookBasePts[1] = endPointHook + fb_xn + fb_yp;
-            //    firstHookBasePts[2] = endPointHook + fb_xn + fb_yn;
-            //    firstHookBasePts[3] = endPointHook + fb_xp + fb_yn;
-            //    firstHookBasePts[4] = endPointHook + fb_xp + fb_yp;
-            //    Curve firstHookBaseRect = new Polyline(firstHookBasePts).ToNurbsCurve();
-
-            //    firstHookBaseRect.Transform(rectAreaRotate);
-
-            //    Point3d sweepFirstBaseFirstPt = endPointHook;
-            //    Vector3d extVec = new Vector3d(skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd));
-            //    Point3d sweepFirstBaseSecondPt = sweepFirstBaseFirstPt + extVec / extVec.Length * 2;
-            //    Point3d[] firstBasePts = new Point3d[2];
-            //    firstBasePts[0] = sweepFirstBaseFirstPt;
-            //    firstBasePts[1] = sweepFirstBaseSecondPt;
-            //    Curve firstBaseRail = new Polyline(firstBasePts).ToNurbsCurve();
-
-            //    firstHookBaseBrep = sweep.PerformSweep(firstBaseRail, firstHookBaseRect)[0];
-            //    firstHookBaseBrep = firstHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    firstHookBaseBrep.Transform(hookBarBrepMove);
-            //    firstHookBaseBrep.Flip();
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(firstHookBaseBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    #region transform the lock head
-
-            //    Transform move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()) - lockHeadCenOrig));
-            //    LockHead.Transform(move1);
-            //    Vector3d new_Xaxis = Vector3d.XAxis;
-            //    Vector3d new_Yaxis = Vector3d.YAxis;
-            //    new_Xaxis.Transform(move1);
-            //    new_Yaxis.Transform(move1);
-
-            //    Vector3d skeXAxis = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()) - skeleton.PointAtNormalizedLength(springStart);
-            //    Transform rotate1 = Transform.Rotation(Vector3d.XAxis, (-1) * skeXAxis, skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
-            //    LockHead.Transform(rotate1);
-            //    new_Xaxis.Transform(rotate1);
-            //    new_Yaxis.Transform(rotate1);
-
-            //    Transform rotate2 = Transform.Rotation(new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()));
-            //    LockHead.Transform(rotate2);
-            //    new_Xaxis.Transform(rotate2);
-            //    new_Yaxis.Transform(rotate2);
-
-            //    Transform move2 = Transform.Translation(lockBaseVector);
-            //    LockHead.Transform(move2);
-            //    new_Xaxis.Transform(move2);
-            //    new_Yaxis.Transform(move2);
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(LockHead);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    #region construct the hood base at the end of the skeleton
-            //    //Vector3d sb_xp = 6.33 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d sb_xn = -6.33 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d sb_yp = 6.6 * secondPtPlane.YAxis;
-            //    //Vector3d sb_yn = -10 / 2 * secondPtPlane.YAxis;
-
-            //    //Point3d[] secondHookBasePts = new Point3d[5];
-            //    //secondHookBasePts[0] = endPointSlot + sb_xp + sb_yp;
-            //    //secondHookBasePts[1] = endPointSlot + sb_xn + sb_yp;
-            //    //secondHookBasePts[2] = endPointSlot + sb_xn + sb_yn;
-            //    //secondHookBasePts[3] = endPointSlot + sb_xp + sb_yn;
-            //    //secondHookBasePts[4] = endPointSlot + sb_xp + sb_yp;
-            //    //Curve secondHookBaseRect = new Polyline(secondHookBasePts).ToNurbsCurve();
-
-            //    //secondHookBaseRect.Transform(rectAreaRotate);
-
-            //    //Point3d sweepSecondBaseFirstPt = endPointSlot;
-            //    //Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
-            //    //Point3d sweepSecondBaseSecondPt = sweepSecondBaseFirstPt + extVec1 / extVec1.Length * 13.6;
-            //    //Point3d[] secondBasePts = new Point3d[2];
-            //    //secondBasePts[0] = sweepSecondBaseFirstPt;
-            //    //secondBasePts[1] = sweepSecondBaseSecondPt;
-            //    //Curve secondBaseRail = new Polyline(secondBasePts).ToNurbsCurve();
-
-            //    //secondHookBaseBrep = sweep.PerformSweep(secondBaseRail, secondHookBaseRect)[0];
-            //    //secondHookBaseBrep = secondHookBaseBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    //secondHookBaseBrep.Transform(hookBarBrepMove);
-
-            //    // create the cavity part1 for the lock head
-
-            //    Vector3d extVec1 = new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - skeleton.PointAtNormalizedLength(springStart));
-            //    Vector3d ca_xp = 6 / 2 * secondPtPlane.XAxis;
-            //    Vector3d ca_xn = -6 / 2 * secondPtPlane.XAxis;
-            //    Vector3d ca_yp = 2.6 * secondPtPlane.YAxis;
-            //    Vector3d ca_yn = -10 / 2 * secondPtPlane.YAxis;
-
-            //    Point3d[] secondHookBaseCavPts = new Point3d[5];
-            //    secondHookBaseCavPts[0] = endPointSlot + ca_xp + ca_yp;
-            //    secondHookBaseCavPts[1] = endPointSlot + ca_xn + ca_yp;
-            //    secondHookBaseCavPts[2] = endPointSlot + ca_xn + ca_yn;
-            //    secondHookBaseCavPts[3] = endPointSlot + ca_xp + ca_yn;
-            //    secondHookBaseCavPts[4] = endPointSlot + ca_xp + ca_yp;
-            //    Curve secondHookBaseCavRect = new Polyline(secondHookBaseCavPts).ToNurbsCurve();
-
-            //    secondHookBaseCavRect.Transform(rectAreaRotate);
-
-            //    Point3d sweepSecondBaseCavFirstPt = endPointSlot;
-            //    Point3d sweepSecondBaseCavSecondPt = sweepSecondBaseCavFirstPt + extVec1 / extVec1.Length * 12;
-            //    Point3d[] secondBaseCavPts = new Point3d[2];
-            //    secondBaseCavPts[0] = sweepSecondBaseCavFirstPt;
-            //    secondBaseCavPts[1] = sweepSecondBaseCavSecondPt;
-            //    Curve secondBaseCavRail = new Polyline(secondBaseCavPts).ToNurbsCurve();
-
-            //    secondHookBaseCavBrep = sweep.PerformSweep(secondBaseCavRail, secondHookBaseCavRect)[0];
-            //    secondHookBaseCavBrep = secondHookBaseCavBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    secondHookBaseCavBrep.Transform(hookBarBrepMove);
-
-            //    // Add an extension for Boolean different from the main body
-            //    Brep partForCutModelBooleanInitial = secondHookBaseCavBrep.DuplicateBrep();
-
-            //    Point3d portForBooleanExtensionFirstPt = endPointSlot;
-            //    Point3d portForBooleanExtensionSecondPt = portForBooleanExtensionFirstPt - extVec1 / extVec1.Length * 50;
-            //    Point3d[] partForBooleanExtensionPts = new Point3d[2];
-            //    partForBooleanExtensionPts[0] = portForBooleanExtensionFirstPt;
-            //    partForBooleanExtensionPts[1] = portForBooleanExtensionSecondPt;
-            //    Curve partForBooleanExtensionRail = new Polyline(partForBooleanExtensionPts).ToNurbsCurve();
-
-            //    Brep partForBooleanExtensionBrep = sweep.PerformSweep(partForBooleanExtensionRail, secondHookBaseCavRect)[0];
-            //    partForBooleanExtensionBrep = partForBooleanExtensionBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    partForBooleanExtensionBrep.Transform(hookBarBrepMove);
-            //    partForBooleanExtensionBrep.Flip();
-
-            //    var brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
-            //                    myDoc.ModelAbsoluteTolerance);
-
-            //    if (brepsForBooleanExtension == null)
-            //    {
-            //        partForBooleanExtensionBrep.Flip();
-            //        brepsForBooleanExtension = Brep.CreateBooleanUnion(new List<Brep> { partForCutModelBooleanInitial, partForBooleanExtensionBrep },
-            //                    myDoc.ModelAbsoluteTolerance);
-            //    }
-            //    partForCutModelBoolean = brepsForBooleanExtension[0];
-
-            //    partForCutModelBooleanMirror = partForCutModelBoolean.DuplicateBrep();
-            //    Transform mirrorTrans = Transform.Mirror(p_inside, lockBaseVector);
-            //    partForCutModelBooleanMirror.Transform(mirrorTrans);
-            //    partForCutModelBooleanMirror.Flip();
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(secondHookBaseCavBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    // create the cavity part2 for the lock head
-            //    //Vector3d ca_pt_xp = 4 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d ca_pt_xn = -4 / 2 * secondPtPlane.XAxis;
-            //    //Vector3d ca_pt_yp = 7 * secondPtPlane.YAxis;
-            //    //Vector3d ca_pt_yn = -7.5 / 2 * secondPtPlane.YAxis;
-
-            //    //Point3d[] secondHookBaseCavPtPts = new Point3d[5];
-            //    //secondHookBaseCavPtPts[0] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-            //    //secondHookBaseCavPtPts[1] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yp;
-            //    //secondHookBaseCavPtPts[2] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xn + ca_pt_yn;
-            //    //secondHookBaseCavPtPts[3] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yn;
-            //    //secondHookBaseCavPtPts[4] = endPointSlot + extVec1 / extVec1.Length * 2.6 + ca_pt_xp + ca_pt_yp;
-            //    //Curve secondHookBaseCavPtRect = new Polyline(secondHookBaseCavPtPts).ToNurbsCurve();
-
-            //    //secondHookBaseCavPtRect.Transform(rectAreaRotate);
-
-            //    //Point3d sweepSecondBaseCavPtFirstPt = endPointSlot + extVec1 / extVec1.Length * 2.6;
-            //    //Point3d sweepSecondBaseCavPtSecondPt = sweepSecondBaseCavPtFirstPt + extVec1 / extVec1.Length * 9;
-            //    //Point3d[] secondBaseCavPtPts = new Point3d[2];
-            //    //secondBaseCavPtPts[0] = sweepSecondBaseCavPtFirstPt;
-            //    //secondBaseCavPtPts[1] = sweepSecondBaseCavPtSecondPt;
-            //    //Curve secondBaseCavPtRail = new Polyline(secondBaseCavPtPts).ToNurbsCurve();
-
-            //    //secondHookBaseCavPtBrep = sweep.PerformSweep(secondBaseCavPtRail, secondHookBaseCavPtRect)[0];
-            //    //secondHookBaseCavPtBrep = secondHookBaseCavPtBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            //    //secondHookBaseCavPtBrep.Transform(hookBarBrepMove);
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(secondHookBaseCavPtBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-
-            //    //var secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-            //    //if (secondHookBaseTakeOutBreps == null)
-            //    //{
-            //    //    secondHookBaseCavBrep.Flip();
-            //    //    secondHookBaseTakeOutBreps = Brep.CreateBooleanDifference(secondHookBaseBrep, secondHookBaseCavBrep, myDoc.ModelAbsoluteTolerance);
-            //    //}
-            //    //secondHookBaseTakeOutBrep = secondHookBaseTakeOutBreps[0];
-
-
-            //    //var lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-            //    //if (lockbaseBreps == null)
-            //    //{
-            //    //    secondHookBaseCavPtBrep.Flip();
-            //    //    lockbaseBreps = Brep.CreateBooleanDifference(secondHookBaseTakeOutBrep, secondHookBaseCavPtBrep, myDoc.ModelAbsoluteTolerance);
-            //    //}
-            //    //lockbaseBrep = lockbaseBreps[0];
-
-            //    #region transform lock base from bucket.3dm
-            //    Vector3d se = skeleton.PointAtNormalizedLength(springStart) - skeleton.PointAtNormalizedLength(springEnd);
-            //    Transform bs_move1 = Transform.Translation(new Vector3d(skeleton.PointAtNormalizedLength(springEnd) - lockBaseCenOrig));
-            //    LockBase.Transform(bs_move1);
-            //    Vector3d bs_new_Xaxis = Vector3d.XAxis;
-            //    Vector3d bs_new_Yaxis = Vector3d.YAxis;
-            //    bs_new_Xaxis.Transform(bs_move1);
-            //    bs_new_Yaxis.Transform(bs_move1);
-
-            //    Vector3d bs_skeXAxis = skeleton.PointAtNormalizedLength(springStart + lock_length / skeleton.GetLength()) - skeleton.PointAtNormalizedLength(springStart);
-            //    Transform bs_rotate1 = Transform.Rotation(Vector3d.XAxis, (-1) * bs_skeXAxis, skeleton.PointAtNormalizedLength(springEnd));
-            //    LockBase.Transform(bs_rotate1);
-            //    bs_new_Xaxis.Transform(bs_rotate1);
-            //    bs_new_Yaxis.Transform(bs_rotate1);
-
-            //    Transform bs_rotate2 = Transform.Rotation(bs_new_Yaxis, lockBaseVector, skeleton.PointAtNormalizedLength(springEnd));
-            //    LockBase.Transform(bs_rotate2);
-            //    bs_new_Xaxis.Transform(bs_rotate2);
-            //    bs_new_Yaxis.Transform(bs_rotate2);
-
-            //    Transform bs_move2 = Transform.Translation(lockBaseVector);
-            //    LockBase.Transform(bs_move2);
-            //    bs_new_Xaxis.Transform(bs_move2);
-            //    bs_new_Yaxis.Transform(bs_move2);
-
-            //    lockbaseBrep = LockBase;
-            //    #endregion
-
-            //    #endregion
-
-            //    #region test by LH
-            //    //myDoc.Objects.AddBrep(lockbaseBrep);
-            //    //myDoc.Views.Redraw();
-            //    #endregion
-            //}
-
-
-            //var LockHeadBreps = Brep.CreateBooleanUnion(new List<Brep> { firstHookBaseBrep, hookBarBrep, LockHead },
-            //                    myDoc.ModelAbsoluteTolerance);
-
-            ////myDoc.Objects.AddBrep(LockHeadBreps0[0]);
-            ////myDoc.Objects.AddBrep(LockHead);
-            ////myDoc.Views.Redraw();
-
-            //if (LockHeadBreps != null)
-            //{
-            //    LockHead = LockHeadBreps[0];
-
-            //    Brep LockHeadMirror = LockHead.DuplicateBrep();
-            //    Brep LockBaseMirror = lockbaseBrep.DuplicateBrep();
-
-            //    Transform mirrorTrans = Transform.Mirror(p_inside, lockBaseVector);
-            //    LockHeadMirror.Transform(mirrorTrans);
-            //    LockBaseMirror.Transform(mirrorTrans);
-
-
-            //    Lock lockHead1 = new Lock(LockHead, true, false);
-            //    Lock lockBase1 = new Lock(lockbaseBrep, false, false);
-            //    Lock lockHead2 = new Lock(LockHeadMirror, true, false);
-            //    Lock lockBase2 = new Lock(LockBaseMirror, false, false);
-
-            //    lockHead1.RegisterOtherPart(lockBase1);
-            //    lockHead2.RegisterOtherPart(lockBase2);
-
-            //    if (lockT < springStart)
-            //    {
-            //        //Add fixation between lockhead and modelCut[1], lockbase and modelCut[0]
-            //        _ = new Fixation(lockHead1, modelCut[1]);
-            //        _ = new Fixation(lockHead2, modelCut[1]);
-
-            //        var baseBreps = Brep.CreateBooleanDifference(modelCut[0].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
-            //        if (baseBreps == null)
-            //        {
-            //            partForCutModelBoolean.Flip();
-            //            baseBreps = Brep.CreateBooleanDifference(modelCut[0].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
-            //        }
-            //        Brep modelCutBaseUpdated = baseBreps[0];
-
-            //        var baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
-            //        if (baseBrepsMirror == null)
-            //        {
-            //            partForCutModelBooleanMirror.Flip();
-            //            baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
-            //        }
-
-            //        Brep modelCutBaseFinal = baseBrepsMirror[0];
-
-            //        modelCut[0].SetModel(modelCutBaseFinal);
-
-            //        _ = new Fixation(lockBase1, modelCut[0]);
-            //        _ = new Fixation(lockBase2, modelCut[0]);
-            //    }
-            //    else
-            //    {
-            //        _ = new Fixation(lockHead1, modelCut[0]);//Here lies the problem
-            //        _ = new Fixation(lockHead2, modelCut[0]);
-
-            //        var baseBreps = Brep.CreateBooleanDifference(modelCut[1].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
-            //        if (baseBreps == null)
-            //        {
-            //            partForCutModelBoolean.Flip();
-            //            baseBreps = Brep.CreateBooleanDifference(modelCut[1].GetModelinWorldCoordinate(), partForCutModelBoolean, myDoc.ModelAbsoluteTolerance);
-            //        }
-            //        Brep modelCutBaseUpdated = baseBreps[0];
-
-            //        var baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
-            //        if (baseBrepsMirror == null)
-            //        {
-            //            partForCutModelBooleanMirror.Flip();
-            //            baseBrepsMirror = Brep.CreateBooleanDifference(modelCutBaseUpdated, partForCutModelBooleanMirror, myDoc.ModelAbsoluteTolerance);
-            //        }
-
-            //        Brep modelCutBaseFinal = baseBrepsMirror[0];
-
-            //        modelCut[1].SetModel(modelCutBaseFinal);
-
-            //        _ = new Fixation(lockBase1, modelCut[1]);
-            //        _ = new Fixation(lockBase2, modelCut[1]);
-            //    }
-            //    entityList.Add(lockHead1);
-            //    entityList.Add(lockHead2);
-            //    entityList.Add(lockBase1);
-            //    entityList.Add(lockBase2);
-
-            //    locks.Add(lockHead1);
-            //    locks.Add(lockHead2);
-            //    locks.Add(lockBase1);
-            //    locks.Add(lockBase2);
-            //}
-
-            //#endregion
-
+            
             #endregion
             return true;
         }
