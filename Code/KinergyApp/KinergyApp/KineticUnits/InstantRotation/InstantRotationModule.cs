@@ -29,12 +29,18 @@ namespace InstRotation
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
 
+        Guid convertedPortion;
+        List<Brep> brepCut;
+        Guid reserveBrepID1;
+        Guid reserveBrepID2;
+
         List<Guid> lockPosPointIDs;
         Guid endEffectorID;
         double innerSpaceRadius;
 
         // Variables used for different functions
         bool lockState;
+        bool dirReverseState;
         double min_wire_diamter;
         double min_coil_num;
         //double energy;
@@ -72,6 +78,9 @@ namespace InstRotation
         bool testEndEffectorBtn;
         bool testPreBtn;
         bool testBakeBtn;
+        bool testDirReverse;
+
+        Guid rotationDirID;
 
         /// <summary>
         /// Initializes a new instance of the InstantRotationModule class.
@@ -92,6 +101,7 @@ namespace InstRotation
             motion = null;
 
             lockState = false;
+            dirReverseState = false;
             min_wire_diamter = 2.8;
             min_coil_num = 3;
             //energy = 0.5;
@@ -114,6 +124,11 @@ namespace InstRotation
             lockPostion = new Point3d();
             guide1 = Guid.Empty;
             guide2 = Guid.Empty;
+
+            convertedPortion = Guid.Empty;
+            brepCut = new List<Brep>();
+            reserveBrepID1 = Guid.Empty;
+            reserveBrepID2 = Guid.Empty;
 
             myDoc = RhinoDoc.ActiveDoc;
 
@@ -189,6 +204,9 @@ namespace InstRotation
             testEndEffectorBtn = false;
             testPreBtn = false;
             testBakeBtn = false;
+            testDirReverse = false;
+
+            rotationDirID = Guid.Empty;
         }
 
         /// <summary>
@@ -209,6 +227,7 @@ namespace InstRotation
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("DirectionReverse", "DirR", "reverse the rotation direction", GH_ParamAccess.item);
         }
 
         double ConvertInputAngleToDoubleType(string angleText)
@@ -236,27 +255,166 @@ namespace InstRotation
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
 
-        double ConvertInputAngleToIntType(string angleText)
+        //double ConvertInputAngleToIntType(string angleText)
+        //{
+        //    double result = 0;
+        //    try
+        //    {
+        //        result = Convert.ToDouble(angleText);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        result = 0;
+        //    }
+        //    return result;
+        //}
+        void showDirIndicator(bool isCCW)
         {
-            double result = 0;
-            try
+            if (!rotationDirID.Equals(Guid.Empty))
             {
-                result = Convert.ToDouble(angleText);
+                myDoc.Objects.Delete(rotationDirID, true);
+                myDoc.Views.Redraw();
             }
-            catch (Exception e)
-            {
-                result = 0;
-            }
-            return result;
-        }
 
+            Vector3d canvasNormal = new Vector3d();
+            Vector3d canvasStart = new Vector3d();
+            Vector3d canvasEnd = new Vector3d();
+            Point3d canvasOrigin = new Point3d();
+            Point3d extrudeEnd = new Point3d();
+
+            var sweep = new SweepOneRail();
+            sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+            sweep.ClosedSweep = false;
+            sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+            switch (selectedAxis)
+            {
+                case 1:
+                    canvasNormal = Vector3d.XAxis;
+                    canvasStart = Vector3d.YAxis;
+                    canvasEnd = Vector3d.ZAxis;
+                    canvasOrigin = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 10) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+                    extrudeEnd = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 13) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+                    break;
+                case 2:
+                    canvasNormal = Vector3d.YAxis;
+                    canvasStart = Vector3d.ZAxis;
+                    canvasEnd = Vector3d.XAxis;
+                    canvasOrigin = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 10) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+                    extrudeEnd = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 13) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+                    break;
+                case 3:
+                    canvasNormal = Vector3d.ZAxis;
+                    canvasStart = Vector3d.XAxis;
+                    canvasEnd = Vector3d.YAxis;
+                    canvasOrigin = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 10) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+                    extrudeEnd = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 13) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+                    break;
+            }
+
+            Curve rail = new Line(canvasOrigin, extrudeEnd).ToNurbsCurve();
+
+            // By default, the indicator is for clockwise
+            #region create the ring
+
+            Brep outerRing = Brep.CreatePipe(rail, 15, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Brep innerRing = Brep.CreatePipe(rail, 10, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            outerRing.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == outerRing.SolidOrientation)
+                outerRing.Flip();
+
+            innerRing.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == innerRing.SolidOrientation)
+                innerRing.Flip();
+
+            Brep ring = Brep.CreateBooleanDifference(outerRing, innerRing, myDoc.ModelAbsoluteTolerance)[0];
+
+            ring.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == ring.SolidOrientation)
+                ring.Flip();
+
+            #endregion
+
+            #region subtract a corner
+
+            Point3d sb0 = canvasOrigin;
+            Point3d sb1 = canvasOrigin + canvasStart * 16;
+            Point3d sb2 = canvasOrigin + canvasStart * 16 + canvasEnd * 16;
+            Point3d sb3 = canvasOrigin + canvasEnd * 16;
+            Point3d sb4 = sb0;
+
+            List<Point3d> subBoxCorners = new List<Point3d>();
+            subBoxCorners.Add(sb0);
+            subBoxCorners.Add(sb1);
+            subBoxCorners.Add(sb2);
+            subBoxCorners.Add(sb3);
+            subBoxCorners.Add(sb4);
+
+            Polyline subBoxRect = new Polyline(subBoxCorners);
+            Curve subBoxRectCrv = subBoxRect.ToNurbsCurve();
+
+            Brep[] subBoxBreps = sweep.PerformSweep(rail, subBoxRectCrv);
+            Brep subBoxBrep = subBoxBreps[0];
+            Brep subBox = subBoxBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            subBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == subBox.SolidOrientation)
+                subBox.Flip();
+
+            Brep arc = Brep.CreateBooleanDifference(ring, subBox, myDoc.ModelAbsoluteTolerance)[0];
+
+            arc.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == arc.SolidOrientation)
+                arc.Flip();
+
+            #endregion
+
+            #region create the arrow
+
+            Point3d tri0 = canvasOrigin + canvasEnd * 7.5;
+            Point3d tri1 = canvasOrigin + canvasEnd * 12.5 + canvasStart * 5;
+            Point3d tri2 = canvasOrigin + canvasEnd * 17.5;
+            Point3d tri3 = tri0;
+
+            List<Point3d> arrowCorners = new List<Point3d>();
+            arrowCorners.Add(tri0);
+            arrowCorners.Add(tri1);
+            arrowCorners.Add(tri2);
+            arrowCorners.Add(tri3);
+
+            Polyline arrowRect = new Polyline(arrowCorners);
+            Curve arrowRectCrv = arrowRect.ToNurbsCurve();
+
+            Brep[] arrowBreps = sweep.PerformSweep(rail, arrowRectCrv);
+            Brep arrowBrep = arrowBreps[0];
+            Brep arrow = arrowBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            arrow.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == arrow.SolidOrientation)
+                arrow.Flip();
+
+            #endregion
+
+            Brep dirIndicator = Brep.CreateBooleanUnion(new List<Brep> { arc, arrow }, myDoc.ModelAbsoluteTolerance)[0];
+
+            if (isCCW)
+            {
+                // flip the indicator
+                Transform tran = Transform.Rotation(Math.PI, canvasNormal, canvasOrigin);
+                dirIndicator.Transform(tran);
+            }
+
+            myDoc.Objects.AddBrep(dirIndicator);
+            
+        }
         /// <summary>
         /// This is the method that actually does the work.
         /// </summary>
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool reg_input = false, axis_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
+            bool reg_input = false, axis_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false, revdir_input;
             int energy_input = 4;
             string angle_input = "";
 
@@ -277,10 +435,14 @@ namespace InstRotation
                 return;
             if (!DA.GetData(7, ref bake_input))
                 return;
+            if (!DA.GetData(8, ref revdir_input))
+                return;
             #endregion
 
             // variables to control states
-            bool toSelectRegion = false, toSetAxis = false, toAdjustParam = false, toSetEndEffector = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
+            bool toSelectRegion = false, toSetAxis = false, toAdjustParam = false, 
+                toSetEndEffector = false, toAddLock = false, toRemoveLock = false, 
+                toPreview = false, toBake = false, toRevDir = false;
 
             #region Input check. This determines how the cell respond to changed params
             if (!reg_input && testBodySelBtn)//This applies to starting situation and when u change the input model
@@ -321,6 +483,13 @@ namespace InstRotation
                 else
                     toRemoveLock = true;
             }
+
+            if (dirReverseState != revdir_input)
+            {
+                dirReverseState = revdir_input;
+                showDirIndicator(dirReverseState);
+            }
+
             if (!pre_input && testPreBtn)
             {
                 toPreview = true;
@@ -469,8 +638,8 @@ namespace InstRotation
                     #endregion
 
                     #region Step 3: calculate and generate the inner cavity
-         
-                    List<Brep> brepCut = new List<Brep>();
+
+                    brepCut.Clear();
                     if (PlaneSelected)
                     {
                         // Call out the waiting window
@@ -569,6 +738,15 @@ namespace InstRotation
                         direction = v;
 
                         processingwin.Hide();
+
+                        myDoc.Objects.Hide(selObjId, true);
+
+                        reserveBrepID1 = myDoc.Objects.AddBrep(Brep1);
+                        reserveBrepID2 = myDoc.Objects.AddBrep(Brep2);
+                        
+                        convertedPortion = myDoc.Objects.AddBrep(Brep3);
+                        myDoc.Objects.Select(convertedPortion);
+
                         Transform cavityTranslation = Transform.Translation(Brep3.GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
                         innerCavity.Transform(cavityTranslation);
                     }
@@ -581,14 +759,10 @@ namespace InstRotation
                     //DirCandidates = motion.GetDirectionCandidates();
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
-                    Brep tempB = brepCut[0];
-                    Guid bID = myDoc.Objects.AddBrep(tempB);
-                    toBeBaked.Add(bID);
-                    Brep tempB2 = brepCut[2];
-                    Guid bID2 = myDoc.Objects.AddBrep(tempB2);
-                    toBeBaked.Add(bID2);
+                    toBeBaked.Add(reserveBrepID1);
+                    toBeBaked.Add(reserveBrepID2);
 
-                    myDoc.Objects.Hide(selObjId, true);
+                    //myDoc.Objects.Hide(selObjId, true); 
                     myDoc.Views.Redraw();
                     #endregion
                 }
@@ -598,54 +772,30 @@ namespace InstRotation
 
             if (toSetEndEffector)
             {
-                //select between 2 side objects to set the end-effector
-                //bool success = false;
-                //if (DirCandidates.Count != 0)
-                //{
-                //    List<Curve> arrowCurves = new List<Curve>();
-                //    foreach (Arrow a in DirCandidates)
-                //    {
-                //        arrowCurves.Add(a.ArrowCurve);
-                //    }
+                if(brepCut.Count > 0)
+                {
+                    // Ask the user to select a Brep
+                    ObjRef objSel_ref;
+                    Guid selObjId = Guid.Empty;
+                    myDoc.Objects.UnselectAll();
+                    myDoc.Views.Redraw();
 
-                //    // Ask the user to select a Brep and calculate which arrow is closer to the selected Brep
-                //    ObjRef objSel_ref;
-                //    Guid selObjId = Guid.Empty;
-                //    var rc = RhinoGet.GetOneObject("Select a surface or polysurface as the end-effector", false, ObjectType.AnyObject, out objSel_ref);
-                //    if (rc == Rhino.Commands.Result.Success)
-                //    {
-                //        // select a brep
-                //        selObjId = objSel_ref.ObjectId;
-                //        ObjRef currObj = new ObjRef(selObjId);
+                    var rc = RhinoGet.GetOneObject("Select a surface or polysurface as the end-effector", false, ObjectType.AnyObject, out objSel_ref);
+                    if (rc == Rhino.Commands.Result.Success)
+                    {
+                        // select a brep
+                        selObjId = objSel_ref.ObjectId;
+                        endEffectorID = selObjId;
 
-                //        Brep endeffector = currObj.Brep();
+                        ObjRef currObj = new ObjRef(endEffectorID);
+                        Brep endeffector = currObj.Brep();
 
-                //        Point3d ee_cen = endeffector.GetBoundingBox(true).Center;
-                //        Point3d arrow1_cen = arrowCurves[0].GetBoundingBox(true).Center;
-                //        Point3d arrow2_cen = arrowCurves[1].GetBoundingBox(true).Center;
-
-                //        if (ee_cen.DistanceTo(arrow1_cen) <= ee_cen.DistanceTo(arrow2_cen))
-                //        {
-                //            // select arrow2
-                //            p = DirCandidates[1];
-                //            success = true;
-                //        }
-                //        else
-                //        {
-                //            // select arrow1
-                //            p = DirCandidates[0];
-                //            success = true;
-                //        }
-                //    }
-                //}
-                //else
-                //{
-                //    RhinoApp.CommandPrompt = "Please select a region first!";
-                //}
-                //if(success)
-                //{
-                //    motion.GenerateSpiralAndAxis(p);
-                //}
+                        myDoc.Objects.Hide(reserveBrepID1, true);
+                        myDoc.Objects.Hide(reserveBrepID2, true);
+                        myDoc.Objects.Hide(convertedPortion, true);
+                        motion.GenerateSpiralAndAxis(endEffectorID, brepCut);
+                    }
+                }
             }
 
             if (toAddLock)

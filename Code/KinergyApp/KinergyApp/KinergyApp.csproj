@@ -287,9 +287,6 @@
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationComponent.cs" />
     <Compile Include="KineticUnits\InstantTranslation\InstantTranslationModule.cs" />
     <Compile Include="KineticUnits\InstantTranslation\Utilities.cs" />
-    <Compile Include="KineticUnits\InstantRotation\01ConstructKineticComponents_IT.cs" />
-    <Compile Include="KineticUnits\InstantRotation\02SettingLock_IT.cs" />
-    <Compile Include="KineticUnits\InstantRotation\03EndEffector_IT.cs" />
     <Compile Include="KineticUnits\InstantRotation\InstantRotationModule.cs" />
     <Compile Include="KineticUnits\InstantRotation\InstantRotation.cs" />
     <Compile Include="KineticUnits\IntermittentOscillation\IntermittentOscillation.cs" />

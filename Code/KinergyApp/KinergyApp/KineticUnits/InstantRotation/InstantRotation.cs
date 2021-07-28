@@ -53,6 +53,8 @@ namespace Kinergy.KineticUnit
         List<Lock> locks;
         RodLike basePart, MidPart,endEffector;
         List<Point3d> lockPosCandidates;
+
+        private RhinoDoc myDoc;
         /// <summary>
         /// Old constructor
         /// </summary>
@@ -61,20 +63,22 @@ namespace Kinergy.KineticUnit
         /// <param name="innerCylinder"></param>
         /// <param name="KineticStrength"></param>
         /// <param name="MaxLoadingDegree"></param>
-        public InstantRotation(Brep InputModel,Vector3d mainDirection,Brep innerCylinder,double KineticStrength,double MaxLoadingDegree)
-        {
-            model = InputModel;
-            direction = mainDirection;
-            innerCylinderForComponents = GetCylinder(innerCylinder,mainDirection);
-            energy_old = KineticStrength;
-            maxDegree = MaxLoadingDegree;
-            BoxLike currB = new BoxLike(model, direction);
-            skeleton = currB.Skeleton;
-            skeleton.Transform(currB.RotateBack);
-            skeletonLen = skeleton.PointAtNormalizedLength(0).DistanceTo(skeleton.PointAtNormalizedLength(1));
-            GenerateSpiralAndAxis();
-            entityList.Add(new Shape(model));
-        }
+        //public InstantRotation(Brep InputModel,Vector3d mainDirection,Brep innerCylinder,double KineticStrength,double MaxLoadingDegree)
+        //{
+        //    model = InputModel;
+        //    direction = mainDirection;
+        //    innerCylinderForComponents = GetCylinder(innerCylinder,mainDirection);
+        //    energy_old = KineticStrength;
+        //    maxDegree = MaxLoadingDegree;
+        //    BoxLike currB = new BoxLike(model, direction);
+        //    skeleton = currB.Skeleton;
+        //    skeleton.Transform(currB.RotateBack);
+        //    skeletonLen = skeleton.PointAtNormalizedLength(0).DistanceTo(skeleton.PointAtNormalizedLength(1));
+        //    GenerateSpiralAndAxis();
+        //    entityList.Add(new Shape(model));
+
+        //    myDoc = RhinoDoc.ActiveDoc;
+        //}
         public InstantRotation(Brep InputModel,Vector3d mainDirection,  Brep innerCylinder,int e,double disp,bool fornothing)
         {
             model = InputModel;
@@ -87,167 +91,224 @@ namespace Kinergy.KineticUnit
             skeleton = currB.Skeleton;
             skeleton.Transform(currB.RotateBack);
             skeletonLen = skeleton.PointAtNormalizedLength(0).DistanceTo(skeleton.PointAtNormalizedLength(1));
+
+            myDoc = RhinoDoc.ActiveDoc;
             //GenerateSpiralAndAxis_New();
             //entityList.Add(new Shape(model));
         }
-        private void GenerateSpiralAndAxis()
+        //private void GenerateSpiralAndAxis()
+        //{
+        //    FixParameter();
+        //    //use the given cylinder to get center
+        //    spiralSpring = new Spiral(innerCylinderForComponents.Center, direction, spiralOuterRadius, spiralInnerRadius, roundNum, spiralX, spiralY);
+        //    BoxLike b = new BoxLike(model, direction);
+        //    BoundingBox box = b.Bbox;
+        //    box.Transform(b.RotateBack);
+        //    if(knobDirection==Vector3d.Unset)
+        //    {
+        //        //Let user do the selection
+        //        Arrow a1 = new Arrow(innerCylinderForComponents.Axis, box.PointAt(1, 0.5, 0.5),1);
+        //        Arrow a2 = new Arrow(-innerCylinderForComponents.Axis, box.PointAt(0, 0.5, 0.5), 1);
+        //        List<Curve> arrowCurves = new List<Curve>();
+        //        arrowCurves.Add(a1.ArrowCurve);
+        //        arrowCurves.Add(a2.ArrowCurve);
+        //        int result=UserSelection.UserSelectCurveInRhino(arrowCurves, RhinoDoc.ActiveDoc);
+        //        if (result == 0)
+        //            knobDirection = direction;
+        //        else
+        //            knobDirection = -direction;
+        //    }
+        //    //Then the centerAxis is generated with knob. Be careful with the direction
+            
+        //    Point3d skStart = skeleton.PointAtNormalizedLength(0);
+        //    Point3d skEnd = skeleton.PointAtNormalizedLength(1);
+        //    double intervalStart = 0, intervalEnd = 0;
+        //    if(knobDirection*direction>0)
+        //    {
+        //        intervalStart =0;
+        //        intervalEnd = (new Vector3d(skEnd) - new Vector3d(innerCylinderForComponents.Center)) * direction / direction.Length+axisRadius*5;
+        //    }
+        //    else
+        //    {
+        //        intervalStart = 0;
+        //        intervalEnd = -(new Vector3d(skStart) - new Vector3d(innerCylinderForComponents.Center)) * direction / direction.Length+axisRadius*5;
+        //    }
+        //    centerAxis = new RodLike(innerCylinderForComponents.Center, axisRadius, knobDirection, new Interval(intervalStart,intervalEnd),false);
+        //    centerAxis.AddKnob(1,axisRadius*2,axisRadius*2);
+        //    entityList.Add(spiralSpring);
+        //    entityList.Add(centerAxis);
+        //    _=new Fixation(centerAxis, spiralSpring);
+        //    _ = new Fixation(centerAxis, endEffector);
+        //}
+        public void GenerateSpiralAndAxis(Guid eeID, List<Brep> brepCut)
         {
-            FixParameter();
-            //use the given cylinder to get center
-            spiralSpring = new Spiral(innerCylinderForComponents.Center, direction, spiralOuterRadius, spiralInnerRadius, roundNum, spiralX, spiralY);
-            BoxLike b = new BoxLike(model, direction);
-            BoundingBox box = b.Bbox;
-            box.Transform(b.RotateBack);
-            if(knobDirection==Vector3d.Unset)
-            {
-                //Let user do the selection
-                Arrow a1 = new Arrow(innerCylinderForComponents.Axis, box.PointAt(1, 0.5, 0.5),1);
-                Arrow a2 = new Arrow(-innerCylinderForComponents.Axis, box.PointAt(0, 0.5, 0.5), 1);
-                List<Curve> arrowCurves = new List<Curve>();
-                arrowCurves.Add(a1.ArrowCurve);
-                arrowCurves.Add(a2.ArrowCurve);
-                int result=UserSelection.UserSelectCurveInRhino(arrowCurves, RhinoDoc.ActiveDoc);
-                if (result == 0)
-                    knobDirection = direction;
-                else
-                    knobDirection = -direction;
-            }
-            //Then the centerAxis is generated with knob. Be careful with the direction
-            
-            Point3d skStart = skeleton.PointAtNormalizedLength(0);
-            Point3d skEnd = skeleton.PointAtNormalizedLength(1);
-            double intervalStart = 0, intervalEnd = 0;
-            if(knobDirection*direction>0)
-            {
-                intervalStart =0;
-                intervalEnd = (new Vector3d(skEnd) - new Vector3d(innerCylinderForComponents.Center)) * direction / direction.Length+axisRadius*5;
-            }
-            else
-            {
-                intervalStart = 0;
-                intervalEnd = -(new Vector3d(skStart) - new Vector3d(innerCylinderForComponents.Center)) * direction / direction.Length+axisRadius*5;
-            }
-            centerAxis = new RodLike(innerCylinderForComponents.Center, axisRadius, knobDirection, new Interval(intervalStart,intervalEnd),false);
-            centerAxis.AddKnob(1,axisRadius*2,axisRadius*2);
-            entityList.Add(spiralSpring);
-            entityList.Add(centerAxis);
-            _=new Fixation(centerAxis, spiralSpring);
-            _ = new Fixation(centerAxis, endEffector);
-        }
-        public void GenerateSpiralAndAxis(Arrow ar)
-        {
-            a = ar;
-            
-            //With given arrow, set 3 parts by cutting, adding.
-            if (a.Direction * direction > 0)
-                EEDirection = 1;
-            else
-                EEDirection = 2;
-            //First cut the middle part. leave the shell and gap.
-            
+            #region Step 1: Obtain the middle part 
+
+            Point3d midPrtS = skeleton.PointAtNormalizedLength(0);
+            Point3d midPrtE = skeleton.PointAtNormalizedLength(1);
+            Point3d p_ee = new Point3d();
+            Point3d p_stationary = new Point3d();
+
+            Brep stationary_brep = new Brep();
+            Brep ee_brep = (Brep)myDoc.Objects.Find(eeID).Geometry;
             Plane pl = Plane.Unset;
-            if(EEDirection==1)
+            int stationaryIdx = 0;
+
+            int eeFlag = -1;
+        
+            if (ee_brep.ClosestPoint(midPrtS).DistanceTo(midPrtS) <= ee_brep.ClosestPoint(midPrtE).DistanceTo(midPrtE))
             {
-                pl = new Plane(skeleton.PointAtNormalizedLength(t2 - 2.5 / skeletonLen), direction);
+                // the end-effector is near the start point of the middle part
+                p_ee = midPrtS;
+                p_stationary = midPrtE;
+
+                stationary_brep = brepCut[0];
+                stationaryIdx = 0;
+
+                if (t1 >= t2)
+                {
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t2 + 2.5 / skeletonLen), -direction);
+                }
+                else
+                {
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t1 + 2.5 / skeletonLen), -direction);
+                }
+
+                eeFlag = 2;
             }
-            else if(EEDirection==2)
+            else
             {
-                pl = new Plane(skeleton.PointAtNormalizedLength(t1 + 2.5 / skeletonLen), -direction);
+                // the end-effector is near the end point of the middle part
+                p_ee = midPrtE;
+                p_stationary = midPrtS;
+
+                stationary_brep = brepCut[2];
+                stationaryIdx = 2;
+
+                if (t1 >= t2)
+                {
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t1 - 2.5 / skeletonLen), direction);
+                }
+                else
+                {
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t2 - 2.5 / skeletonLen), direction);
+                }
+
+                eeFlag = 1;
             }
-            Brep b2Cut1 = b2.Trim(pl, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-            Brep b2Inside = Brep.CreateOffsetBrep(b2Cut1, 2, true, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,out _,out _)[0];
-            if(b2.GetBoundingBox(true ).Volume<b2Inside.GetBoundingBox(true ).Volume)
+
+            Brep b2Cut1 = b2.Trim(pl, myDoc.ModelAbsoluteTolerance)[0];
+            Brep b2Inside = Brep.CreateOffsetBrep(b2Cut1, 2, true, true, myDoc.ModelAbsoluteTolerance, out _, out _)[0];
+            if (b2.GetBoundingBox(true).Volume < b2Inside.GetBoundingBox(true).Volume)
             {
                 b2Cut1.Flip();
-                b2Inside = Brep.CreateOffsetBrep(b2Cut1, 2, true, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out _, out _)[0];
+                b2Inside = Brep.CreateOffsetBrep(b2Cut1, 2, true, true, myDoc.ModelAbsoluteTolerance, out _, out _)[0];
             }
-            //b2Inside=b2Inside.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-            
-            //Brep b2Cut1 = b2.Trim(pl, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-            //b2Cut1= b2Cut1.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-            
-            var s= b2Inside.IsSolid;
-            //b2Inside.Flip();
-            //var booleanResult= Brep.CreateBooleanDifference(b2Cut1, b2Inside, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-            Brep midBrep = b2Inside;
-            /*foreach (Brep b in booleanResult)
-                midBrep.Append(b);*/
-            //Brep midBrep = new Brep();
-            /*midBrep.Append(b2Cut1);
-            midBrep.Append(b2Inside);*/
-            //midBrep = midBrep.Trim(pl, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-            //midBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-            if (EEDirection == 1)
+
+            myDoc.Objects.AddBrep(b2Inside);
+            myDoc.Views.Redraw();
+
+            #endregion
+
+            #region Step 2: create the central part (the central axis)
+
+            var s = b2Inside.IsSolid;
+            Brep midBrep = b2Inside.DuplicateBrep();
+
+            if(eeFlag == 2)
+            {
+                MidPart = new RodLike(midBrep, -direction);
+                basePart = new RodLike(b1, -direction);
+                endEffector = new RodLike(b3, -direction);
+
+                BoundingBox bbox = MidPart.Model.GetBoundingBox(true);
+                //Point3d axisStart = bbox.Center + direction / direction.Length * (bbox.Max.X - bbox.Min.X) / 2;
+                //Point3d axisEnd = bbox.Center - direction / direction.Length * ((bbox.Max.X - bbox.Min.X) / 2 + 2.5);
+
+                Point3d axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+                Point3d axisEnd = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+
+                entityList.Add(new Socket(axisStart - direction / direction.Length * 0.53, -direction, 8));
+
+                Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, -direction), 6));
+                c1.Height1 = 1.6;
+                c1.Height2 = 2.6;
+
+                Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, -direction), 3));
+                c2.Height1 = 1.6;
+                c2.Height2 = axisStart.DistanceTo(axisEnd);
+
+                Brep axisB = c1.ToBrep(true, true);
+                axisB.Append(c2.ToBrep(true, true));
+
+                centerAxis = new RodLike(axisB, -direction);
+                centerAxis.Skeleton = new Line(axisStart, axisEnd).ToNurbsCurve();
+                entityList.Add(centerAxis);
+
+                myDoc.Objects.AddBrep(centerAxis.GetModelinWorldCoordinate());
+                myDoc.Views.Redraw();
+            }
+            else
             {
                 MidPart = new RodLike(midBrep, direction);
-                basePart = new RodLike(b1, direction);
-                endEffector= new RodLike(b3, direction);
-                //entityList.Add(new Socket(skeleton.PointAtNormalizedLength(t1), direction,5));
+                basePart = new RodLike(b3, direction);
+                endEffector = new RodLike(b1, direction);
+
                 BoundingBox bbox = MidPart.Model.GetBoundingBox(true);
-                //Point3d axisStart = skeleton.PointAtNormalizedLength(t1 + 2 / skeletonLen);
-                //Point3d axisStart = skeleton.PointAtNormalizedLength(t1 ), axisEnd = skeleton.PointAtNormalizedLength(t2);
-                Point3d axisStart = bbox.Center - direction / direction.Length * (bbox.Max.X - bbox.Min.X) / 2;
-                Point3d axisEnd = bbox.Center + direction / direction.Length * ((bbox.Max.X -bbox.Min.X) / 2+2.5);
-                entityList.Add(new Socket(axisStart, direction, 8));
+                //Point3d axisStart = bbox.Center - direction / direction.Length * (bbox.Max.X - bbox.Min.X) / 2;
+                //Point3d axisEnd = bbox.Center + direction / direction.Length * ((bbox.Max.X - bbox.Min.X) / 2 + 2.5);
+
+                
+                Point3d axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+                Point3d axisEnd = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+
+                entityList.Add(new Socket(axisStart + direction/ direction.Length * 0.53, direction, 8));
+
                 Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, direction), 6));
-                c1.Height1 = 1;
-                c1.Height2 = 2;
+                c1.Height1 = 1.6;
+                c1.Height2 = 2.6;
+
                 Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, direction), 3));
-                c2.Height1 = 1;c2.Height2 = axisStart.DistanceTo(axisEnd);
+                c2.Height1 = 1.6;
+                c2.Height2 = axisStart.DistanceTo(axisEnd);
+
                 Brep axisB = c1.ToBrep(true, true);
                 axisB.Append(c2.ToBrep(true, true));
                 centerAxis = new RodLike(axisB, direction);
                 centerAxis.Skeleton = new Line(axisStart, axisEnd).ToNurbsCurve();
                 entityList.Add(centerAxis);
+
+                myDoc.Objects.AddBrep(centerAxis.GetModelinWorldCoordinate());
+                myDoc.Views.Redraw();
             }
-            else
-            { 
-                MidPart = new RodLike(midBrep, -direction);
-                basePart = new RodLike(b3, -direction);
-                endEffector = new RodLike(b1, -direction);
-                //entityList.Add(new Socket(skeleton.PointAtNormalizedLength(t2), -direction, 5));
-                //Point3d axisStart = skeleton.PointAtNormalizedLength(t2 - 2 / skeletonLen);
-                //Point3d axisStart = skeleton.PointAtNormalizedLength(t2), axisEnd = skeleton.PointAtNormalizedLength(t1);
-                BoundingBox bbox = MidPart.Model.GetBoundingBox(true);
-                Point3d axisStart = bbox.Center + direction / direction.Length * (bbox.Max.X - bbox.Min.X) / 2;
-                Point3d axisEnd = bbox.Center - direction / direction.Length * ((bbox.Max.X -bbox.Min.X) / 2+2.5);
-                entityList.Add(new Socket(axisStart, -direction, 8));
-                Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, -direction), 6));
-                c1.Height1 = 1;
-                c1.Height2 = 2;
-                Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, -direction), 3));
-                c2.Height1 = 1; c2.Height2 = axisStart.DistanceTo(axisEnd);
-                Brep axisB = c1.ToBrep(true, true);
-                axisB.Append(c2.ToBrep(true, true));
-                centerAxis = new RodLike(axisB, -direction);
-                centerAxis.Skeleton = new Line(axisStart, axisEnd).ToNurbsCurve();
-                entityList.Add(centerAxis);
-            }
+
             entityList.Add(MidPart);
             entityList.Add(basePart);
             entityList.Add(endEffector);
-            //Then generate spiral
-            spiralSpring = new Spiral(direction, MidPart.Model.GetBoundingBox(true).Center, innerCylinderForComponents.Radius - 0.5, maxDegree, energy);
-            //spiralSpring = new Spiral(direction, skeleton.PointAtNormalizedLength(t1 / 2 + t2 / 2), innerCylinderForComponents.Radius - 2, maxDegree, energy);
+            #endregion
+
+            #region Step 3: create the central part (the spiral spring)
+
+            spiralSpring = new Spiral(direction, skeleton.PointAtNormalizedLength((t1 + t2) / 2.0), innerCylinderForComponents.Radius - 0.5, maxDegree, energy);
             entityList.Add(spiralSpring);
-            //CalculateLockPosCandidates
+
+            #endregion
+
+            #region Step 4: prepare the lock position candidates
+
             lockPosCandidates = new List<Point3d>();
-            for(double i=t1+3/skeletonLen; i<=t2-3/skeletonLen;i+=2/skeletonLen)
+            Point3d centerP = spiralSpring.Center;
+            Plane plane = new Plane(centerP, direction);
+            Curve[] c;
+            Point3d[] pt;
+            Rhino.Geometry.Intersect.Intersection.BrepPlane(b2, plane, myDoc.ModelAbsoluteTolerance, out c, out pt);
+            for (int j = 0; j < 10; j++)
             {
-                Point3d centerP = skeleton.PointAtNormalizedLength(i);
-                if(centerP.DistanceTo(spiralSpring.Center)>spiralSpring.ThicknessY/2+2)
-                {
-                    //Add points on the outer surface
-                    Plane plane = new Plane(centerP, direction);
-                    Curve[] c;
-                    Point3d[] pt;
-                    Rhino.Geometry.Intersect.Intersection.BrepPlane(b2, plane, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out c, out pt);
-                    for (int j = 0; j < 10; j++)
-                    {
-                        lockPosCandidates.Add(c[0].PointAtNormalizedLength(j * 0.1));
-                    }
-                }
+                lockPosCandidates.Add(c[0].PointAtNormalizedLength(j * 0.1));
             }
+
+            #endregion
+
         }
         public void Set3Parts(double T1,double T2,Brep B1,Brep B2,Brep B3)
         {
@@ -267,13 +328,13 @@ namespace Kinergy.KineticUnit
             spiralY= spiralX * Math.Pow(energy_old, 0.25)*3;
             spiralY = Math.Min(innerCylinderForComponents.TotalHeight, spiralY);
         }
-        public void AdjustParameter(double KineticStrength, double MaxLoadingDegree)
-        {
-            energy_old = KineticStrength;
-            maxDegree = MaxLoadingDegree;
-            GenerateSpiralAndAxis();
+        //public void AdjustParameter(double KineticStrength, double MaxLoadingDegree)
+        //{
+        //    energy_old = KineticStrength;
+        //    maxDegree = MaxLoadingDegree;
+        //    GenerateSpiralAndAxis();
             
-        }
+        //}
         public void AdjustParameter(int KineticStrength, double MaxLoadingDegree)
         {
             maxDegree = Math.PI * MaxLoadingDegree / 180;
@@ -281,39 +342,14 @@ namespace Kinergy.KineticUnit
             spiralSpring.AdjustParam(KineticStrength, maxDegree);
             energy = KineticStrength;
         }
-        public List<Arrow> GetDirectionCandidates()
-        {
-            Vector3d v1 = direction;
-            Vector3d v2 = -v1;
-            Point3d p1 =  skeleton.PointAtNormalizedLength(0);
-            Point3d p2 = skeleton.PointAtNormalizedLength(1);
-            Arrow a1 = new Arrow(v1, p1);
-            Arrow a2 = new Arrow(v2, p2);
-            return new List<Arrow> { a1, a2 };
-
-        }
-        /// <summary>
-        /// This method generate the lock pos candidates and let user select
-        /// </summary>
-        public void SetLockPosition_Old()
-        {
-            //First calculate lock pos candidates
-            //With knob direction given, we could calculate the box that lock pos should be in.
-            List<Point3d> posCandidates = CalculateLockPositionCandidate_Old();
-            LockPosition = posCandidates[UserSelection.UserSelectPointInRhino(posCandidates, RhinoDoc.ActiveDoc)];
-            double t = 0;
-            centerAxis.Skeleton.ClosestPoint(LockPosition, out t);
-            t = centerAxis.Skeleton.Domain.NormalizedParameterAt(t);
-            lockClosestPointOnAxis = centerAxis.Skeleton.PointAtNormalizedLength(t);
-            lockDisToAxis = LockPosition.DistanceTo(lockClosestPointOnAxis);
-        }
+      
         public void SetLockPosition()
         {
             //First calculate lock pos candidates
             //With knob direction given, we could calculate the box that lock pos should be in.
             if(lockDisToAxis==0)//When lock pos is never set before
             {
-                LockPosition = lockPosCandidates[UserSelection.UserSelectPointInRhino(lockPosCandidates, RhinoDoc.ActiveDoc)];
+                LockPosition = lockPosCandidates[UserSelection.UserSelectPointInRhino(lockPosCandidates, myDoc)];
                 double t = 0;
                 //Use the axis instead!
                 centerAxis.Skeleton.ClosestPoint(LockPosition, out t);
@@ -377,10 +413,11 @@ namespace Kinergy.KineticUnit
             locks = new List<Lock>();
             //Build the locking structure. ITwould be easy
             Lock LockHead;
+            double ratchetRadius = lockDisToAxis * 0.5;
             if (EEDirection==2)
-                LockHead = new Lock(lockClosestPointOnAxis, direction, lockDisToAxis*0.6,true);
+                LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, true);
             else
-                LockHead = new Lock(lockClosestPointOnAxis, direction, lockDisToAxis * 0.6, false);
+                LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, false);
             Vector3d centerLinkDirection = new Vector3d(lockClosestPointOnAxis) - new Vector3d(LockPosition);
             double centerLinkLen = centerLinkDirection.Length;
             centerLinkDirection.Unitize();

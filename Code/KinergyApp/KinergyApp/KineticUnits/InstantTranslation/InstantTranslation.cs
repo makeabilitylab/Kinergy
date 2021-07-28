@@ -34,7 +34,7 @@ namespace Kinergy.KineticUnit
         private double distance;//distance is between 0.2 and 0.8,indicating the ratio of spring travel out of length;
         private Vector3d direction = Vector3d.Unset;
         private bool addLock;
-        RhinoDoc myDoc;
+        private RhinoDoc myDoc;
 
         //The later selected parameters
         private Point3d springPosition = Point3d.Unset;
