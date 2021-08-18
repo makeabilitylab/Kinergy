@@ -53,7 +53,8 @@ namespace HumanUIforKinergy.Components.SpiralSpring
             if (!DA.GetData(1, ref rmax)) { return; }
             if (!DA.GetData(2, ref e)) { return; }
             if (!DA.GetData(3, ref d)) { return; }
-            Spiral c = new Spiral(p.Normal, p.Origin, rmax, d*Math.PI/180, e);
+            Spiral c = null;
+            //Spiral c = new Spiral(p.Normal, p.Origin, rmax, d*Math.PI/180, e);
 
             DA.SetData(0, c);
 

@@ -29,9 +29,10 @@ namespace Kinergy.KineticUnit
         Cylinder innerCylinderForComponents;
         Vector3d direction;
         //Parameters given by user
-        double energy_old, maxDegree;
+        double energy_old;
+        int maxDegree;
         int energy;
-        double displacement;
+        int displacement;
         Vector3d knobDirection=Vector3d.Unset;
         int EEDirection = 0;
         Point3d LockPosition;
@@ -55,6 +56,9 @@ namespace Kinergy.KineticUnit
         List<Point3d> lockPosCandidates;
 
         private RhinoDoc myDoc;
+        int midPartIdx;
+        List<int> lockPartIdx;
+        Brep midPartBackup;
         /// <summary>
         /// Old constructor
         /// </summary>
@@ -79,20 +83,24 @@ namespace Kinergy.KineticUnit
 
         //    myDoc = RhinoDoc.ActiveDoc;
         //}
-        public InstantRotation(Brep InputModel,Vector3d mainDirection,  Brep innerCylinder,int e,double disp,bool fornothing)
+        public InstantRotation(Brep InputModel,Vector3d mainDirection,  Brep innerCylinder,int e,int disp,bool fornothing)
         {
             model = InputModel;
             direction = mainDirection;
             innerCylinderForComponents = GetCylinder(innerCylinder, mainDirection);
             energy = e;
             displacement = disp;//as degrees
-            maxDegree = Math.PI *displacement/180;
+            maxDegree = disp;
             BoxLike currB = new BoxLike(model, direction);
             skeleton = currB.Skeleton;
             skeleton.Transform(currB.RotateBack);
             skeletonLen = skeleton.PointAtNormalizedLength(0).DistanceTo(skeleton.PointAtNormalizedLength(1));
 
             myDoc = RhinoDoc.ActiveDoc;
+            midPartIdx = -1;
+            lockPartIdx = new List<int>();
+            locks = new List<Lock>();
+            midPartBackup = new Brep();
             //GenerateSpiralAndAxis_New();
             //entityList.Add(new Shape(model));
         }
@@ -140,7 +148,7 @@ namespace Kinergy.KineticUnit
         //    _=new Fixation(centerAxis, spiralSpring);
         //    _ = new Fixation(centerAxis, endEffector);
         //}
-        public void GenerateSpiralAndAxis(Guid eeID, List<Brep> brepCut)
+        public void GenerateSpiralAndAxis(Guid eeID, List<Brep> brepCut, bool isSpringCW)
         {
             #region Step 1: Obtain the middle part 
 
@@ -167,11 +175,11 @@ namespace Kinergy.KineticUnit
 
                 if (t1 >= t2)
                 {
-                    pl = new Plane(skeleton.PointAtNormalizedLength(t2 + 2.5 / skeletonLen), -direction);
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t2 + 2 / skeletonLen), -direction);
                 }
                 else
                 {
-                    pl = new Plane(skeleton.PointAtNormalizedLength(t1 + 2.5 / skeletonLen), -direction);
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t1 + 2 / skeletonLen), -direction);
                 }
 
                 eeFlag = 2;
@@ -187,26 +195,145 @@ namespace Kinergy.KineticUnit
 
                 if (t1 >= t2)
                 {
-                    pl = new Plane(skeleton.PointAtNormalizedLength(t1 - 2.5 / skeletonLen), direction);
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t1 - 2 / skeletonLen), direction);
                 }
                 else
                 {
-                    pl = new Plane(skeleton.PointAtNormalizedLength(t2 - 2.5 / skeletonLen), direction);
+                    pl = new Plane(skeleton.PointAtNormalizedLength(t2 - 2 / skeletonLen), direction);
                 }
 
                 eeFlag = 1;
             }
 
             Brep b2Cut1 = b2.Trim(pl, myDoc.ModelAbsoluteTolerance)[0];
-            Brep b2Inside = Brep.CreateOffsetBrep(b2Cut1, 2, true, true, myDoc.ModelAbsoluteTolerance, out _, out _)[0];
-            if (b2.GetBoundingBox(true).Volume < b2Inside.GetBoundingBox(true).Volume)
-            {
+            b2Cut1 = b2Cut1.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            b2Cut1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == b2Cut1.SolidOrientation)
                 b2Cut1.Flip();
-                b2Inside = Brep.CreateOffsetBrep(b2Cut1, 2, true, true, myDoc.ModelAbsoluteTolerance, out _, out _)[0];
+
+            Brep b2Outside = b2Cut1.DuplicateBrep();
+            Brep b2Inside = Brep.CreateOffsetBrep(b2Cut1, -2, false, true, myDoc.ModelAbsoluteTolerance, out _, out _)[0];
+
+            b2Inside.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == b2Inside.SolidOrientation)
+                b2Inside.Flip();
+
+            Point3d axisStart = new Point3d();
+            Point3d axisEnd = new Point3d();
+            Point3d deductStartPt = new Point3d();
+            Point3d deductEndPt = new Point3d();
+            Vector3d interPlnDir = new Vector3d();
+
+            if(eeFlag == 2)
+            {
+                axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+                axisEnd = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+                deductStartPt = (axisStart + axisEnd) / 2;
+                deductEndPt = deductStartPt - direction * axisStart.DistanceTo(axisEnd);
+                interPlnDir = -direction;
+            }
+            else
+            {
+                axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+                axisEnd = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+                deductStartPt = (axisStart + axisEnd) / 2;
+                deductEndPt = deductStartPt + direction * axisStart.DistanceTo(axisEnd);
+                interPlnDir = direction;
             }
 
-            myDoc.Objects.AddBrep(b2Inside);
-            myDoc.Views.Redraw();
+            Curve deductCrv = new Line(deductStartPt, deductEndPt).ToNurbsCurve();
+            Brep deductBrep = Brep.CreatePipe(deductCrv, 2.8, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            deductBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == deductBrep.SolidOrientation)
+                deductBrep.Flip();
+
+            Brep b2InsideBig = Brep.CreateOffsetBrep(b2, -2, false, true, myDoc.ModelAbsoluteTolerance, out _, out _)[0];
+            b2InsideBig.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == b2InsideBig.SolidOrientation)
+                b2InsideBig.Flip();
+
+            Point3d[] interPts;
+            Intersection.CurveBrep(deductCrv, b2Inside, myDoc.ModelAbsoluteTolerance, out _, out interPts);
+            Point3d interPt = interPts[0];
+            Plane interPln = new Plane(interPt, interPlnDir);
+            Curve[] interCrvs;
+            Intersection.BrepPlane(b2Inside, interPln, myDoc.ModelAbsoluteTolerance, out interCrvs, out _);
+            Curve interCrv = interCrvs[0];
+            double inter_t = -1;
+            interCrv.ClosestPoint(interPt, out inter_t);
+            Point3d crvInterPt = interCrv.PointAt(inter_t);
+
+            double moonRad = crvInterPt.DistanceTo(interPt) - 1;
+
+            //Curve moonCylinderCrv = new Line(deductStartPt, interPt + interPlnDir * 5).ToNurbsCurve();
+            Curve moonCylinderCrv = deductCrv;
+            Brep moonCylinderBrep = Brep.CreatePipe(moonCylinderCrv, moonRad, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            moonCylinderBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == moonCylinderBrep.SolidOrientation)
+                moonCylinderBrep.Flip();
+
+            Vector3d moonRectVec = crvInterPt - interPt;
+            moonRectVec.Unitize();
+            Vector3d moonRectExpVec = moonRectVec;
+            Transform tr = Transform.Rotation(Math.PI / 2, interPlnDir, interPt);
+            moonRectExpVec.Transform(tr);
+
+            double overhangWidthOffset = 4;
+
+            Point3d moonRect0 = deductStartPt + moonRectVec * (moonRad + 11) + moonRectExpVec * overhangWidthOffset;
+            Point3d moonRect1 = deductStartPt + moonRectVec * (moonRad + 11) - moonRectExpVec * overhangWidthOffset;
+            Point3d moonRect2 = deductStartPt - moonRectVec * (moonRad + 11) - moonRectExpVec * overhangWidthOffset;
+            Point3d moonRect3 = deductStartPt - moonRectVec * (moonRad + 11) + moonRectExpVec * overhangWidthOffset;
+            Point3d moonRect4 = moonRect0;
+
+            List<Point3d> moonRectCorners = new List<Point3d>();
+            moonRectCorners.Add(moonRect0);
+            moonRectCorners.Add(moonRect1);
+            moonRectCorners.Add(moonRect2);
+            moonRectCorners.Add(moonRect3);
+            moonRectCorners.Add(moonRect4);
+
+            Polyline moonRect = new Polyline(moonRectCorners);
+            Curve moonRectCrv = moonRect.ToNurbsCurve();
+
+            var sweep = new SweepOneRail();
+            sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+            sweep.ClosedSweep = false;
+            sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+            Brep[] moonRectBreps = sweep.PerformSweep(moonCylinderCrv, moonRectCrv);
+            Brep moonRectBrep = moonRectBreps[0];
+            Brep moonRectDeduct = moonRectBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            moonRectDeduct.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == moonRectDeduct.SolidOrientation)
+                moonRectDeduct.Flip();
+
+            Brep[] moonBreps = Brep.CreateBooleanDifference(moonCylinderBrep, moonRectDeduct, myDoc.ModelAbsoluteTolerance);
+            Brep moonBrep1 = moonBreps[0];
+            Brep moonBrep2 = moonBreps[1];
+            moonBrep1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == moonBrep1.SolidOrientation)
+                moonBrep1.Flip();
+            moonBrep2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == moonBrep2.SolidOrientation)
+                moonBrep2.Flip();
+ 
+
+            Brep b2DeductBrep = Brep.CreateBooleanUnion(new List<Brep> { b2Inside, deductBrep, moonBrep1, moonBrep2 }, myDoc.ModelAbsoluteTolerance)[0];
+            b2DeductBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == b2DeductBrep.SolidOrientation)
+                b2DeductBrep.Flip();
+
+            b2Inside = Brep.CreateBooleanDifference(b2Outside, b2DeductBrep, myDoc.ModelAbsoluteTolerance)[0];
+            b2Inside.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == b2Inside.SolidOrientation)
+                b2Inside.Flip();
+
+            //myDoc.Objects.AddBrep(b2Inside);
+            //myDoc.Views.Redraw();
+
 
             #endregion
 
@@ -225,17 +352,14 @@ namespace Kinergy.KineticUnit
                 //Point3d axisStart = bbox.Center + direction / direction.Length * (bbox.Max.X - bbox.Min.X) / 2;
                 //Point3d axisEnd = bbox.Center - direction / direction.Length * ((bbox.Max.X - bbox.Min.X) / 2 + 2.5);
 
-                Point3d axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
-                Point3d axisEnd = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+                entityList.Add(new Socket(axisStart - direction / direction.Length * 2.5, -direction));
 
-                entityList.Add(new Socket(axisStart - direction / direction.Length * 0.53, -direction, 8));
+                Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, -direction), 4));
+                c1.Height1 = 1;
+                c1.Height2 = 2;
 
-                Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, -direction), 6));
-                c1.Height1 = 1.6;
-                c1.Height2 = 2.6;
-
-                Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, -direction), 3));
-                c2.Height1 = 1.6;
+                Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, -direction), 2));
+                c2.Height1 = 1;
                 c2.Height2 = axisStart.DistanceTo(axisEnd);
 
                 Brep axisB = c1.ToBrep(true, true);
@@ -245,8 +369,28 @@ namespace Kinergy.KineticUnit
                 centerAxis.Skeleton = new Line(axisStart, axisEnd).ToNurbsCurve();
                 entityList.Add(centerAxis);
 
-                myDoc.Objects.AddBrep(centerAxis.GetModelinWorldCoordinate());
-                myDoc.Views.Redraw();
+                Point3d cavStart = axisStart + direction / direction.Length * 5;
+                Point3d cavEnd = axisStart - direction / direction.Length * 10;
+                Curve cavPath = new Line(cavStart, cavEnd).ToNurbsCurve();
+                Brep cavBrep = Brep.CreatePipe(cavPath, 10, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                cavBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == cavBrep.SolidOrientation)
+                    cavBrep.Flip();
+
+                MidPart.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == MidPart.Model.SolidOrientation)
+                    MidPart.Model.Flip();
+
+                Brep newMidModel = Brep.CreateBooleanDifference(MidPart.Model, cavBrep, myDoc.ModelAbsoluteTolerance)[0];
+                newMidModel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == newMidModel.SolidOrientation)
+                    newMidModel.Flip();
+
+                MidPart.Model = newMidModel;
+
+                //myDoc.Objects.AddBrep(centerAxis.GetModelinWorldCoordinate());
+                //myDoc.Views.Redraw();
             }
             else
             {
@@ -258,18 +402,14 @@ namespace Kinergy.KineticUnit
                 //Point3d axisStart = bbox.Center - direction / direction.Length * (bbox.Max.X - bbox.Min.X) / 2;
                 //Point3d axisEnd = bbox.Center + direction / direction.Length * ((bbox.Max.X - bbox.Min.X) / 2 + 2.5);
 
-                
-                Point3d axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
-                Point3d axisEnd = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+                entityList.Add(new Socket(axisStart + direction/ direction.Length * 2.5, direction));
 
-                entityList.Add(new Socket(axisStart + direction/ direction.Length * 0.53, direction, 8));
+                Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, direction), 4));
+                c1.Height1 = 1;
+                c1.Height2 = 2;
 
-                Cylinder c1 = new Cylinder(new Circle(new Plane(axisStart, direction), 6));
-                c1.Height1 = 1.6;
-                c1.Height2 = 2.6;
-
-                Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, direction), 3));
-                c2.Height1 = 1.6;
+                Cylinder c2 = new Cylinder(new Circle(new Plane(axisStart, direction), 2));
+                c2.Height1 = 1;
                 c2.Height2 = axisStart.DistanceTo(axisEnd);
 
                 Brep axisB = c1.ToBrep(true, true);
@@ -278,18 +418,66 @@ namespace Kinergy.KineticUnit
                 centerAxis.Skeleton = new Line(axisStart, axisEnd).ToNurbsCurve();
                 entityList.Add(centerAxis);
 
-                myDoc.Objects.AddBrep(centerAxis.GetModelinWorldCoordinate());
-                myDoc.Views.Redraw();
+                Point3d cavStart = axisStart - direction / direction.Length * 5;
+                Point3d cavEnd = axisStart + direction / direction.Length * 10;
+                Curve cavPath = new Line(cavStart, cavEnd).ToNurbsCurve();
+                Brep cavBrep = Brep.CreatePipe(cavPath, 10, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                cavBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == cavBrep.SolidOrientation)
+                    cavBrep.Flip();
+
+                MidPart.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == MidPart.Model.SolidOrientation)
+                    MidPart.Model.Flip();
+
+                Brep newMidModel = Brep.CreateBooleanDifference(MidPart.Model, cavBrep, myDoc.ModelAbsoluteTolerance)[0];
+                newMidModel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == newMidModel.SolidOrientation)
+                    newMidModel.Flip();
+
+                MidPart.Model = newMidModel;
+
+                //myDoc.Objects.AddBrep(centerAxis.GetModelinWorldCoordinate());
+                //myDoc.Views.Redraw();
             }
 
-            entityList.Add(MidPart);
+            
             entityList.Add(basePart);
             entityList.Add(endEffector);
+            entityList.Add(MidPart);
+            midPartIdx = entityList.Count - 1;
             #endregion
 
             #region Step 3: create the central part (the spiral spring)
 
-            spiralSpring = new Spiral(direction, skeleton.PointAtNormalizedLength((t1 + t2) / 2.0), innerCylinderForComponents.Radius - 0.5, maxDegree, energy);
+            Point3d springCen = new Point3d();
+            Point3d pt_temp = new Point3d();
+            Point3d pt_far = new Point3d();
+            if (eeFlag == 2)
+            {
+                axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+
+                pt_temp = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+                pt_far = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+                springCen = (pt_temp - direction / direction.Length * 10).DistanceTo(pt_temp) < ((pt_temp + pt_far) / 2).DistanceTo(pt_temp)?
+                                (pt_temp - direction / direction.Length * 10) : ((pt_temp + pt_far) / 2);
+                
+                spiralSpring = new Spiral(axisStart, -direction, springCen, innerCylinderForComponents.Radius - 0.5, isSpringCW, maxDegree, energy);
+
+                // generate the spring end connector
+
+            }
+            else
+            {
+                axisStart = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+
+                pt_temp = skeleton.PointAtNormalizedLength(t2 > t1 ? t1 : t2);
+                pt_far = skeleton.PointAtNormalizedLength(t2 > t1 ? t2 : t1);
+                springCen = (pt_temp + direction / direction.Length * 10).DistanceTo(pt_temp) < ((pt_temp + pt_far) / 2).DistanceTo(pt_temp)?
+                               (pt_temp + direction / direction.Length * 10) : ((pt_temp + pt_far) / 2);
+                spiralSpring = new Spiral(axisStart, direction, springCen, innerCylinderForComponents.Radius - 0.5, isSpringCW, maxDegree, energy);
+            }
             entityList.Add(spiralSpring);
 
             #endregion
@@ -297,7 +485,7 @@ namespace Kinergy.KineticUnit
             #region Step 4: prepare the lock position candidates
 
             lockPosCandidates = new List<Point3d>();
-            Point3d centerP = spiralSpring.Center;
+            Point3d centerP = (pt_far + springCen) / 2.0;
             Plane plane = new Plane(centerP, direction);
             Curve[] c;
             Point3d[] pt;
@@ -318,16 +506,16 @@ namespace Kinergy.KineticUnit
             b2 = B2;
             b3 = B3;
         }
-        private void FixParameter()
-        {
-            spiralOuterRadius = innerCylinderForComponents.Radius * 0.95;
-            spiralInnerRadius = Math.Max(2, innerCylinderForComponents.Radius * 0.1);
-            axisRadius = spiralInnerRadius;
-            roundNum = (int)Math.Ceiling(maxDegree / 360 / (spiralOuterRadius - spiralInnerRadius) * (2 * spiralOuterRadius + 4 * spiralInnerRadius));
-            spiralX = (spiralOuterRadius - spiralInnerRadius) / roundNum * 0.4 * Math.Pow(energy_old, 0.25);
-            spiralY= spiralX * Math.Pow(energy_old, 0.25)*3;
-            spiralY = Math.Min(innerCylinderForComponents.TotalHeight, spiralY);
-        }
+        //private void FixParameter()
+        //{
+        //    spiralOuterRadius = innerCylinderForComponents.Radius * 0.95;
+        //    spiralInnerRadius = Math.Max(2, innerCylinderForComponents.Radius * 0.1);
+        //    axisRadius = spiralInnerRadius;
+        //    roundNum = (int)Math.Ceiling(maxDegree / 360 / (spiralOuterRadius - spiralInnerRadius) * (2 * spiralOuterRadius + 4 * spiralInnerRadius));
+        //    spiralX = (spiralOuterRadius - spiralInnerRadius) / roundNum * 0.4 * Math.Pow(energy_old, 0.25);
+        //    spiralY= spiralX * Math.Pow(energy_old, 0.25)*3;
+        //    spiralY = Math.Min(innerCylinderForComponents.TotalHeight, spiralY);
+        //}
         //public void AdjustParameter(double KineticStrength, double MaxLoadingDegree)
         //{
         //    energy_old = KineticStrength;
@@ -335,11 +523,11 @@ namespace Kinergy.KineticUnit
         //    GenerateSpiralAndAxis();
             
         //}
-        public void AdjustParameter(int KineticStrength, double MaxLoadingDegree)
+        public void AdjustParameter(int KineticStrength, int MaxLoadingDegree, bool isSpringCW)
         {
-            maxDegree = Math.PI * MaxLoadingDegree / 180;
+            maxDegree = MaxLoadingDegree;
             //GenerateSpiralAndAxis();
-            spiralSpring.AdjustParam(KineticStrength, maxDegree);
+            spiralSpring.AdjustParam(KineticStrength, maxDegree, isSpringCW);
             energy = KineticStrength;
         }
       
@@ -358,95 +546,494 @@ namespace Kinergy.KineticUnit
                 lockDisToAxis = LockPosition.DistanceTo(lockClosestPointOnAxis);
             }
         }
-        private List<Point3d> CalculateLockPositionCandidate_Old()
-        {
-            List<Point3d> lockPosCandidates = new List<Point3d>();
-            BoxLike b = new BoxLike(model, direction);
-            BoundingBox box = b.Bbox,targetBox=BoundingBox.Unset;
 
-            //First tell the knob direction and get the target box
-            if (knobDirection * direction > 0)
-                targetBox = new BoundingBox(box.PointAt(0.85, 0, 0), box.PointAt(1, 1, 1));
-            else
-                targetBox = new BoundingBox(box.PointAt(0, 0, 0), box.PointAt(0.15, 1, 1));
-            targetBox.Transform(b.RotateBack);
-            box.Transform(b.RotateBack);
-            for (double i= 0;i<= 1;i+=0.05)
+        public void RemoveLocks()
+        {
+            if(lockPartIdx.Count > 0)
             {
-                for (double j = 0; j <= 1; j += 0.05)
-                {
-                    Line l = new Line(box.PointAt(0, i, j), box.PointAt(1, i, j));
-                    Point3d[] pts;
-                    Intersection.CurveBrep(l.ToNurbsCurve(), model, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out _, out pts);
-                    foreach(Point3d pt in pts)
-                    {
-                        if (targetBox.Contains(pt)&&pt.DistanceTo(targetBox.Center)>axisRadius*2)
-                            lockPosCandidates.Add(pt+knobDirection*3);
-                    }
-                }
-            }
-            return lockPosCandidates;
-        }
-        public void ConstructLocks_Old()
-        {
-            locks = new List<Lock>();
-            BoxLike b = new BoxLike(model, direction);
-            BoundingBox box = b.Bbox;
-            //Build the locking structure. ITwould be easy
-            Lock LockHead = new Lock(lockClosestPointOnAxis, direction, lockDisToAxis);
-            
-            Point3d railS = LockPosition - knobDirection * 3 * axisRadius;
-            Point3d railE= LockPosition + knobDirection * 3 * axisRadius;
-            Line l = new Line(railS, railE);
-            Brep LockBaseBrep = Brep.CreatePipe(l.ToNurbsCurve(), lockDisToAxis * 0.1,false,PipeCapMode.Round,true,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,RhinoDoc.ActiveDoc.ModelAngleToleranceRadians)[0];
+                // retrack the midpart
+                MidPart.Model = midPartBackup;
 
-            locks.Add(LockHead);
-            locks.Add(new Lock(LockBaseBrep, false));
-            entityList.Add(LockHead);
-            entityList.Add(locks[1]);
-            LockHead.RegisterOtherPart(locks[1]);
-            _ = new Fixation(centerAxis, LockHead);
+                // delete all the entities that have already been registered
+                for (int i = lockPartIdx.Count-1; i>=0; i--)
+                {
+                    int pos = lockPartIdx.ElementAt(i);
+                    entityList.RemoveAt(pos);
+                }
+                lockPartIdx.Clear();
+                locks.Clear();
+                lockDisToAxis = 0;
+
+                // re-registered the new entities
+                entityList.Add(MidPart);
+                midPartIdx = entityList.Count - 1;
+
+            }
+
         }
-        public void ConstructLocks()
+        public void updateLock(bool dir)
         {
-            SetLockPosition();
-            locks = new List<Lock>();
-            //Build the locking structure. ITwould be easy
             Lock LockHead;
             double ratchetRadius = lockDisToAxis * 0.5;
-            if (EEDirection==2)
-                LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, true);
-            else
+
+            if (dir)
                 LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, false);
+            else
+                LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, true);
+
+            // update entitylist
+            int delPos = entityList.Count - 2;
+            entityList.RemoveAt(delPos);
+            entityList.Insert(delPos, LockHead);
+
+            // update locks
+            locks.RemoveAt(0);
+            locks.Insert(0, LockHead);
+            LockHead.RegisterOtherPart(locks.ElementAt(1));
+            _ = new Fixation(centerAxis, LockHead);
+
+        }
+        public void ConstructLocks(bool dir)
+        {
+            SetLockPosition();
+            
+            if (lockPartIdx.Count > 0)
+            {
+                for (int i = lockPartIdx.Count - 1; i >= 0; i--)
+                {
+                    entityList.RemoveAt(i);
+                }
+                midPartIdx = -1;
+                lockPartIdx.Clear();
+            }
+                
+            if (locks.Count > 0)
+                locks.Clear();
+
+            Lock LockHead;
+            double ratchetRadius = lockDisToAxis * 0.5;
+            //if (EEDirection==2)
+            if(dir)
+                LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, false);
+            else
+                LockHead = new Lock(lockClosestPointOnAxis, direction, ratchetRadius, true);
+
+            //myDoc.Objects.AddBrep(LockHead.GetModelinWorldCoordinate());
+            //myDoc.Views.Redraw();
+
             Vector3d centerLinkDirection = new Vector3d(lockClosestPointOnAxis) - new Vector3d(LockPosition);
             double centerLinkLen = centerLinkDirection.Length;
             centerLinkDirection.Unitize();
-            Point3d railS = LockPosition - centerLinkDirection*10;
-            Point3d railE = LockPosition + centerLinkDirection* lockDisToAxis * 0.5;
-            Point3d railS1 = LockPosition - centerLinkDirection * 0.5;
-            Point3d railE1 = LockPosition + centerLinkDirection * 2.5;
-            Line l = new Line(railS, railE);
-            Brep LockBaseBrep = Brep.CreatePipe(l.ToNurbsCurve(), 1.5, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAngleToleranceRadians)[0];
-            Brep LockBaseBrepLarge = Brep.CreatePipe(l.ToNurbsCurve(), 2.5, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAngleToleranceRadians)[0];
-            //LockBaseBrepLarge.Flip();
-            MidPart.Model.Flip();
-            MidPart.Model = Brep.CreateBooleanDifference(MidPart.Model, LockBaseBrepLarge, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-            Plane pl1 = new Plane(LockPosition + centerLinkDirection * (lockDisToAxis * 0.21 + 2), centerLinkDirection);
-            Cylinder c1 = new Cylinder(new Circle(pl1, 3.5));
-            c1.Height1 = 0;c1.Height2 = 3;
-            Plane pl2 = new Plane(LockPosition, centerLinkDirection);
-            Cylinder c2 = new Cylinder(new Circle(pl2 , 3.5));
-            c2.Height1 = -3; c2.Height2 = 0;
-            LockBaseBrep.Append(c1.ToBrep(true, true));
-            LockBaseBrep.Append(c2.ToBrep(true, true));
-            LockBaseBrep.Append(new Sphere(railS, 2.5).ToBrep());
-            LockBaseBrep.Transform(Transform.Translation(-centerLinkDirection * lockDisToAxis * 0.1));
+
+            #region create the handler
+
+            double handlerDis = Math.Max(20, ratchetRadius);
+            double handlerThickness = 3;
+            double handlerRadius = 5;
+            Point3d handlerPos = LockPosition - centerLinkDirection * handlerDis;
+            Point3d handlerEndPos = handlerPos - centerLinkDirection * handlerThickness;
+            Curve handlerTraj = new Line(handlerPos, handlerEndPos).ToNurbsCurve();
+            Brep handler = Brep.CreatePipe(handlerTraj, handlerRadius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            handler.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == handler.SolidOrientation)
+                handler.Flip();
+
+            #endregion
+
+            #region create the central axis and the piston
+
+            double axisLen = 0;
+            double latchClearance = 4;
+            double tipLen = 2;
+            if (ratchetRadius < (tipLen + latchClearance)) return;
+            axisLen = ratchetRadius - (tipLen + latchClearance) + handlerDis;
+  
+            double axisRadius = 1;
+            Point3d axisEnd = handlerPos;
+            Point3d axisStart = axisEnd + centerLinkDirection * axisLen;
+            Curve axisTraj = new Line(axisStart, axisEnd).ToNurbsCurve();
+            Brep axisRodBrep = Brep.CreatePipe(axisTraj, axisRadius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            axisRodBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == axisRodBrep.SolidOrientation)
+                axisRodBrep.Flip();
+
+            Transform rot = Transform.Rotation(Math.PI / 2, centerLinkDirection, axisStart);
+            Vector3d tipDir = direction;
+            tipDir.Transform(rot);
+            tipDir.Unitize();
+            double tipBig = 2.5;
+            double tipSmall = 1;
+
+            var sweep = new SweepOneRail();
+            sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+            sweep.ClosedSweep = false;
+            sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+            Point3d tipPt0 = axisStart + tipDir * axisRadius + direction/direction.Length * tipBig;
+            Point3d tipPt1 = axisStart + tipDir * axisRadius + centerLinkDirection * tipLen + direction / direction.Length * tipSmall;
+            Point3d tipPt2 = axisStart + tipDir * axisRadius + centerLinkDirection * tipLen - direction / direction.Length * tipSmall;
+            Point3d tipPt3 = axisStart + tipDir * axisRadius - direction / direction.Length * tipBig;
+            Point3d tipPt4 = tipPt0;
+
+            List<Point3d> tipCorners = new List<Point3d>();
+            tipCorners.Add(tipPt0);
+            tipCorners.Add(tipPt1);
+            tipCorners.Add(tipPt2);
+            tipCorners.Add(tipPt3);
+            tipCorners.Add(tipPt4);
+
+            Polyline tipRect = new Polyline(tipCorners);
+            Curve tipRectCrv = tipRect.ToNurbsCurve();
+
+            Point3d tipPathStart = axisStart + tipDir * axisRadius;
+            Point3d tipPathEnd = axisStart - tipDir * axisRadius;
+            Curve tipTraj = new Line(tipPathStart, tipPathEnd).ToNurbsCurve();
+
+            Brep[] tipBreps = sweep.PerformSweep(tipTraj, tipRectCrv);
+            Brep tipBrep = tipBreps[0];
+            Brep tip = tipBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            tip.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == tip.SolidOrientation)
+                tip.Flip();
+
+            Brep centralAxis = Brep.CreateBooleanUnion(new List<Brep> { axisRodBrep, tip }, myDoc.ModelAbsoluteTolerance)[0];
+
+            centralAxis.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == centralAxis.SolidOrientation)
+                centralAxis.Flip();
+
+            #endregion
+
+            #region create the beams
+
+            double clearance = 0.6;
+
+            Point3d axisMidPoint = (axisStart + axisEnd) / 2.0;
+            double beamDis = axisLen / 4.0;
+            double beamOffset = 3;
+            double beamWidthOffset = 1;
+            double beamThickness = 2;
+            double beamLeverThickness = 1;
+            Point3d beamPos = axisMidPoint - centerLinkDirection * beamDis;
+
+            Point3d beamHolderPt0 = beamPos + tipDir * beamOffset + direction / direction.Length * beamWidthOffset;
+            Point3d beamHolderPt1 = beamPos + tipDir * beamOffset - direction / direction.Length * beamWidthOffset;
+            Point3d beamHolderPt2 = beamPos + tipDir * beamOffset - direction / direction.Length * beamWidthOffset - centerLinkDirection * beamThickness;
+            Point3d beamHolderPt3 = beamPos + tipDir * beamOffset + direction / direction.Length * beamWidthOffset - centerLinkDirection * beamThickness;
+            Point3d beamHolderPt4 = beamHolderPt0;
+
+            List<Point3d> beamCorners = new List<Point3d>();
+            beamCorners.Add(beamHolderPt0);
+            beamCorners.Add(beamHolderPt1);
+            beamCorners.Add(beamHolderPt2);
+            beamCorners.Add(beamHolderPt3);
+            beamCorners.Add(beamHolderPt4);
+
+            Polyline beamRect = new Polyline(beamCorners);
+            Curve beamRectCrv = beamRect.ToNurbsCurve();
+
+            Point3d beamPathStart = beamPos + tipDir * beamOffset;
+            Point3d beamPathEnd = beamPos - tipDir * beamOffset;
+            Curve beamTraj = new Line(beamPathStart, beamPathEnd).ToNurbsCurve();
+
+            Brep[] beamHolderBreps = sweep.PerformSweep(beamTraj, beamRectCrv);
+            Brep beamHolderBrep = beamHolderBreps[0];
+            Brep beamHolder = beamHolderBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            beamHolder.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamHolder.SolidOrientation)
+                beamHolder.Flip();
+
+            double hookRadius = 1;
+            double notchRadius = 1.6;
+            double moveDis = tipLen + latchClearance + 2 * 0.6 - 2 * hookRadius;
+
+            Point3d notchCenFirst = axisMidPoint + tipDir * beamOffset + centerLinkDirection * hookRadius;
+            Point3d notchCenSecond = notchCenFirst + centerLinkDirection * (2 * hookRadius + moveDis);
+            double beamLeverLen = axisLen / 4.0 + 2 * hookRadius;
+
+            Point3d beamLeverStart = beamHolderPt0;
+            Point3d beamLeverEnd = beamHolderPt0 + centerLinkDirection * beamLeverLen;
+            Curve beamLeverTraj = new Line(beamLeverStart, beamLeverEnd).ToNurbsCurve();
+
+            Point3d beamDetentStart = beamHolderPt0 + centerLinkDirection * (axisLen / 4.0);
+            Point3d beamDetentEnd = beamDetentStart + centerLinkDirection * 2 * hookRadius;
+            Curve beamDetentTraj = new Line(beamDetentStart, beamDetentEnd).ToNurbsCurve();
+
+            Point3d beamLeverRPt0 = beamPos + tipDir * beamOffset + direction / direction.Length * beamWidthOffset;
+            Point3d beamLeverRPt1 = beamPos + tipDir * beamOffset - direction / direction.Length * beamWidthOffset;
+            Point3d beamLeverRPt2 = beamPos + tipDir * (beamOffset - beamLeverThickness) - direction / direction.Length * beamWidthOffset;
+            Point3d beamLeverRPt3 = beamPos + tipDir * (beamOffset - beamLeverThickness) + direction / direction.Length * beamWidthOffset;
+            Point3d beamLeverRPt4 = beamLeverRPt0;
+
+            Point3d beamDetentRPt0 = beamLeverRPt0 + centerLinkDirection * (axisLen / 4.0);
+            Point3d beamDetentRPt1 = beamLeverRPt1 + centerLinkDirection * (axisLen / 4.0);
+            Point3d beamDetentRPt2 = beamPos + tipDir * (beamOffset - hookRadius) - direction / direction.Length * beamWidthOffset + centerLinkDirection * (axisLen / 4.0);
+            Point3d beamDetentRPt3 = beamPos + tipDir * (beamOffset - hookRadius) + direction / direction.Length * beamWidthOffset + centerLinkDirection * (axisLen / 4.0);
+            Point3d beamDetentRPt4 = beamDetentRPt0;
+
+            List<Point3d> beamLeverRCorners = new List<Point3d>();
+            beamLeverRCorners.Add(beamLeverRPt0);
+            beamLeverRCorners.Add(beamLeverRPt1);
+            beamLeverRCorners.Add(beamLeverRPt2);
+            beamLeverRCorners.Add(beamLeverRPt3);
+            beamLeverRCorners.Add(beamLeverRPt4);
+
+            List<Point3d> beamDetentRCorners = new List<Point3d>();
+            beamDetentRCorners.Add(beamDetentRPt0);
+            beamDetentRCorners.Add(beamDetentRPt1);
+            beamDetentRCorners.Add(beamDetentRPt2);
+            beamDetentRCorners.Add(beamDetentRPt3);
+            beamDetentRCorners.Add(beamDetentRPt4);
+
+            Polyline beamLeverRRect = new Polyline(beamLeverRCorners);
+            Curve beamLeverRRectCrv = beamLeverRRect.ToNurbsCurve();
+
+            Polyline beamDetentRRect = new Polyline(beamDetentRCorners);
+            Curve beamDetentRRectCrv = beamDetentRRect.ToNurbsCurve();
+
+            Brep[] beamLeverRBreps = sweep.PerformSweep(beamLeverTraj, beamLeverRRectCrv);
+            Brep beamLeverRBrep = beamLeverRBreps[0];
+            Brep beamLeverR = beamLeverRBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            beamLeverR.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamLeverR.SolidOrientation)
+                beamLeverR.Flip();
+
+            Brep[] beamDetentRBreps = sweep.PerformSweep(beamDetentTraj, beamDetentRRectCrv);
+            Brep beamDetentRBrep = beamDetentRBreps[0];
+            Brep beamDetentR = beamDetentRBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            beamDetentR.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamDetentR.SolidOrientation)
+                beamDetentR.Flip();
+
+            Sphere beamDetentRSphere = new Sphere(notchCenFirst, hookRadius);
+            Brep beamDetentRSphereBrep = beamDetentRSphere.ToBrep();
+            beamDetentRSphereBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamDetentRSphereBrep.SolidOrientation)
+                beamDetentRSphereBrep.Flip();
+
+            Brep beamDetentRNotch = Brep.CreateBooleanDifference(beamDetentRSphereBrep, beamDetentR, myDoc.ModelAbsoluteTolerance)[0];
+            beamDetentRNotch.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamDetentRNotch.SolidOrientation)
+                beamDetentRNotch.Flip();
+
+            Brep beamRight = Brep.CreateBooleanUnion(new List<Brep> { beamLeverR, beamDetentRNotch }, myDoc.ModelAbsoluteTolerance)[0];
+            beamRight.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamRight.SolidOrientation)
+                beamRight.Flip();
+
+            Brep beamLeft = beamRight.DuplicateBrep();
+            Transform mirrorTrans = Transform.Mirror(LockPosition, tipDir);
+            beamLeft.Transform(mirrorTrans);
+            beamLeft.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == beamLeft.SolidOrientation)
+                beamLeft.Flip();
+
+            Brep beam = Brep.CreateBooleanUnion(new List<Brep> { beamHolder, beamRight, beamLeft }, myDoc.ModelAbsoluteTolerance)[0];
+
+            #endregion
+
+            #region create the barrel
+
+            Point3d barrelStart = (axisMidPoint + beamPos) / 2.0;
+            Point3d barrelEnd = barrelStart + centerLinkDirection * (barrelStart.DistanceTo(axisMidPoint) + 4 * hookRadius + moveDis + 2);
+            Curve barrelTraj = new Line(barrelStart, barrelEnd).ToNurbsCurve();
+
+            Point3d barrelHollowStart = barrelStart + centerLinkDirection * barrelStart.DistanceTo(axisMidPoint);
+            Point3d barrelHollowEnd = barrelHollowStart + centerLinkDirection * (4 * hookRadius + moveDis);
+            Curve barrelHollowTraj = new Line(barrelHollowStart, barrelHollowEnd).ToNurbsCurve();
+    
+            double barrelThickness = 1.2;
+            double barrelRadius = beamOffset + clearance + barrelThickness;
+
+            double barrelCylinderRadius = barrelRadius - 0.2;
+
+            Brep barrelBrep = Brep.CreatePipe(barrelTraj, barrelRadius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            barrelBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == barrelBrep.SolidOrientation)
+                barrelBrep.Flip();
+
+            #region deduct the lock from the middle part
+
+            Brep barrelCylinderDeduct = Brep.CreatePipe(barrelTraj, barrelCylinderRadius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            barrelCylinderDeduct.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == barrelCylinderDeduct.SolidOrientation)
+                barrelCylinderDeduct.Flip();
+
+            midPartBackup = MidPart.Model.DuplicateBrep();
+
+            MidPart.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == MidPart.Model.SolidOrientation)
+                MidPart.Model.Flip();
+            MidPart.Model = Brep.CreateBooleanDifference(MidPart.Model, barrelCylinderDeduct, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            MidPart.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == MidPart.Model.SolidOrientation)
+                MidPart.Model.Flip();
+
+            #endregion
+
+            Point3d barrelTunnelPt0 = barrelStart + tipDir * (beamOffset + clearance) + direction / direction.Length * (beamWidthOffset + clearance);
+            Point3d barrelTunnelPt1 = barrelStart + tipDir * (beamOffset + clearance) - direction / direction.Length * (beamWidthOffset + clearance);
+            Point3d barrelTunnelPt2 = barrelStart - tipDir * (beamOffset + clearance) - direction / direction.Length * (beamWidthOffset + clearance);
+            Point3d barrelTunnelPt3 = barrelStart - tipDir * (beamOffset + clearance) + direction / direction.Length * (beamWidthOffset + clearance);
+            Point3d barrelTunnelPt4 = barrelTunnelPt0;
+
+            List<Point3d> barrelTunnelCorners = new List<Point3d>();
+            barrelTunnelCorners.Add(barrelTunnelPt0);
+            barrelTunnelCorners.Add(barrelTunnelPt1);
+            barrelTunnelCorners.Add(barrelTunnelPt2);
+            barrelTunnelCorners.Add(barrelTunnelPt3);
+            barrelTunnelCorners.Add(barrelTunnelPt4);
+
+            Polyline barrelTunnelRect = new Polyline(barrelTunnelCorners);
+            Curve barrelTunnelRectCrv = barrelTunnelRect.ToNurbsCurve();
+
+            Brep[] barrelTunnelBreps = sweep.PerformSweep(barrelTraj, barrelTunnelRectCrv);
+            Brep barrelTunnelBrep = barrelTunnelBreps[0];
+            Brep barrelTunnel = barrelTunnelBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            barrelTunnel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == barrelTunnel.SolidOrientation)
+                barrelTunnel.Flip();
+
+
+            Point3d barrelHollowPt0 = barrelHollowStart + tipDir * (beamOffset + clearance) + direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
+            Point3d barrelHollowPt1 = barrelHollowStart + tipDir * (beamOffset + clearance) - direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
+            Point3d barrelHollowPt2 = barrelHollowStart - tipDir * (beamOffset + clearance) - direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
+            Point3d barrelHollowPt3 = barrelHollowStart - tipDir * (beamOffset + clearance) + direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
+            Point3d barrelHollowPt4 = barrelHollowPt0;
+
+            List<Point3d> barrelHollowCorners = new List<Point3d>();
+            barrelHollowCorners.Add(barrelHollowPt0);
+            barrelHollowCorners.Add(barrelHollowPt1);
+            barrelHollowCorners.Add(barrelHollowPt2);
+            barrelHollowCorners.Add(barrelHollowPt3);
+            barrelHollowCorners.Add(barrelHollowPt4);
+
+            Polyline barrelHollowRect = new Polyline(barrelHollowCorners);
+            Curve barrelHollowRectCrv = barrelHollowRect.ToNurbsCurve();
+
+            Brep[] barrelHollowBreps = sweep.PerformSweep(barrelHollowTraj, barrelHollowRectCrv);
+            Brep barrelHollowBrep = barrelHollowBreps[0];
+            Brep barrelHollow = barrelHollowBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            barrelHollow.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == barrelHollow.SolidOrientation)
+                barrelHollow.Flip();
+
+            List<Point3d> sphereShells = new List<Point3d>();
+            sphereShells.Add(notchCenFirst);
+            sphereShells.Add(notchCenSecond);
+            sphereShells.Add(notchCenFirst - tipDir * beamOffset * 2);
+            sphereShells.Add(notchCenSecond - tipDir * beamOffset * 2);
+
+            List<Brep> deductBreps = new List<Brep>();
+            deductBreps.Add(barrelTunnel);
+            deductBreps.Add(barrelHollow);
+
+            foreach (Point3d pt in sphereShells)
+            {
+                Sphere notchSphere = new Sphere(pt, notchRadius);
+                Brep notchShellBrep = notchSphere.ToBrep();
+
+                notchShellBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == notchShellBrep.SolidOrientation)
+                    notchShellBrep.Flip();
+
+                deductBreps.Add(notchShellBrep);
+            }
+
+            Brep barrelDeductBrep = Brep.CreateBooleanUnion(deductBreps, myDoc.ModelAbsoluteTolerance)[0];
+            barrelDeductBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == barrelDeductBrep.SolidOrientation)
+                barrelDeductBrep.Flip();
+
+
+            Brep barrel = Brep.CreateBooleanDifference(barrelBrep, barrelDeductBrep, myDoc.ModelAbsoluteTolerance)[0];
+            barrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == barrel.SolidOrientation)
+                barrel.Flip();
+
+            #endregion
+
+            #region combine the beam, the axis, and the handler
+            
+            Brep lockBasedBrep = Brep.CreateBooleanUnion(new List<Brep> { beam, handler, centralAxis }, myDoc.ModelAbsoluteTolerance)[0];
+            lockBasedBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == lockBasedBrep.SolidOrientation)
+                lockBasedBrep.Flip();
+
+            MidPart.Model = Brep.CreateBooleanUnion(new List<Brep> { MidPart.Model, barrel }, myDoc.ModelAbsoluteTolerance)[0];
+            MidPart.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == MidPart.Model.SolidOrientation)
+                MidPart.Model.Flip();
+
+            #endregion
+
+            //myDoc.Objects.AddBrep(barrel);
+            //myDoc.Views.Redraw();
+            //myDoc.Objects.AddBrep(lockBasedBrep);
+            //myDoc.Views.Redraw();
+
+            #region add lock parts to the entitylist
+
+            Lock lockBase = new Lock(lockBasedBrep, false);
+            if(midPartIdx != -1)
+            {
+                // midpart has been registered in the entity list
+                entityList.RemoveAt(midPartIdx);
+            }
+           
+            entityList.Add(MidPart); // the MidPart's model is updated with an extra barrel
+            lockPartIdx.Add(entityList.Count - 1);
+            entityList.Add(LockHead); // the ratchet gear
+            lockPartIdx.Add(entityList.Count - 1);
+            entityList.Add(lockBase); // the latch
+            lockPartIdx.Add(entityList.Count - 1);
             locks.Add(LockHead);
-            locks.Add(new Lock(LockBaseBrep, false));
-            entityList.Add(LockHead);
-            entityList.Add(locks[1]);
-            LockHead.RegisterOtherPart(locks[1]);
+            locks.Add(lockBase);
+            LockHead.RegisterOtherPart(lockBase);
             _ = new Fixation(centerAxis, LockHead);
+
+            #endregion
+
+            #region old method
+
+            //Point3d railS = LockPosition - centerLinkDirection * 10;
+            //Point3d railE = LockPosition + centerLinkDirection * lockDisToAxis * 0.5;
+            //Point3d railS1 = LockPosition - centerLinkDirection * 0.5;
+            //Point3d railE1 = LockPosition + centerLinkDirection * 2.5;
+            //Line l = new Line(railS, railE);
+            //Brep LockBaseBrep = Brep.CreatePipe(l.ToNurbsCurve(), 1.5, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAngleToleranceRadians)[0];
+            //Brep LockBaseBrepLarge = Brep.CreatePipe(l.ToNurbsCurve(), 2.5, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAngleToleranceRadians)[0];
+            ////LockBaseBrepLarge.Flip();
+            //MidPart.Model.Flip();
+            //MidPart.Model = Brep.CreateBooleanDifference(MidPart.Model, LockBaseBrepLarge, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            //Plane pl1 = new Plane(LockPosition + centerLinkDirection * (lockDisToAxis * 0.21 + 2), centerLinkDirection);
+            //Cylinder c1 = new Cylinder(new Circle(pl1, 3.5));
+            //c1.Height1 = 0; c1.Height2 = 3;
+            //Plane pl2 = new Plane(LockPosition, centerLinkDirection);
+            //Cylinder c2 = new Cylinder(new Circle(pl2, 3.5));
+            //c2.Height1 = -3; c2.Height2 = 0;
+            //LockBaseBrep.Append(c1.ToBrep(true, true));
+            //LockBaseBrep.Append(c2.ToBrep(true, true));
+            //LockBaseBrep.Append(new Sphere(railS, 2.5).ToBrep());
+            //LockBaseBrep.Transform(Transform.Translation(-centerLinkDirection * lockDisToAxis * 0.1));
+            //locks.Add(LockHead);
+            //locks.Add(new Lock(LockBaseBrep, false));
+            //entityList.Add(LockHead);
+            //entityList.Add(locks[1]);
+            //LockHead.RegisterOtherPart(locks[1]);
+            //_ = new Fixation(centerAxis, LockHead);
+
+            #endregion
         }
         public void SetEndEffector(Brep EEM)
         {

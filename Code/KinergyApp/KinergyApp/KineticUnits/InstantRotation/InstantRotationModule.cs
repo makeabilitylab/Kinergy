@@ -44,7 +44,7 @@ namespace InstRotation
         double min_wire_diamter;
         double min_coil_num;
         //double energy;
-        double displacement;
+        int displacement;
         bool isLockSet;
         Guid selObjId;
         List<Guid> toBeBaked;
@@ -81,6 +81,7 @@ namespace InstRotation
         bool testDirReverse;
 
         Guid rotationDirID;
+        bool isSpringCW;
 
         /// <summary>
         /// Initializes a new instance of the InstantRotationModule class.
@@ -105,7 +106,7 @@ namespace InstRotation
             min_wire_diamter = 2.8;
             min_coil_num = 3;
             //energy = 0.5;
-            displacement = 0.5;
+            displacement = 5;
             arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;
@@ -131,6 +132,7 @@ namespace InstRotation
             reserveBrepID2 = Guid.Empty;
 
             myDoc = RhinoDoc.ActiveDoc;
+            isSpringCW = true;
 
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
@@ -223,7 +225,7 @@ namespace InstRotation
 
             // Value listeners 
             pManager.AddIntegerParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddTextParameter("MaxAngle", "MaxAng", "The max rotation angle", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("MaxRev", "MaxRev", "The max rotation revolution", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -254,20 +256,14 @@ namespace InstRotation
             pManager.AddBrepParameter("Models", "M", "", GH_ParamAccess.list);
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
         }
-
-        //double ConvertInputAngleToIntType(string angleText)
-        //{
-        //    double result = 0;
-        //    try
-        //    {
-        //        result = Convert.ToDouble(angleText);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        result = 0;
-        //    }
-        //    return result;
-        //}
+        void hideDirIndicator()
+        {
+            if (!rotationDirID.Equals(Guid.Empty))
+            {
+                myDoc.Objects.Hide(rotationDirID, true);
+                myDoc.Views.Redraw();
+            }
+        }
         void showDirIndicator(bool isCCW)
         {
             if (!rotationDirID.Equals(Guid.Empty))
@@ -401,12 +397,13 @@ namespace InstRotation
             if (isCCW)
             {
                 // flip the indicator
-                Transform tran = Transform.Rotation(Math.PI, canvasNormal, canvasOrigin);
+                Transform tran = Transform.Mirror(canvasOrigin, canvasStart);
                 dirIndicator.Transform(tran);
             }
 
-            myDoc.Objects.AddBrep(dirIndicator);
-            
+            isSpringCW = !isCCW;
+            rotationDirID = myDoc.Objects.AddBrep(dirIndicator, redAttribute);
+            myDoc.Views.Redraw();
         }
         /// <summary>
         /// This is the method that actually does the work.
@@ -414,9 +411,9 @@ namespace InstRotation
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool reg_input = false, axis_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false, revdir_input;
+            bool reg_input = false, axis_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false, revdir_input = false;
             int energy_input = 4;
-            string angle_input = "";
+            int angle_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -488,6 +485,9 @@ namespace InstRotation
             {
                 dirReverseState = revdir_input;
                 showDirIndicator(dirReverseState);
+                motion.AdjustParameter(energyLevel, displacement, isSpringCW);
+                // todo: add updateLock
+                motion.updateLock(dirReverseState);
             }
 
             if (!pre_input && testPreBtn)
@@ -500,14 +500,14 @@ namespace InstRotation
                 testPreBtn = true;
             }
 
-            if (energyLevel == energy_input && displacement== ConvertInputAngleToDoubleType(angle_input))
+            if (energyLevel == energy_input && displacement== angle_input)
             {
                 toAdjustParam = false;
             }
             else
             {
                 energyLevel = energy_input;
-                displacement= ConvertInputAngleToDoubleType(angle_input);
+                displacement= angle_input;
                 toAdjustParam = true;
             }
 
@@ -526,6 +526,7 @@ namespace InstRotation
             {
                 if (motion != null)
                 {
+                    hideDirIndicator();
                     foreach (Guid id in endEffectorCandidates)
                     {
                         myDoc.Objects.Hide(id, true);
@@ -537,8 +538,9 @@ namespace InstRotation
                         {
                             Brep tempB = b.GetModelinWorldCoordinate();
                             myDoc.Objects.AddBrep(tempB);
+                            myDoc.Views.Redraw();
                         }
-                        myDoc.Views.Redraw();
+                       
                         this.ExpirePreview(true);
                     }
                 }
@@ -769,7 +771,6 @@ namespace InstRotation
 
             }
 
-
             if (toSetEndEffector)
             {
                 if(brepCut.Count > 0)
@@ -793,7 +794,9 @@ namespace InstRotation
                         myDoc.Objects.Hide(reserveBrepID1, true);
                         myDoc.Objects.Hide(reserveBrepID2, true);
                         myDoc.Objects.Hide(convertedPortion, true);
-                        motion.GenerateSpiralAndAxis(endEffectorID, brepCut);
+                        motion.GenerateSpiralAndAxis(endEffectorID, brepCut, isSpringCW);
+
+                        showDirIndicator(false);
                     }
                 }
             }
@@ -801,19 +804,20 @@ namespace InstRotation
             if (toAddLock)
             {
                 if(motion!=null)
-                    motion.ConstructLocks();
+                    motion.ConstructLocks(dirReverseState);
             }
 
-            if (toPreview)
+            if (toRemoveLock)
             {
-
+                if (motion != null)
+                    motion.RemoveLocks();
             }
 
             if (toAdjustParam)
             {
                 if(motion!=null)
                 //Just reconstruct spiral
-                    motion.AdjustParameter(energyLevel,displacement);
+                    motion.AdjustParameter(energyLevel,displacement,isSpringCW);
             }
 
             DA.SetData(0, motion);
@@ -1004,7 +1008,6 @@ namespace InstRotation
             }
         }
 
-       
         private void Gp_SelectionMouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         { 
             if (selected != Guid.Empty)

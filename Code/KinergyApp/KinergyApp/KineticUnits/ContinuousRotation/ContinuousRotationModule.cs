@@ -23,8 +23,8 @@ namespace ConRotation
         Brep innerCavity;
         double t1, t2; // the positoins of start point and end point of the segment on the normalized skeleton
         Curve skeleton;     // skeleton
-        double energyLevel;         // value of the strength slide bar
-        double speedLevel;   // value of the speed slide bar
+        int energyLevel;         // value of the strength slide bar
+        int speedLevel;   // value of the speed slide bar
         Vector3d direction;             // kinetic unit direction
         ContinuousRotation motion;
         List<Arrow> lockDirCandidates;
@@ -100,8 +100,8 @@ namespace ConRotation
             t1 = 0;
             t2 = 1;
             skeleton = null;
-            energyLevel = 0.5;
-            speedLevel = 4;
+            energyLevel = 5;
+            speedLevel = 5;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -166,8 +166,8 @@ namespace ConRotation
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
-            double energy_input = 4;
-            double speed_input = 4;
+            int energy_input = 4;
+            int speed_input = 4;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))

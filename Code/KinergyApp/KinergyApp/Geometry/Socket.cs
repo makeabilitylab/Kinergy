@@ -12,18 +12,14 @@ namespace Kinergy.Geom
     {
         Point3d centerPoint;
         Vector3d direction;
-        double radius;
-        public Socket(Point3d p, Vector3d v,double r)
+        public Socket(Point3d p, Vector3d v)
         {
             center = p;
-            direction = v;
-            radius = r;
-            double scale = r / 10;
-            Brep primitiveModel = KinergyUtilities.FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() + "\\SocketRadius10mm.3dm");
+            direction = v/v.Length;
+            Brep primitiveModel = KinergyUtilities.FileOperation.SingleBrepFromResourceFileDirectory(FileOperation.FindCurrentFolderResourceDirectory() + "\\RevoluteJointSocket.3dm");
             model = primitiveModel.DuplicateBrep();
-            model.Transform(Transform.Scale(Point3d.Origin, scale));
-            model.Transform(Transform.Rotation(Vector3d.XAxis, direction, Point3d.Origin));
-            model.Transform(Transform.Translation(new Vector3d(p)));
+            model.Transform(Transform.Rotation(Vector3d.XAxis, direction, model.GetBoundingBox(true).Center));
+            model.Transform(Transform.Translation(new Vector3d(p - model.GetBoundingBox(true).Center)));
         }
     }
 }

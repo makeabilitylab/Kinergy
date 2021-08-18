@@ -99,12 +99,12 @@ namespace Kinergy.KineticUnit
 
         }
 
-        public void AdjustParameter(double energylevel, double speedlevel)
+        public void AdjustParameter(int energylevel, int speedlevel)
         {
             if(Energy != energylevel)
             {
                 double maxDegree = Math.PI * 2;
-                springS.AdjustParam((int)(energylevel * 10 - 1), maxDegree);
+                //springS.AdjustParam((int)(energylevel * 10 - 1), maxDegree);
                 Brep springModel = springS.GetModelinWorldCoordinate();
                 springModel.Transform(_translateBack);
                 springModel.Transform(_rotationBack);
@@ -793,7 +793,8 @@ namespace Kinergy.KineticUnit
 
                 #region construct a spiral spring 
 
-                SpringS = new Spiral(new Vector3d(springSSidePt - springSCenter), springSCenter, lastGearRadius * 1.2, Math.PI * 2, (int)(Energy * 10 - 1));
+                SpringS = null;
+                //SpringS = new Spiral(new Vector3d(springSSidePt - springSCenter), springSCenter, lastGearRadius * 1.2, Math.PI * 2, (int)(Energy * 10 - 1));
                 Brep spring_s_origi = SpringS.GetModelinWorldCoordinate();
 
                 spring_s_origi.Transform(translateBack);
