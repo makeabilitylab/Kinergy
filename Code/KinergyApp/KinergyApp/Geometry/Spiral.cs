@@ -234,10 +234,17 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == b.SolidOrientation)
                     b.Flip();
 
+                double suppColSideLen = 6;
                 Point3d conStart = springStartPos + thicknessY  * direction / direction.Length;
                 Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction / direction.Length + conStart;
                 Curve conPath = new Line(conStart, conEnd).ToNurbsCurve();
-                Brep connectorBrep = Brep.CreatePipe(conPath, thicknessX, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+
+                Plane supPlane = new Plane(centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction / direction.Length, direction);
+                Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen/2, suppColSideLen/2), new Interval(-suppColSideLen, 0));
+                outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+                Brep connectorBrep = Brep.CreateFromSweep(conPath, outlineSupport.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                connectorBrep = connectorBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                //Brep connectorBrep = Brep.CreatePipe(conPath, thicknessX, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
 
                 connectorBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == connectorBrep.SolidOrientation)

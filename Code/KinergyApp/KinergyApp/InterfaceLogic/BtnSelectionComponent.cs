@@ -183,7 +183,7 @@ namespace HumanUIforKinergy.InterfaceLogic
                 DA.SetData(6, false);
                 DA.SetData(7, false);
             }
-            else if (!btnClick_instrans && !btnClick_insrot && btnClick_contrans && !btnClick_conrot &&
+            else if (!btnClick_instrans && !btnClick_insrot && !btnClick_contrans && !btnClick_conrot &&
                 btnClick_recip && !btnClick_interosci && !btnClick_interrot)
             {
                 motionType = 5;
@@ -200,7 +200,7 @@ namespace HumanUIforKinergy.InterfaceLogic
                 DA.SetData(6, false);
                 DA.SetData(7, false);
             }
-            else if (!btnClick_instrans && !btnClick_insrot && btnClick_contrans && !btnClick_conrot &&
+            else if (!btnClick_instrans && !btnClick_insrot && !btnClick_contrans && !btnClick_conrot &&
                 !btnClick_recip && btnClick_interosci && !btnClick_interrot)
             {
                 motionType = 6;
@@ -217,7 +217,7 @@ namespace HumanUIforKinergy.InterfaceLogic
                 DA.SetData(6, true);
                 DA.SetData(7, false);
             }
-            else if (!btnClick_instrans && !btnClick_insrot && btnClick_contrans && !btnClick_conrot &&
+            else if (!btnClick_instrans && !btnClick_insrot && !btnClick_contrans && !btnClick_conrot &&
                 !btnClick_recip && !btnClick_interosci && btnClick_interrot)
             {
                 motionType = 7;

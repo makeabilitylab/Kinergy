@@ -13,7 +13,7 @@ using HumanUIforKinergy.KinergyUtilities;
 using Kinergy.Geom;
 using System.Linq;
 
-namespace HumanUIforKinergy.KineticUnits.Reciprocation
+namespace InterReciprocation
 {
     public class ReciprocationModule : GH_Component
     {
@@ -23,9 +23,8 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         Brep innerCavity;
         double t1, t2; // the positoins of start point and end point of the segment on the normalized skeleton
         Curve skeleton;     // skeleton
-        double energyLevel;         // value of the strength slide bar
-        int amplitude;
-        double speedLevel;      // value of the speed slide bar
+        int speedLevel;         // value of the strength slide bar
+        int amplitudeLevel;      // value of the speed slide bar
         int pattern;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
@@ -57,6 +56,15 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         Vector3d v = Vector3d.Unset;
         ProcessingWin processingwin = new ProcessingWin();
 
+        RhinoDoc myDoc;
+        bool testBodySelBtn;
+        bool testMotionControlPosSetBtn;
+        bool testEEPosSetBtn;
+        bool testMotionAxisDirSetBtn;
+        bool testPreBtn;
+        bool testBakeBtn;
+        int motionControlMethod; // 1: press; 2: turn
+
         /// <summary>
         /// Initializes a new instance of the ReciprocationModule class.
         /// </summary>
@@ -71,8 +79,8 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
             t1 = 0;
             t2 = 1;
             skeleton = null;
-            energyLevel = 0.5;
-            amplitude = 0;
+            speedLevel = 5;
+            amplitudeLevel = 5;
             pattern = 1;
             direction = new Vector3d();
             motion = null;
@@ -89,6 +97,15 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
             selObjId = Guid.Empty;
             toBeBaked = new List<Guid>();
             speed = 0;
+
+            myDoc = RhinoDoc.ActiveDoc;
+            testBodySelBtn = false;
+            testMotionControlPosSetBtn = false;
+            testEEPosSetBtn = false;
+            testMotionAxisDirSetBtn = false;
+            testPreBtn = false;
+            testBakeBtn = false;
+            motionControlMethod = -1;
         }
 
         /// <summary>
@@ -98,15 +115,17 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         {
             // User triggers for actions
             pManager.AddBooleanParameter("RegionSelection", "Reg", "Enabling region selection and direction calculation", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("EndeffectorSetting", "EE", "Enabling the selection of the end-effector", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("MotionControlMethod", "MCM", "The method to control the motion (press or turn)", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("SetMotionControlPos", "MCPos", "Set the motion control position", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("SetEEPos", "EEPos", "Set the end-effector position", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("SetAxisDir", "ADir", "Set the motion axis direction", GH_ParamAccess.item);
+
             pManager.AddBooleanParameter("AddLock", "L", "Enabling locking", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Preview", "Pre", "Enabling preview", GH_ParamAccess.item);
 
             // Value listeners 
-            pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddTextParameter("Amplitude", "A", "The amplitude of the reciprocation", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Speed", "S", "The speed of the reciprocation", GH_ParamAccess.item);
-            pManager.AddTextParameter("Pattern", "P", "The type of the cam profile", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Speed", "Speed", "Speed of motion", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Amplitude", "A", "The amplitude of the reciprocation", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -152,45 +171,80 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
-            double energy_input = 4;
-            string amplitude_input = "";
-            double speed_input = 4;
-            string pattern_input = "";
+            bool reg_input = false, control_pos = false, ee_pos = false, motion_axis = false, addlock_input = false, pre_input = false, bake_input = false;
+            int motion_control_method = -1;
+            int speed_input = 5;
+            int amp_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
                 return;
-            if (!DA.GetData(1, ref end_input))
+            if (!DA.GetData(1, ref motion_control_method))
                 return;
-            if (!DA.GetData(2, ref addlock_input))
+            if (!DA.GetData(2, ref control_pos))
                 return;
-            if (!DA.GetData(3, ref pre_input))
+            if (!DA.GetData(3, ref ee_pos))
                 return;
-            if (!DA.GetData(4, ref energy_input))
+            if (!DA.GetData(4, ref motion_axis))
                 return;
-            if (!DA.GetData(5, ref amplitude_input))
+            if (!DA.GetData(5, ref addlock_input))
                 return;
-            if (!DA.GetData(6, ref speed_input))
+            if (!DA.GetData(6, ref pre_input))
                 return;
-            if (!DA.GetData(7, ref pattern_input))
+            if (!DA.GetData(7, ref speed_input))
                 return;
-            if (!DA.GetData(8, ref bake_input))
+            if (!DA.GetData(8, ref amp_input))
+                return;
+            if (!DA.GetData(9, ref bake_input))
                 return;
             #endregion
 
             // variables to control states
-            bool toSelectRegion = false, toAdjustParam = false, toSetEndEffector = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
+            bool toSelectRegion = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAdjustParam = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
 
             #region Input check. This determines how the cell respond to changed params
-            if (reg_input)//This applies to starting situation and when u change the input model
+            if (!reg_input && testBodySelBtn)
             {
                 toSelectRegion = true;
+                testBodySelBtn = false;
             }
-            if (end_input)
+            else if (reg_input)
             {
-                toSetEndEffector = true;
+                testBodySelBtn = true;
             }
+
+            motionControlMethod = motion_control_method;
+
+            if (!control_pos && testMotionControlPosSetBtn)
+            {
+                toSetMotionControl = true;
+                testMotionControlPosSetBtn = false;
+            }
+            else if (control_pos)
+            {
+                testMotionControlPosSetBtn = true;
+            }
+
+            if (!ee_pos && testEEPosSetBtn)
+            {
+                toSetEEPos = true;
+                testEEPosSetBtn = false;
+            }
+            else if (ee_pos)
+            {
+                testEEPosSetBtn = true;
+            }
+
+            if (!motion_axis && testMotionAxisDirSetBtn)
+            {
+                toSetAxisDir = true;
+                testMotionAxisDirSetBtn = false;
+            }
+            else if (motion_axis)
+            {
+                testMotionAxisDirSetBtn = true;
+            }
+
             if (lockState != addlock_input)
             {
                 lockState = addlock_input;
@@ -199,39 +253,55 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
                 else
                     toRemoveLock = true;
             }
-            if (pre_input)
+            if (!pre_input && testPreBtn)
             {
                 toPreview = true;
+                testPreBtn = false;
+            }
+            else if (pre_input)
+            {
+                testPreBtn = true;
             }
 
-            if (energyLevel == energy_input && amplitude == ConvertAmpToIntType(amplitude_input) && speedLevel == speed_input  && pattern == ConvertPatternToIntType(pattern_input))
+            if (!bake_input && testBakeBtn)
+            {
+                toBake = true;
+                testBakeBtn = false;
+            }
+            else if (bake_input)
+            {
+                testBakeBtn = true;
+            }
+
+            if (speedLevel == speed_input && amplitudeLevel == amp_input)
             {
                 toAdjustParam = false;
             }
             else
             {
-                energyLevel = energy_input;
-                amplitude = ConvertAmpToIntType(amplitude_input);
                 speedLevel = speed_input;
-                pattern = ConvertPatternToIntType(pattern_input);
+                amplitudeLevel = amp_input;
                 toAdjustParam = true;
             }
-            if (bake_input)
-            {
-                toBake = true;
-            }
-            #endregion
 
-            if (toBake)
-            {
-            }
+            #endregion
 
             if (toSelectRegion)
             {
 
             }
 
-            if (toSetEndEffector)
+            if (toSetMotionControl)
+            {
+
+            }
+
+            if (toSetEEPos)
+            {
+
+            }
+
+            if (toSetAxisDir)
             {
 
             }
@@ -241,7 +311,17 @@ namespace HumanUIforKinergy.KineticUnits.Reciprocation
 
             }
 
+            if (toRemoveLock)
+            {
+
+            }
+
             if (toPreview)
+            {
+
+            }
+
+            if (toBake)
             {
 
             }

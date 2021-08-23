@@ -23,14 +23,13 @@ namespace ConRotation
         Brep innerCavity;
         double t1, t2; // the positoins of start point and end point of the segment on the normalized skeleton
         Curve skeleton;     // skeleton
-        int energyLevel;         // value of the strength slide bar
-        int speedLevel;   // value of the speed slide bar
+        int speedLevel;         // value of the strength slide bar
+        int roundLevel;   // value of the speed slide bar
         Vector3d direction;             // kinetic unit direction
         ContinuousRotation motion;
         List<Arrow> lockDirCandidates;
         Arrow p;
         int energyChargingMethod;       // pressing: 1; turning: 2
-        RhinoDoc myDoc;
         Vector3d orientationDir;
         int outputAxle;
         bool OperatingOutputAxleMethod;
@@ -84,7 +83,16 @@ namespace ConRotation
         Vector3d skeletonVec = Vector3d.Unset;
         Vector3d v = Vector3d.Unset;
         ProcessingWin processingwin = new ProcessingWin();
-        
+
+        RhinoDoc myDoc;
+        bool testBodySelBtn;
+        bool testMotionControlPosSetBtn;
+        bool testEEPosSetBtn;
+        bool testMotionAxisDirSetBtn;
+        bool testPreBtn;
+        bool testBakeBtn;
+        int motionControlMethod; // 1: press; 2: turn
+
 
         /// <summary>
         /// Initializes a new instance of the ContinuousRotationModule class.
@@ -100,7 +108,7 @@ namespace ConRotation
             t1 = 0;
             t2 = 1;
             skeleton = null;
-            energyLevel = 5;
+            roundLevel = 5;
             speedLevel = 5;
             direction = new Vector3d();
             motion = null;
@@ -127,6 +135,14 @@ namespace ConRotation
             zIndicatorID = Guid.Empty;
             innerHeight = double.MaxValue;
             innerDepth = double.MaxValue;
+
+            testBodySelBtn = false;
+            testMotionControlPosSetBtn = false;
+            testEEPosSetBtn = false;
+            testMotionAxisDirSetBtn = false;
+            testPreBtn = false;
+            testBakeBtn = false;
+            motionControlMethod = -1;
         }
 
         /// <summary>
@@ -136,13 +152,17 @@ namespace ConRotation
         {
             // User triggers for actions
             pManager.AddBooleanParameter("RegionSelection", "Reg", "Enabling region selection and direction calculation", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("EndeffectorSetting", "EE", "Enabling the selection of the end-effector", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("MotionControlMethod", "MCM", "The method to control the motion (press or turn)", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("SetMotionControlPos", "MCPos", "Set the motion control position", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("SetEEPos", "EEPos", "Set the end-effector position", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("SetAxisDir", "ADir", "Set the motion axis direction", GH_ParamAccess.item);
+
             pManager.AddBooleanParameter("AddLock", "L", "Enabling locking", GH_ParamAccess.item);
             pManager.AddBooleanParameter("Preview", "Pre", "Enabling preview", GH_ParamAccess.item);
 
             // Value listeners 
-            pManager.AddNumberParameter("Energy", "E", "Energy of motion", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Speed", "V", "The speed/velocity of the output gear (RPM)", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Speed", "S", "Speed of motion", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Rounds", "R", "The rounds of the output motion", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -165,39 +185,80 @@ namespace ConRotation
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool reg_input = false, end_input = false, addlock_input = false, pre_input = false, bake_input = false;
-            int energy_input = 4;
-            int speed_input = 4;
+            bool reg_input = false, control_pos = false, ee_pos = false, motion_axis = false,  addlock_input = false, pre_input = false, bake_input = false;
+            int motion_control_method = -1;
+            int speed_input = 5;
+            int round_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
                 return;
-            if (!DA.GetData(1, ref end_input))
+            if (!DA.GetData(1, ref motion_control_method))
                 return;
-            if (!DA.GetData(2, ref addlock_input))
+            if (!DA.GetData(2, ref control_pos))
                 return;
-            if (!DA.GetData(3, ref pre_input))
+            if (!DA.GetData(3, ref ee_pos))
                 return;
-            if (!DA.GetData(4, ref energy_input))
+            if (!DA.GetData(4, ref motion_axis))
                 return;
-            if (!DA.GetData(5, ref speed_input))
+            if (!DA.GetData(5, ref addlock_input))
                 return;
-            if (!DA.GetData(6, ref bake_input))
+            if (!DA.GetData(6, ref pre_input))
+                return;
+            if (!DA.GetData(7, ref speed_input))
+                return;
+            if (!DA.GetData(8, ref round_input))
+                return;
+            if (!DA.GetData(9, ref bake_input))
                 return;
             #endregion
 
             // variables to control states
-            bool toSelectRegion = false, toAdjustParam = false, toSetEndEffector = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
+            bool toSelectRegion = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAdjustParam = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
 
             #region Input check. This determines how the cell respond to changed params
-            if (reg_input)//This applies to starting situation and when u change the input model
+            if (!reg_input && testBodySelBtn)
             {
                 toSelectRegion = true;
+                testBodySelBtn = false;
             }
-            if (end_input)
+            else if (reg_input)
             {
-                toSetEndEffector = true;
+                testBodySelBtn = true;
             }
+
+            motionControlMethod = motion_control_method;
+
+            if (!control_pos && testMotionControlPosSetBtn)
+            {
+                toSetMotionControl = true;
+                testMotionControlPosSetBtn = false;
+            }
+            else if (control_pos)
+            {
+                testMotionControlPosSetBtn = true;
+            }
+
+            if (!ee_pos && testEEPosSetBtn)
+            {
+                toSetEEPos = true;
+                testEEPosSetBtn = false;
+            }
+            else if (ee_pos)
+            {
+                testEEPosSetBtn = true;
+            }
+
+            if (!motion_axis && testMotionAxisDirSetBtn)
+            {
+                toSetAxisDir = true;
+                testMotionAxisDirSetBtn = false;
+            }
+            else if (motion_axis)
+            {
+                testMotionAxisDirSetBtn = true;
+            }
+
             if (lockState != addlock_input)
             {
                 lockState = addlock_input;
@@ -206,25 +267,37 @@ namespace ConRotation
                 else
                     toRemoveLock = true;
             }
-            if (pre_input)
+            if (!pre_input && testPreBtn)
             {
                 toPreview = true;
+                testPreBtn = false;
+            }
+            else if (pre_input)
+            {
+                testPreBtn = true;
             }
 
-            if (energyLevel == energy_input && speedLevel == speed_input)
+            if (!bake_input && testBakeBtn)
+            {
+                toBake = true;
+                testBakeBtn = false;
+            }
+            else if (bake_input)
+            {
+                testBakeBtn = true;
+            }
+
+            if (speedLevel == speed_input && roundLevel == round_input)
             {
                 toAdjustParam = false;
             }
             else
             {
-                energyLevel = energy_input;
                 speedLevel = speed_input;
+                roundLevel = round_input;
                 toAdjustParam = true;
             }
-            if (bake_input)
-            {
-                toBake = true;
-            }
+
             #endregion
 
             if (toBake)
@@ -501,681 +574,684 @@ namespace ConRotation
 
             }
 
-            if (toSetEndEffector)
-            {
-                // Ask the user to select a Brep and calculate the orientation of the embedded kinetic unit
-                List<ObjRef> objSel_refs = new List<ObjRef>();
-                List<Guid> selObjId1s = new List<Guid>();
-                List<Brep> eeBreps = new List<Brep>();
-
-                #region Pre-process step: ask the user to select the end-effector(s)
-                RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent3;
-                Rhino.Input.Custom.GetPoint gp7 = new Rhino.Input.Custom.GetPoint();
-                gp7.SetCommandPrompt(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.");
-                gp7.AcceptNothing(true);
-                Rhino.Input.GetResult r7;
-                
-                multipleSelections = true;
-                do
-                {
-                    ObjRef tempObjSel_ref;
-                    Guid selObjIdTemp = Guid.Empty;
-
-                    var rc = RhinoGet.GetOneObject(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.", false, ObjectType.AnyObject, out tempObjSel_ref);
-                    if (rc == Rhino.Commands.Result.Success)
-                    {
-                        // select a brep
-                        selObjIdTemp = tempObjSel_ref.ObjectId;
-                        endEffectorIDs.Add(selObjIdTemp);
-                        ObjRef currObj = new ObjRef(selObjIdTemp);
-
-                        Brep endeffector = currObj.Brep();
-                        eeBreps.Add(endeffector);
-
-                    }
-                    r7 = gp7.Get(true);
-
-                } while (r7 != Rhino.Input.GetResult.Nothing);
-                multipleSelections = false;
-
-                #endregion
-
-                #region Step 0: set the output gear axle type
-
-                RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent2; ;
-                Rhino.Input.Custom.GetPoint gp4 = new Rhino.Input.Custom.GetPoint();
-                gp4.SetCommandPrompt(@"Press '1' to set the output gear shaft in the object or '2' to extend the shaft out of the object. Press 'Enter' to continue.");
-                gp4.AcceptNothing(true);
-                Rhino.Input.GetResult r4;
-
-                OperatingOutputAxleMethod = true;
-                do
-                {
-                    r4 = gp4.Get(true);
-
-                } while (r4 != Rhino.Input.GetResult.Nothing);
-                OperatingOutputAxleMethod = false;
-
-                #endregion
-
-                #region Step 1: configure the position and direction of the kinetic unit
-
-                if (eeBreps.Count() == 1)
-                {
-                    // only one object is selected as the end-effector
-
-                    #region Prepare the endpoints and transformation for generating the kinetic unit
-                    Brep endeffector = eeBreps.ElementAt(0);
-
-                    Point3d ptS = skeleton.PointAtNormalizedLength(t1);
-                    Point3d ptE = skeleton.PointAtNormalizedLength(t2);
-
-                    Point3d tarPt = new Point3d();
-                    Point3d springPosPt = new Point3d();
-                    BoundingBox eeBoundingBox = endeffector.GetBoundingBox(true);
-                    Point3d ee_center = eeBoundingBox.Center;
-                    if (ee_center.DistanceTo(ptS) >= ee_center.DistanceTo(ptE))
-                    {
-                        tarPt = ptE;
-                        springPosPt = ptS;
-                       
-                    }
-                    else
-                    {
-                        tarPt = ptS;
-                        springPosPt = ptE;
-                    }
-
-                    Plane eeDirPlane = new Plane(tarPt, new Vector3d(springPosPt - tarPt));
-                    Point3d dirPt = eeDirPlane.ClosestPoint(ee_center);
-                    Vector3d rawDir = new Vector3d(dirPt - tarPt);
-
-                    Point3d inputPt = springPosPt;
-                    Point3d outputPt = tarPt; 
-
-                    // Currently, Kinergy only cares about the transformation along the height
-                    switch (alignment)
-                    {
-                        case 1:
-                            {
-                                orientationDir = new Vector3d(0, 0, dirPt.Z - tarPt.Z);
-                                innerHeight = innerHeight - Math.Abs(dirPt.Z - tarPt.Z);
-                                axisToSkeleton = new Vector3d(tarPt - new Point3d(tarPt.X, 0, 0));
-                                skeletonToAxis = new Vector3d(new Point3d(tarPt.X, 0, 0) - tarPt);
-                                rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1+t2)/2));
-                                rotateOrientationToAxis = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            #region old code
+            //if (toSetEndEffector)
+            //{
+            //    // Ask the user to select a Brep and calculate the orientation of the embedded kinetic unit
+            //    List<ObjRef> objSel_refs = new List<ObjRef>();
+            //    List<Guid> selObjId1s = new List<Guid>();
+            //    List<Brep> eeBreps = new List<Brep>();
+
+            //    #region Pre-process step: ask the user to select the end-effector(s)
+            //    RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent3;
+            //    Rhino.Input.Custom.GetPoint gp7 = new Rhino.Input.Custom.GetPoint();
+            //    gp7.SetCommandPrompt(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.");
+            //    gp7.AcceptNothing(true);
+            //    Rhino.Input.GetResult r7;
+
+            //    multipleSelections = true;
+            //    do
+            //    {
+            //        ObjRef tempObjSel_ref;
+            //        Guid selObjIdTemp = Guid.Empty;
+
+            //        var rc = RhinoGet.GetOneObject(@"Please select at least one Brep or Surface as the end-effector. Press 'Enter' to continue.", false, ObjectType.AnyObject, out tempObjSel_ref);
+            //        if (rc == Rhino.Commands.Result.Success)
+            //        {
+            //            // select a brep
+            //            selObjIdTemp = tempObjSel_ref.ObjectId;
+            //            endEffectorIDs.Add(selObjIdTemp);
+            //            ObjRef currObj = new ObjRef(selObjIdTemp);
+
+            //            Brep endeffector = currObj.Brep();
+            //            eeBreps.Add(endeffector);
+
+            //        }
+            //        r7 = gp7.Get(true);
+
+            //    } while (r7 != Rhino.Input.GetResult.Nothing);
+            //    multipleSelections = false;
+
+            //    #endregion
+
+            //    #region Step 0: set the output gear axle type
+
+            //    RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent2; ;
+            //    Rhino.Input.Custom.GetPoint gp4 = new Rhino.Input.Custom.GetPoint();
+            //    gp4.SetCommandPrompt(@"Press '1' to set the output gear shaft in the object or '2' to extend the shaft out of the object. Press 'Enter' to continue.");
+            //    gp4.AcceptNothing(true);
+            //    Rhino.Input.GetResult r4;
+
+            //    OperatingOutputAxleMethod = true;
+            //    do
+            //    {
+            //        r4 = gp4.Get(true);
+
+            //    } while (r4 != Rhino.Input.GetResult.Nothing);
+            //    OperatingOutputAxleMethod = false;
+
+            //    #endregion
+
+            //    #region Step 1: configure the position and direction of the kinetic unit
+
+            //    if (eeBreps.Count() == 1)
+            //    {
+            //        // only one object is selected as the end-effector
+
+            //        #region Prepare the endpoints and transformation for generating the kinetic unit
+            //        Brep endeffector = eeBreps.ElementAt(0);
+
+            //        Point3d ptS = skeleton.PointAtNormalizedLength(t1);
+            //        Point3d ptE = skeleton.PointAtNormalizedLength(t2);
+
+            //        Point3d tarPt = new Point3d();
+            //        Point3d springPosPt = new Point3d();
+            //        BoundingBox eeBoundingBox = endeffector.GetBoundingBox(true);
+            //        Point3d ee_center = eeBoundingBox.Center;
+            //        if (ee_center.DistanceTo(ptS) >= ee_center.DistanceTo(ptE))
+            //        {
+            //            tarPt = ptE;
+            //            springPosPt = ptS;
+
+            //        }
+            //        else
+            //        {
+            //            tarPt = ptS;
+            //            springPosPt = ptE;
+            //        }
+
+            //        Plane eeDirPlane = new Plane(tarPt, new Vector3d(springPosPt - tarPt));
+            //        Point3d dirPt = eeDirPlane.ClosestPoint(ee_center);
+            //        Vector3d rawDir = new Vector3d(dirPt - tarPt);
+
+            //        Point3d inputPt = springPosPt;
+            //        Point3d outputPt = tarPt; 
+
+            //        // Currently, Kinergy only cares about the transformation along the height
+            //        switch (alignment)
+            //        {
+            //            case 1:
+            //                {
+            //                    orientationDir = new Vector3d(0, 0, dirPt.Z - tarPt.Z);
+            //                    innerHeight = innerHeight - Math.Abs(dirPt.Z - tarPt.Z);
+            //                    axisToSkeleton = new Vector3d(tarPt - new Point3d(tarPt.X, 0, 0));
+            //                    skeletonToAxis = new Vector3d(new Point3d(tarPt.X, 0, 0) - tarPt);
+            //                    rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1+t2)/2));
+            //                    rotateOrientationToAxis = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
 
-                            }break;
-                        case 2:
-                            {
-                                orientationDir = new Vector3d(0, 0, dirPt.Z - tarPt.Z);
-                                innerHeight = innerHeight - Math.Abs(dirPt.Z - tarPt.Z);
-                                axisToSkeleton = new Vector3d(tarPt - new Point3d(0, tarPt.Y, 0));
-                                skeletonToAxis = new Vector3d(new Point3d(0, tarPt.Y, 0) - tarPt);
-                                rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.YAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                                rotateOrientationToAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-
-                            }
-                            break;
-                        case 3:
-                            {
-                                orientationDir = new Vector3d(0, dirPt.Y - tarPt.Y, 0);
-                                innerHeight = innerHeight - Math.Abs(dirPt.Y - tarPt.Y);
-                                axisToSkeleton = new Vector3d(tarPt - new Point3d(0, 0, tarPt.Z));
-                                skeletonToAxis = new Vector3d(new Point3d(0, 0, tarPt.Z) - tarPt);
-                                rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.ZAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                                rotateOrientationToAxis = Transform.Rotation(Vector3d.ZAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-
-                            }
-                            break;
-                        default:break;
-                    }
-
-                    #endregion
-
-                    #region Parse energy and the speed
-
-                    speed = speedLevel;
-                    // Parse the energy to 0.1-1
-                    energy = (energyLevel + 1) / 10;
-
-                    #endregion
-
-                    #region Create an instance of Continuous Rotation class
-
-                    myDoc.Objects.Hide(selObjId, true);
-
-                    motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
-
-                    #endregion
-
-                    #region Using orientationDir and tarPt as the axis of the last gear
-
-                    transSkeleton = Transform.Translation(skeletonToAxis);
-                    transSkeletonBack = Transform.Translation(axisToSkeleton);
-                    offsetTranslation = Transform.Translation(orientationDir);
-
-                    inputPt.Transform(transSkeleton);
-                    inputPt.Transform(rotateOrientationToAxis);
-                    outputPt.Transform(transSkeleton);
-                    outputPt.Transform(rotateOrientationToAxis);
-                    innerCavity.Transform(transSkeleton);
-                    innerCavity.Transform(rotateOrientationToAxis);
-
-                    double xEnd = outputPt.X;
-
-                    Brep innerCavityBrep = innerCavity.DuplicateBrep();
-                    double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
-
-                    #region old code
-                    //// Transform from the current orientation and direction to X axis
-                    //Point3d startPoint = springPosPt;
-
-                    //Transform dirToXRotation = Transform.Rotation(direction, new Vector3d(1, 0, 0), startPoint);
-                    //Point3d projectedSpringPosPt = new Point3d(startPoint.X, 0, 0);
-                    //Transform dirToXTranlation = Transform.Translation(new Vector3d(projectedSpringPosPt - startPoint));
-
-                    //// Transform back from X axis to the current kinetic unit orientation
-                    //dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
-                    //dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
-
-                    //// Last step, rotate back to the pose of the kinetic unit
-                    //Vector3d originalYVector = new Vector3d(0, 1, 0);
-                    //originalYVector.Transform(dirToXTranlationBack);
-                    //originalYVector.Transform(dirToXRotationBack);
-                    ////yToPoseTrans = Transform.Rotation(originalYVector, orientationDir, startPoint);
-                    //yToPoseTrans = Transform.Identity;
-
-                    //// Start transform
-                    //startPoint.Transform(dirToXRotation);
-                    //startPoint.Transform(dirToXTranlation);
-
-                    //Point3d endPt = new Point3d(tarPt);
-                    //endPt.Transform(dirToXRotation);
-                    //endPt.Transform(dirToXTranlation);
-
-                    //double xEnd = endPt.X;
-                    //Brep modelDup = model.DuplicateBrep();
-                    //modelDup.Transform(dirToXRotation);
-                    //modelDup.Transform(dirToXTranlation);
-
-
-                    //double outDiameter = Math.Abs(modelDup.GetBoundingBox(true).Max.Z - modelDup.GetBoundingBox(true).Min.Z);
-                    ////double outDiameter = Double.MaxValue;
-
-                    ////foreach(var v in modelDup.Vertices)
-                    ////{
-                    ////    if (Math.Abs(v.Location.Z) < outDiameter / 2)
-                    ////        outDiameter = Math.Abs(v.Location.Z) * 2;
-                    ////}
-                    //double totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y);
-                    ////double totalThickness = Double.MaxValue;
-
-                    ////foreach(var v in modelDup.Vertices)
-                    ////{
-                    ////    if (Math.Abs(v.Location.Y) < totalThickness / 2)
-                    ////        totalThickness = Math.Abs(v.Location.Y) * 2;
-                    ////}
-                    //Brep innerCavityBrep = innerCavity.DuplicateBrep();
-                    //innerCavityBrep.Transform(dirToXTranlation);
-                    //innerCavityBrep.Transform(dirToXRotation);
-                    //double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
-
-                    #endregion
-
-                    motion.ConstructGearTrain(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
-                        transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
-                    motion.ConstructSpring(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
-                        transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
-
-                    foreach (var obj in myDoc.Objects)
-                    {
-                        Guid tempID = obj.Id;
-                        if (!endEffectorIDs.Contains(tempID))
-                        {
-                            ObjRef currObj = new ObjRef(tempID);
-
-                            Brep tempBrep = currObj.Brep();
-
-                            bool isFind = false;
-                            foreach (Entity en in motion.EntityList)
-                            {
-                                if (en.Model == tempBrep)
-                                {
-                                    isFind = true;
-                                    break;
-                                }
-
-                            }
-
-                            if (!isFind)
-                            {
-                                motion.EntityList.Add(new Shape(tempBrep, false, ""));
-                            }
-                        }
-                    }
-
-                    #endregion
-                }
-                else
-                {
-                    // multiple objects are selected as the end-effectors
-
-                    #region Prepare the endpoints
-
-                    Point3d ptS = skeleton.PointAtNormalizedLength(t1);
-                    Point3d ptE = skeleton.PointAtNormalizedLength(t2);
-
-                    Point3d tarPt = new Point3d();
-                    Point3d springPosPt = new Point3d();
-
-                    Point3d eeCenter = new Point3d(0,0,0);
-                    Brep eeBrepAll = new Brep();
-
-                    List<Point3d> brepCenters = new List<Point3d>();
-                    Point3d eeCen1 = new Point3d();
-                    Point3d eeCen2 = new Point3d();
-
-                    foreach (Brep b in eeBreps)
-                    {
-                        BoundingBox eeBoundingBox = b.GetBoundingBox(true);
-                        Point3d ee_center = eeBoundingBox.Center;
-
-                        brepCenters.Add(ee_center);
-
-                        //eeBrepAll.Append(b);
-                        eeBrepAll = b;
-
-                        eeCenter = eeCenter + ee_center;
-                    }
-                    eeCen1 = brepCenters.ElementAt(0);
-                    eeCen2 = brepCenters.ElementAt(1);
-
-                    eeCenter = eeCenter / eeBreps.Count();
-                    
-                    if (eeCenter.DistanceTo(ptS) >= eeCenter.DistanceTo(ptE))
-                    {
-                        tarPt = ptE;
-                        springPosPt = ptS;
-                    }
-                    else
-                    {
-                        tarPt = ptS;
-                        springPosPt = ptE;
-                    }
-
-                    #endregion
-
-                    #region transform the model so that the skeleton is on the X axis
-
-                    //Plane eeDirPlane = new Plane(tarPt, new Vector3d(springPosPt - tarPt));
-                    //Point3d dirPt = eeDirPlane.ClosestPoint(eeCenter);
-                    //Vector3d rawDir = new Vector3d(dirPt - tarPt);
-
-                    Point3d inputPt = springPosPt;
-                    Point3d outputPt = tarPt;
-
-                    // Currently, Kinergy only cares about the transformation along the height
-                    switch (alignment)
-                    {
-                        case 1:
-                            {
-                                // X axis
-
-                                // first rotate the entire model from the current aligned axis to X axis
-                                rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                                rotateOrientationToAxis = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-
-                                // second, rotate the model so that the generated gears only move along Z axis
-                                eeCen1.Transform(rotateOrientationToAxis);
-                                eeCen2.Transform(rotateOrientationToAxis);
-                                double xDiff = Math.Abs(eeCen1.X - eeCen2.X);
-                                double yDiff = Math.Abs(eeCen1.Y - eeCen2.Y);
-                                double zDiff = Math.Abs(eeCen1.Z - eeCen2.Z);
-
-                                if (xDiff >= yDiff && xDiff >= zDiff)
-                                {
-                                    // impossible
-                                }
-                                else if (yDiff >= xDiff && yDiff >= zDiff)
-                                {
-                                    // rotate the end-effector direction (Y axis) to Y axis
-                                    eeDirectionToYAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                    eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                }
-                                else
-                                {
-                                    // rotate the end-effector direction (Z axis) to Y axis
-                                    eeDirectionToYAxis = Transform.Rotation(-Vector3d.ZAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                    eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, -Vector3d.ZAxis, (eeCen1 + eeCen2) / 2);
-                                }
-
-                                // third, transform the inputPt, outputPt, model, innerCavity, cen1, cen2 with two rotation matrix
-                                eeCen1.Transform(eeDirectionToYAxis);
-                                eeCen2.Transform(eeDirectionToYAxis);
-                                inputPt.Transform(rotateOrientationToAxis);
-                                inputPt.Transform(eeDirectionToYAxis);
-                                outputPt.Transform(rotateOrientationToAxis);
-                                outputPt.Transform(eeDirectionToYAxis);
-
-                                model.Transform(rotateOrientationToAxis);
-                                model.Transform(eeDirectionToYAxis);
-                                innerCavity.Transform(rotateOrientationToAxis);
-                                innerCavity.Transform(eeDirectionToYAxis);
-
-                                // only transform the skeleton here
-                                Point3d newCen = (eeCen1 + eeCen2) / 2;
-                                orientationDir = new Vector3d(0, 0, newCen.Z - outputPt.Z);
-                                offsetTranslation = Transform.Translation(orientationDir);
-                                //innerHeight = innerHeight - Math.Abs(newCen.Z - outputPt.Z);
-                                inputPt.Transform(offsetTranslation);
-                                outputPt.Transform(offsetTranslation);
-
-                                // transform all the skeleton, model, and innerCavity to align the skeleton on the X axis
-                                axisToSkeleton = new Vector3d(outputPt - new Point3d(outputPt.X, 0, 0));
-                                skeletonToAxis = new Vector3d(new Point3d(outputPt.X, 0, 0) - outputPt);
-                                transSkeleton = Transform.Translation(skeletonToAxis);
-                                transSkeletonBack = Transform.Translation(axisToSkeleton);
-
-                                outputPt.Transform(transSkeleton);
-                                inputPt.Transform(transSkeleton);
-                                model.Transform(transSkeleton);
-                                innerCavity.Transform(transSkeleton);
-                                eeCen1.Transform(transSkeleton);
-                                eeCen2.Transform(transSkeleton);
-                                newCen.Transform(transSkeleton);
-
-                            }
-                            break;
-                        case 2:
-                            {
-                                // Y axis
-
-                                // first rotate the entire model from the current aligned axis to X axis 
-                                rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.YAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                                rotateOrientationToAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-
-                                // second, rotate the model so that the generated gears only move along Z axis
-                                eeCen1.Transform(rotateOrientationToAxis);
-                                eeCen2.Transform(rotateOrientationToAxis);
-                                double xDiff = Math.Abs(eeCen1.X - eeCen2.X);
-                                double yDiff = Math.Abs(eeCen1.Y - eeCen2.Y);
-                                double zDiff = Math.Abs(eeCen1.Z - eeCen2.Z);
-
-                                if (xDiff >= yDiff && xDiff >= zDiff)
-                                {
-                                    // impossible
-                                }
-                                else if (yDiff >= xDiff && yDiff >= zDiff)
-                                {
-                                    // rotate the end-effector direction (Y axis) to Y axis
-                                    eeDirectionToYAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                    eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                }
-                                else
-                                {
-                                    // rotate the end-effector direction (Z axis) to Y axis
-                                    eeDirectionToYAxis = Transform.Rotation(-Vector3d.ZAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                    eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, -Vector3d.ZAxis, (eeCen1 + eeCen2) / 2);
-                                }
-
-                                // third, transform the inputPt, outputPt, model, innerCavity, cen1, cen2 with two rotation matrix
-                                eeCen1.Transform(eeDirectionToYAxis);
-                                eeCen2.Transform(eeDirectionToYAxis);
-                                inputPt.Transform(rotateOrientationToAxis);
-                                inputPt.Transform(eeDirectionToYAxis);
-                                outputPt.Transform(rotateOrientationToAxis);
-                                outputPt.Transform(eeDirectionToYAxis);
-
-                                model.Transform(rotateOrientationToAxis);
-                                model.Transform(eeDirectionToYAxis);
-                                innerCavity.Transform(rotateOrientationToAxis);
-                                innerCavity.Transform(eeDirectionToYAxis);
-
-                                // only transform the skeleton here
-                                Point3d newCen = (eeCen1 + eeCen2) / 2;
-                                orientationDir = new Vector3d(0, 0, newCen.Z - outputPt.Z);
-                                offsetTranslation = Transform.Translation(orientationDir);
-                                //innerHeight = innerHeight - Math.Abs(newCen.Z - outputPt.Z);
-                                inputPt.Transform(offsetTranslation);
-                                outputPt.Transform(offsetTranslation);
-
-                                // transform all the skeleton, model, and innerCavity to align the skeleton on the X axis
-                                axisToSkeleton = new Vector3d(outputPt - new Point3d(outputPt.X, 0, 0));
-                                skeletonToAxis = new Vector3d(new Point3d(outputPt.X, 0, 0) - outputPt);
-                                transSkeleton = Transform.Translation(skeletonToAxis);
-                                transSkeletonBack = Transform.Translation(axisToSkeleton);
-
-                                outputPt.Transform(transSkeleton);
-                                inputPt.Transform(transSkeleton);
-                                model.Transform(transSkeleton);
-                                innerCavity.Transform(transSkeleton);
-                                eeCen1.Transform(transSkeleton);
-                                eeCen2.Transform(transSkeleton);
-                                newCen.Transform(transSkeleton);
-
-                            }
-                            break;
-                        case 3:
-                            {
-                                // Z axis
-
-                                // first rotate the entire model from the current aligned axis to X axis 
-                                rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.ZAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                                rotateOrientationToAxis = Transform.Rotation(Vector3d.ZAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-
-                                // second, rotate the model so that the generated gears only move along Z axis
-                                eeCen1.Transform(rotateOrientationToAxis);
-                                eeCen2.Transform(rotateOrientationToAxis);
-                                double xDiff = Math.Abs(eeCen1.X - eeCen2.X);
-                                double yDiff = Math.Abs(eeCen1.Y - eeCen2.Y);
-                                double zDiff = Math.Abs(eeCen1.Z - eeCen2.Z);
-
-                                if (xDiff >= yDiff && xDiff >= zDiff)
-                                {
-                                    // impossible
-                                }
-                                else if (yDiff >= xDiff && yDiff >= zDiff)
-                                {
-                                    // rotate the end-effector direction (Y axis) to Y axis
-                                    eeDirectionToYAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                    eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                }
-                                else
-                                {
-                                    // rotate the end-effector direction (Z axis) to Y axis
-                                    eeDirectionToYAxis = Transform.Rotation(-Vector3d.ZAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
-                                    eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, -Vector3d.ZAxis, (eeCen1 + eeCen2) / 2);
-                                }
-
-                                // third, transform the inputPt, outputPt, model, innerCavity, cen1, cen2 with two rotation matrix
-                                eeCen1.Transform(eeDirectionToYAxis);
-                                eeCen2.Transform(eeDirectionToYAxis);
-                                inputPt.Transform(rotateOrientationToAxis);
-                                inputPt.Transform(eeDirectionToYAxis);
-                                outputPt.Transform(rotateOrientationToAxis);
-                                outputPt.Transform(eeDirectionToYAxis);
-
-                                model.Transform(rotateOrientationToAxis);
-                                model.Transform(eeDirectionToYAxis);
-                                innerCavity.Transform(rotateOrientationToAxis);
-                                innerCavity.Transform(eeDirectionToYAxis);
-
-                                // only transform the skeleton here
-                                Point3d newCen = (eeCen1 + eeCen2) / 2;
-                                orientationDir = new Vector3d(0, 0, newCen.Z - outputPt.Z);
-                                offsetTranslation = Transform.Translation(orientationDir);
-                                //innerHeight = innerHeight - Math.Abs(newCen.Z - outputPt.Z);
-                                inputPt.Transform(offsetTranslation);
-                                outputPt.Transform(offsetTranslation);
-
-                                // transform all the skeleton, model, and innerCavity to align the skeleton on the X axis
-                                axisToSkeleton = new Vector3d(outputPt - new Point3d(outputPt.X, 0, 0));
-                                skeletonToAxis = new Vector3d(new Point3d(outputPt.X, 0, 0) - outputPt);
-                                transSkeleton = Transform.Translation(skeletonToAxis);
-                                transSkeletonBack = Transform.Translation(axisToSkeleton);
-
-                                outputPt.Transform(transSkeleton);
-                                inputPt.Transform(transSkeleton);
-                                model.Transform(transSkeleton);
-                                innerCavity.Transform(transSkeleton);
-                                eeCen1.Transform(transSkeleton);
-                                eeCen2.Transform(transSkeleton);
-                                newCen.Transform(transSkeleton);
-
-                                //orientationDir = new Vector3d(0, dirPt.Y - tarPt.Y, 0);
-                                //innerHeight = innerHeight - Math.Abs(dirPt.Y - tarPt.Y);
-                                //axisToSkeleton = new Vector3d(tarPt - new Point3d(0, 0, tarPt.Z));
-                                //skeletonToAxis = new Vector3d(new Point3d(0, 0, tarPt.Z) - tarPt);
-                                //rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.ZAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                                //rotateOrientationToAxis = Transform.Rotation(Vector3d.ZAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
-                            }
-                            break;
-                        default: break;
-                    }
-
-                    #endregion
-
-                    #region Set up the output gear position and the max X on the X axis
-
-                    //inputPt.Transform(transSkeleton);
-                    //inputPt.Transform(rotateOrientationToAxis);
-                    //outputPt.Transform(transSkeleton);
-                    //outputPt.Transform(rotateOrientationToAxis);
-                    //innerCavity.Transform(transSkeleton);
-                    //innerCavity.Transform(rotateOrientationToAxis);
-                    //eeCen1.Transform(transSkeleton);
-                    //eeCen1.Transform(rotateOrientationToAxis);
-                    //eeCen2.Transform(transSkeleton);
-                    //eeCen2.Transform(rotateOrientationToAxis);
-
-                    double xEnd = outputPt.X;
-
-                    Brep innerCavityBrep = innerCavity.DuplicateBrep();
-                    double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
-
-                    #endregion
-
-
-                    #region Parse energy and the speed
-
-                    speed = speedLevel;
-                    // Parse the energy to 0.1-1
-                    energy = (energyLevel + 1) / 10;
-
-                    #endregion
-
-                    #region Create an instance of Continuous Rotation class
-
-                    myDoc.Objects.Hide(selObjId, true);
-                    motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
-
-                    #endregion
-
-                    Line dir = new Line();
-                    dir = new Line(eeCen1, eeCen2);
-
-                    if (dir != null)
-                    {
-                        eeBrepAll.Transform(rotateOrientationToAxis);
-                        eeBrepAll.Transform(eeDirectionToYAxis);
-                        eeBrepAll.Transform(transSkeleton);
-                        Wheel eeBrepWheel = new Wheel(eeBrepAll, dir, motion);
-                        motion.DrivenPart = eeBrepWheel;
-                    }
-
-                    #region old code
-                    //Point3d startPoint = springPosPt;
-
-                    //Transform dirToXRotation = Transform.Rotation(direction, new Vector3d(1, 0, 0), startPoint);
-                    //Point3d projectedSpringPosPt = new Point3d(startPoint.X, 0, 0);
-                    //Transform dirToXTranlation = Transform.Translation(new Vector3d(projectedSpringPosPt - startPoint));
-
-                    //// Transform back from X axis to the current kinetic unit orientation
-                    //dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
-                    //dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
-
-                    //// Last step, rotate back to the pose of the kinetic unit
-                    //Vector3d originalYVector = new Vector3d(0, 1, 0);
-                    //originalYVector.Transform(dirToXTranlationBack);
-                    //originalYVector.Transform(dirToXRotationBack);
-                    //yToPoseTrans = Transform.Translation(orientationDir);
-
-                    //// Start transform
-                    //startPoint.Transform(dirToXRotation);
-                    //startPoint.Transform(dirToXTranlation);
-
-                    //Point3d endPt = new Point3d(tarPt);
-                    //endPt.Transform(dirToXRotation);
-                    //endPt.Transform(dirToXTranlation);
-
-                    //double xEnd = endPt.X;
-                    //Brep modelDup = model.DuplicateBrep();
-                    //modelDup.Transform(dirToXRotation);
-                    //modelDup.Transform(dirToXTranlation);
-
-
-                    //double outDiameter;
-                    //double totalThickness;
-
-                    //if (directionType == 3)
-                    //    outDiameter = Math.Abs(2 * (modelDup.GetBoundingBox(true).Center.Z - translatingDis - modelDup.GetBoundingBox(true).Min.Z));
-                    //else
-                    //    outDiameter = Math.Abs(2 * (modelDup.GetBoundingBox(true).Center.Z - modelDup.GetBoundingBox(true).Min.Z));
-
-                    //if (directionType == 2)
-                    //    totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y - translatingDis);
-                    //else
-                    //    totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y);
-                    ////double outDiameter = Double.MaxValue;
-
-                    //Brep innerCavityBrep = innerCavity.DuplicateBrep();
-                    //innerCavityBrep.Transform(dirToXTranlation);
-                    //innerCavityBrep.Transform(dirToXRotation);
-
-                    //double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
-
-                    #endregion
-
-                    motion.ConstructGearTrain(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
-                        transSkeletonBack, eeYAxisToDirection, rotateAxisToOrientation);
-                    motion.ConstructSpring(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
-                        transSkeletonBack, eeYAxisToDirection, rotateAxisToOrientation);
-
-                    //motion.ConstructGearTrain(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
-                    //    dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
-                    //motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
-                    //    dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
-
-                    foreach (var obj in myDoc.Objects)
-                    {
-                        Guid tempID = obj.Id;
-                        ObjRef currObj = new ObjRef(tempID);
-
-                        Brep tempBrep = currObj.Brep();
-
-                        bool isFind = false;
-                        foreach (Entity en in motion.EntityList)
-                        {
-                            if (en.Model == tempBrep)
-                            {
-                                isFind = true;
-                                break;
-                            }
-
-                        }
-
-                        if (!isFind)
-                        {
-                            motion.EntityList.Add(new Shape(tempBrep, false, ""));
-                        }
-                    }
-
-                    
-                }
-                #endregion
-
-            }
+            //                }break;
+            //            case 2:
+            //                {
+            //                    orientationDir = new Vector3d(0, 0, dirPt.Z - tarPt.Z);
+            //                    innerHeight = innerHeight - Math.Abs(dirPt.Z - tarPt.Z);
+            //                    axisToSkeleton = new Vector3d(tarPt - new Point3d(0, tarPt.Y, 0));
+            //                    skeletonToAxis = new Vector3d(new Point3d(0, tarPt.Y, 0) - tarPt);
+            //                    rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.YAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                    rotateOrientationToAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+
+            //                }
+            //                break;
+            //            case 3:
+            //                {
+            //                    orientationDir = new Vector3d(0, dirPt.Y - tarPt.Y, 0);
+            //                    innerHeight = innerHeight - Math.Abs(dirPt.Y - tarPt.Y);
+            //                    axisToSkeleton = new Vector3d(tarPt - new Point3d(0, 0, tarPt.Z));
+            //                    skeletonToAxis = new Vector3d(new Point3d(0, 0, tarPt.Z) - tarPt);
+            //                    rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.ZAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                    rotateOrientationToAxis = Transform.Rotation(Vector3d.ZAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+
+            //                }
+            //                break;
+            //            default:break;
+            //        }
+
+            //        #endregion
+
+            //        #region Parse energy and the speed
+
+            //        speed = speedLevel;
+            //        // Parse the energy to 0.1-1
+            //        energy = (energyLevel + 1) / 10;
+
+            //        #endregion
+
+            //        #region Create an instance of Continuous Rotation class
+
+            //        myDoc.Objects.Hide(selObjId, true);
+
+            //        motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
+
+            //        #endregion
+
+            //        #region Using orientationDir and tarPt as the axis of the last gear
+
+            //        transSkeleton = Transform.Translation(skeletonToAxis);
+            //        transSkeletonBack = Transform.Translation(axisToSkeleton);
+            //        offsetTranslation = Transform.Translation(orientationDir);
+
+            //        inputPt.Transform(transSkeleton);
+            //        inputPt.Transform(rotateOrientationToAxis);
+            //        outputPt.Transform(transSkeleton);
+            //        outputPt.Transform(rotateOrientationToAxis);
+            //        innerCavity.Transform(transSkeleton);
+            //        innerCavity.Transform(rotateOrientationToAxis);
+
+            //        double xEnd = outputPt.X;
+
+            //        Brep innerCavityBrep = innerCavity.DuplicateBrep();
+            //        double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
+
+            //        #region old code
+            //        //// Transform from the current orientation and direction to X axis
+            //        //Point3d startPoint = springPosPt;
+
+            //        //Transform dirToXRotation = Transform.Rotation(direction, new Vector3d(1, 0, 0), startPoint);
+            //        //Point3d projectedSpringPosPt = new Point3d(startPoint.X, 0, 0);
+            //        //Transform dirToXTranlation = Transform.Translation(new Vector3d(projectedSpringPosPt - startPoint));
+
+            //        //// Transform back from X axis to the current kinetic unit orientation
+            //        //dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
+            //        //dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
+
+            //        //// Last step, rotate back to the pose of the kinetic unit
+            //        //Vector3d originalYVector = new Vector3d(0, 1, 0);
+            //        //originalYVector.Transform(dirToXTranlationBack);
+            //        //originalYVector.Transform(dirToXRotationBack);
+            //        ////yToPoseTrans = Transform.Rotation(originalYVector, orientationDir, startPoint);
+            //        //yToPoseTrans = Transform.Identity;
+
+            //        //// Start transform
+            //        //startPoint.Transform(dirToXRotation);
+            //        //startPoint.Transform(dirToXTranlation);
+
+            //        //Point3d endPt = new Point3d(tarPt);
+            //        //endPt.Transform(dirToXRotation);
+            //        //endPt.Transform(dirToXTranlation);
+
+            //        //double xEnd = endPt.X;
+            //        //Brep modelDup = model.DuplicateBrep();
+            //        //modelDup.Transform(dirToXRotation);
+            //        //modelDup.Transform(dirToXTranlation);
+
+
+            //        //double outDiameter = Math.Abs(modelDup.GetBoundingBox(true).Max.Z - modelDup.GetBoundingBox(true).Min.Z);
+            //        ////double outDiameter = Double.MaxValue;
+
+            //        ////foreach(var v in modelDup.Vertices)
+            //        ////{
+            //        ////    if (Math.Abs(v.Location.Z) < outDiameter / 2)
+            //        ////        outDiameter = Math.Abs(v.Location.Z) * 2;
+            //        ////}
+            //        //double totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y);
+            //        ////double totalThickness = Double.MaxValue;
+
+            //        ////foreach(var v in modelDup.Vertices)
+            //        ////{
+            //        ////    if (Math.Abs(v.Location.Y) < totalThickness / 2)
+            //        ////        totalThickness = Math.Abs(v.Location.Y) * 2;
+            //        ////}
+            //        //Brep innerCavityBrep = innerCavity.DuplicateBrep();
+            //        //innerCavityBrep.Transform(dirToXTranlation);
+            //        //innerCavityBrep.Transform(dirToXRotation);
+            //        //double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
+
+            //        #endregion
+
+            //        motion.ConstructGearTrain(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
+            //            transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
+            //        motion.ConstructSpring(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
+            //            transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
+
+            //        foreach (var obj in myDoc.Objects)
+            //        {
+            //            Guid tempID = obj.Id;
+            //            if (!endEffectorIDs.Contains(tempID))
+            //            {
+            //                ObjRef currObj = new ObjRef(tempID);
+
+            //                Brep tempBrep = currObj.Brep();
+
+            //                bool isFind = false;
+            //                foreach (Entity en in motion.EntityList)
+            //                {
+            //                    if (en.Model == tempBrep)
+            //                    {
+            //                        isFind = true;
+            //                        break;
+            //                    }
+
+            //                }
+
+            //                if (!isFind)
+            //                {
+            //                    motion.EntityList.Add(new Shape(tempBrep, false, ""));
+            //                }
+            //            }
+            //        }
+
+            //        #endregion
+            //    }
+            //    else
+            //    {
+            //        // multiple objects are selected as the end-effectors
+
+            //        #region Prepare the endpoints
+
+            //        Point3d ptS = skeleton.PointAtNormalizedLength(t1);
+            //        Point3d ptE = skeleton.PointAtNormalizedLength(t2);
+
+            //        Point3d tarPt = new Point3d();
+            //        Point3d springPosPt = new Point3d();
+
+            //        Point3d eeCenter = new Point3d(0,0,0);
+            //        Brep eeBrepAll = new Brep();
+
+            //        List<Point3d> brepCenters = new List<Point3d>();
+            //        Point3d eeCen1 = new Point3d();
+            //        Point3d eeCen2 = new Point3d();
+
+            //        foreach (Brep b in eeBreps)
+            //        {
+            //            BoundingBox eeBoundingBox = b.GetBoundingBox(true);
+            //            Point3d ee_center = eeBoundingBox.Center;
+
+            //            brepCenters.Add(ee_center);
+
+            //            //eeBrepAll.Append(b);
+            //            eeBrepAll = b;
+
+            //            eeCenter = eeCenter + ee_center;
+            //        }
+            //        eeCen1 = brepCenters.ElementAt(0);
+            //        eeCen2 = brepCenters.ElementAt(1);
+
+            //        eeCenter = eeCenter / eeBreps.Count();
+
+            //        if (eeCenter.DistanceTo(ptS) >= eeCenter.DistanceTo(ptE))
+            //        {
+            //            tarPt = ptE;
+            //            springPosPt = ptS;
+            //        }
+            //        else
+            //        {
+            //            tarPt = ptS;
+            //            springPosPt = ptE;
+            //        }
+
+            //        #endregion
+
+            //        #region transform the model so that the skeleton is on the X axis
+
+            //        //Plane eeDirPlane = new Plane(tarPt, new Vector3d(springPosPt - tarPt));
+            //        //Point3d dirPt = eeDirPlane.ClosestPoint(eeCenter);
+            //        //Vector3d rawDir = new Vector3d(dirPt - tarPt);
+
+            //        Point3d inputPt = springPosPt;
+            //        Point3d outputPt = tarPt;
+
+            //        // Currently, Kinergy only cares about the transformation along the height
+            //        switch (alignment)
+            //        {
+            //            case 1:
+            //                {
+            //                    // X axis
+
+            //                    // first rotate the entire model from the current aligned axis to X axis
+            //                    rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                    rotateOrientationToAxis = Transform.Rotation(Vector3d.XAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+
+            //                    // second, rotate the model so that the generated gears only move along Z axis
+            //                    eeCen1.Transform(rotateOrientationToAxis);
+            //                    eeCen2.Transform(rotateOrientationToAxis);
+            //                    double xDiff = Math.Abs(eeCen1.X - eeCen2.X);
+            //                    double yDiff = Math.Abs(eeCen1.Y - eeCen2.Y);
+            //                    double zDiff = Math.Abs(eeCen1.Z - eeCen2.Z);
+
+            //                    if (xDiff >= yDiff && xDiff >= zDiff)
+            //                    {
+            //                        // impossible
+            //                    }
+            //                    else if (yDiff >= xDiff && yDiff >= zDiff)
+            //                    {
+            //                        // rotate the end-effector direction (Y axis) to Y axis
+            //                        eeDirectionToYAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                        eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                    }
+            //                    else
+            //                    {
+            //                        // rotate the end-effector direction (Z axis) to Y axis
+            //                        eeDirectionToYAxis = Transform.Rotation(-Vector3d.ZAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                        eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, -Vector3d.ZAxis, (eeCen1 + eeCen2) / 2);
+            //                    }
+
+            //                    // third, transform the inputPt, outputPt, model, innerCavity, cen1, cen2 with two rotation matrix
+            //                    eeCen1.Transform(eeDirectionToYAxis);
+            //                    eeCen2.Transform(eeDirectionToYAxis);
+            //                    inputPt.Transform(rotateOrientationToAxis);
+            //                    inputPt.Transform(eeDirectionToYAxis);
+            //                    outputPt.Transform(rotateOrientationToAxis);
+            //                    outputPt.Transform(eeDirectionToYAxis);
+
+            //                    model.Transform(rotateOrientationToAxis);
+            //                    model.Transform(eeDirectionToYAxis);
+            //                    innerCavity.Transform(rotateOrientationToAxis);
+            //                    innerCavity.Transform(eeDirectionToYAxis);
+
+            //                    // only transform the skeleton here
+            //                    Point3d newCen = (eeCen1 + eeCen2) / 2;
+            //                    orientationDir = new Vector3d(0, 0, newCen.Z - outputPt.Z);
+            //                    offsetTranslation = Transform.Translation(orientationDir);
+            //                    //innerHeight = innerHeight - Math.Abs(newCen.Z - outputPt.Z);
+            //                    inputPt.Transform(offsetTranslation);
+            //                    outputPt.Transform(offsetTranslation);
+
+            //                    // transform all the skeleton, model, and innerCavity to align the skeleton on the X axis
+            //                    axisToSkeleton = new Vector3d(outputPt - new Point3d(outputPt.X, 0, 0));
+            //                    skeletonToAxis = new Vector3d(new Point3d(outputPt.X, 0, 0) - outputPt);
+            //                    transSkeleton = Transform.Translation(skeletonToAxis);
+            //                    transSkeletonBack = Transform.Translation(axisToSkeleton);
+
+            //                    outputPt.Transform(transSkeleton);
+            //                    inputPt.Transform(transSkeleton);
+            //                    model.Transform(transSkeleton);
+            //                    innerCavity.Transform(transSkeleton);
+            //                    eeCen1.Transform(transSkeleton);
+            //                    eeCen2.Transform(transSkeleton);
+            //                    newCen.Transform(transSkeleton);
+
+            //                }
+            //                break;
+            //            case 2:
+            //                {
+            //                    // Y axis
+
+            //                    // first rotate the entire model from the current aligned axis to X axis 
+            //                    rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.YAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                    rotateOrientationToAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+
+            //                    // second, rotate the model so that the generated gears only move along Z axis
+            //                    eeCen1.Transform(rotateOrientationToAxis);
+            //                    eeCen2.Transform(rotateOrientationToAxis);
+            //                    double xDiff = Math.Abs(eeCen1.X - eeCen2.X);
+            //                    double yDiff = Math.Abs(eeCen1.Y - eeCen2.Y);
+            //                    double zDiff = Math.Abs(eeCen1.Z - eeCen2.Z);
+
+            //                    if (xDiff >= yDiff && xDiff >= zDiff)
+            //                    {
+            //                        // impossible
+            //                    }
+            //                    else if (yDiff >= xDiff && yDiff >= zDiff)
+            //                    {
+            //                        // rotate the end-effector direction (Y axis) to Y axis
+            //                        eeDirectionToYAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                        eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                    }
+            //                    else
+            //                    {
+            //                        // rotate the end-effector direction (Z axis) to Y axis
+            //                        eeDirectionToYAxis = Transform.Rotation(-Vector3d.ZAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                        eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, -Vector3d.ZAxis, (eeCen1 + eeCen2) / 2);
+            //                    }
+
+            //                    // third, transform the inputPt, outputPt, model, innerCavity, cen1, cen2 with two rotation matrix
+            //                    eeCen1.Transform(eeDirectionToYAxis);
+            //                    eeCen2.Transform(eeDirectionToYAxis);
+            //                    inputPt.Transform(rotateOrientationToAxis);
+            //                    inputPt.Transform(eeDirectionToYAxis);
+            //                    outputPt.Transform(rotateOrientationToAxis);
+            //                    outputPt.Transform(eeDirectionToYAxis);
+
+            //                    model.Transform(rotateOrientationToAxis);
+            //                    model.Transform(eeDirectionToYAxis);
+            //                    innerCavity.Transform(rotateOrientationToAxis);
+            //                    innerCavity.Transform(eeDirectionToYAxis);
+
+            //                    // only transform the skeleton here
+            //                    Point3d newCen = (eeCen1 + eeCen2) / 2;
+            //                    orientationDir = new Vector3d(0, 0, newCen.Z - outputPt.Z);
+            //                    offsetTranslation = Transform.Translation(orientationDir);
+            //                    //innerHeight = innerHeight - Math.Abs(newCen.Z - outputPt.Z);
+            //                    inputPt.Transform(offsetTranslation);
+            //                    outputPt.Transform(offsetTranslation);
+
+            //                    // transform all the skeleton, model, and innerCavity to align the skeleton on the X axis
+            //                    axisToSkeleton = new Vector3d(outputPt - new Point3d(outputPt.X, 0, 0));
+            //                    skeletonToAxis = new Vector3d(new Point3d(outputPt.X, 0, 0) - outputPt);
+            //                    transSkeleton = Transform.Translation(skeletonToAxis);
+            //                    transSkeletonBack = Transform.Translation(axisToSkeleton);
+
+            //                    outputPt.Transform(transSkeleton);
+            //                    inputPt.Transform(transSkeleton);
+            //                    model.Transform(transSkeleton);
+            //                    innerCavity.Transform(transSkeleton);
+            //                    eeCen1.Transform(transSkeleton);
+            //                    eeCen2.Transform(transSkeleton);
+            //                    newCen.Transform(transSkeleton);
+
+            //                }
+            //                break;
+            //            case 3:
+            //                {
+            //                    // Z axis
+
+            //                    // first rotate the entire model from the current aligned axis to X axis 
+            //                    rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.ZAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                    rotateOrientationToAxis = Transform.Rotation(Vector3d.ZAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+
+            //                    // second, rotate the model so that the generated gears only move along Z axis
+            //                    eeCen1.Transform(rotateOrientationToAxis);
+            //                    eeCen2.Transform(rotateOrientationToAxis);
+            //                    double xDiff = Math.Abs(eeCen1.X - eeCen2.X);
+            //                    double yDiff = Math.Abs(eeCen1.Y - eeCen2.Y);
+            //                    double zDiff = Math.Abs(eeCen1.Z - eeCen2.Z);
+
+            //                    if (xDiff >= yDiff && xDiff >= zDiff)
+            //                    {
+            //                        // impossible
+            //                    }
+            //                    else if (yDiff >= xDiff && yDiff >= zDiff)
+            //                    {
+            //                        // rotate the end-effector direction (Y axis) to Y axis
+            //                        eeDirectionToYAxis = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                        eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                    }
+            //                    else
+            //                    {
+            //                        // rotate the end-effector direction (Z axis) to Y axis
+            //                        eeDirectionToYAxis = Transform.Rotation(-Vector3d.ZAxis, Vector3d.YAxis, (eeCen1 + eeCen2) / 2);
+            //                        eeYAxisToDirection = Transform.Rotation(Vector3d.YAxis, -Vector3d.ZAxis, (eeCen1 + eeCen2) / 2);
+            //                    }
+
+            //                    // third, transform the inputPt, outputPt, model, innerCavity, cen1, cen2 with two rotation matrix
+            //                    eeCen1.Transform(eeDirectionToYAxis);
+            //                    eeCen2.Transform(eeDirectionToYAxis);
+            //                    inputPt.Transform(rotateOrientationToAxis);
+            //                    inputPt.Transform(eeDirectionToYAxis);
+            //                    outputPt.Transform(rotateOrientationToAxis);
+            //                    outputPt.Transform(eeDirectionToYAxis);
+
+            //                    model.Transform(rotateOrientationToAxis);
+            //                    model.Transform(eeDirectionToYAxis);
+            //                    innerCavity.Transform(rotateOrientationToAxis);
+            //                    innerCavity.Transform(eeDirectionToYAxis);
+
+            //                    // only transform the skeleton here
+            //                    Point3d newCen = (eeCen1 + eeCen2) / 2;
+            //                    orientationDir = new Vector3d(0, 0, newCen.Z - outputPt.Z);
+            //                    offsetTranslation = Transform.Translation(orientationDir);
+            //                    //innerHeight = innerHeight - Math.Abs(newCen.Z - outputPt.Z);
+            //                    inputPt.Transform(offsetTranslation);
+            //                    outputPt.Transform(offsetTranslation);
+
+            //                    // transform all the skeleton, model, and innerCavity to align the skeleton on the X axis
+            //                    axisToSkeleton = new Vector3d(outputPt - new Point3d(outputPt.X, 0, 0));
+            //                    skeletonToAxis = new Vector3d(new Point3d(outputPt.X, 0, 0) - outputPt);
+            //                    transSkeleton = Transform.Translation(skeletonToAxis);
+            //                    transSkeletonBack = Transform.Translation(axisToSkeleton);
+
+            //                    outputPt.Transform(transSkeleton);
+            //                    inputPt.Transform(transSkeleton);
+            //                    model.Transform(transSkeleton);
+            //                    innerCavity.Transform(transSkeleton);
+            //                    eeCen1.Transform(transSkeleton);
+            //                    eeCen2.Transform(transSkeleton);
+            //                    newCen.Transform(transSkeleton);
+
+            //                    //orientationDir = new Vector3d(0, dirPt.Y - tarPt.Y, 0);
+            //                    //innerHeight = innerHeight - Math.Abs(dirPt.Y - tarPt.Y);
+            //                    //axisToSkeleton = new Vector3d(tarPt - new Point3d(0, 0, tarPt.Z));
+            //                    //skeletonToAxis = new Vector3d(new Point3d(0, 0, tarPt.Z) - tarPt);
+            //                    //rotateAxisToOrientation = Transform.Rotation(Vector3d.XAxis, Vector3d.ZAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                    //rotateOrientationToAxis = Transform.Rotation(Vector3d.ZAxis, Vector3d.XAxis, skeleton.PointAtNormalizedLength((t1 + t2) / 2));
+            //                }
+            //                break;
+            //            default: break;
+            //        }
+
+            //        #endregion
+
+            //        #region Set up the output gear position and the max X on the X axis
+
+            //        //inputPt.Transform(transSkeleton);
+            //        //inputPt.Transform(rotateOrientationToAxis);
+            //        //outputPt.Transform(transSkeleton);
+            //        //outputPt.Transform(rotateOrientationToAxis);
+            //        //innerCavity.Transform(transSkeleton);
+            //        //innerCavity.Transform(rotateOrientationToAxis);
+            //        //eeCen1.Transform(transSkeleton);
+            //        //eeCen1.Transform(rotateOrientationToAxis);
+            //        //eeCen2.Transform(transSkeleton);
+            //        //eeCen2.Transform(rotateOrientationToAxis);
+
+            //        double xEnd = outputPt.X;
+
+            //        Brep innerCavityBrep = innerCavity.DuplicateBrep();
+            //        double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
+
+            //        #endregion
+
+
+            //        #region Parse energy and the speed
+
+            //        speed = speedLevel;
+            //        // Parse the energy to 0.1-1
+            //        energy = (energyLevel + 1) / 10;
+
+            //        #endregion
+
+            //        #region Create an instance of Continuous Rotation class
+
+            //        myDoc.Objects.Hide(selObjId, true);
+            //        motion = new ContinuousRotation(model, direction, energy, speed, energyChargingMethod, innerCavity);      // the second argument represents if the skeleton is curved
+
+            //        #endregion
+
+            //        Line dir = new Line();
+            //        dir = new Line(eeCen1, eeCen2);
+
+            //        if (dir != null)
+            //        {
+            //            eeBrepAll.Transform(rotateOrientationToAxis);
+            //            eeBrepAll.Transform(eeDirectionToYAxis);
+            //            eeBrepAll.Transform(transSkeleton);
+            //            Wheel eeBrepWheel = new Wheel(eeBrepAll, dir, motion);
+            //            motion.DrivenPart = eeBrepWheel;
+            //        }
+
+            //        #region old code
+            //        //Point3d startPoint = springPosPt;
+
+            //        //Transform dirToXRotation = Transform.Rotation(direction, new Vector3d(1, 0, 0), startPoint);
+            //        //Point3d projectedSpringPosPt = new Point3d(startPoint.X, 0, 0);
+            //        //Transform dirToXTranlation = Transform.Translation(new Vector3d(projectedSpringPosPt - startPoint));
+
+            //        //// Transform back from X axis to the current kinetic unit orientation
+            //        //dirToXTranlationBack = Transform.Translation(new Vector3d(startPoint - projectedSpringPosPt));
+            //        //dirToXRotationBack = Transform.Rotation(new Vector3d(1, 0, 0), direction, startPoint);
+
+            //        //// Last step, rotate back to the pose of the kinetic unit
+            //        //Vector3d originalYVector = new Vector3d(0, 1, 0);
+            //        //originalYVector.Transform(dirToXTranlationBack);
+            //        //originalYVector.Transform(dirToXRotationBack);
+            //        //yToPoseTrans = Transform.Translation(orientationDir);
+
+            //        //// Start transform
+            //        //startPoint.Transform(dirToXRotation);
+            //        //startPoint.Transform(dirToXTranlation);
+
+            //        //Point3d endPt = new Point3d(tarPt);
+            //        //endPt.Transform(dirToXRotation);
+            //        //endPt.Transform(dirToXTranlation);
+
+            //        //double xEnd = endPt.X;
+            //        //Brep modelDup = model.DuplicateBrep();
+            //        //modelDup.Transform(dirToXRotation);
+            //        //modelDup.Transform(dirToXTranlation);
+
+
+            //        //double outDiameter;
+            //        //double totalThickness;
+
+            //        //if (directionType == 3)
+            //        //    outDiameter = Math.Abs(2 * (modelDup.GetBoundingBox(true).Center.Z - translatingDis - modelDup.GetBoundingBox(true).Min.Z));
+            //        //else
+            //        //    outDiameter = Math.Abs(2 * (modelDup.GetBoundingBox(true).Center.Z - modelDup.GetBoundingBox(true).Min.Z));
+
+            //        //if (directionType == 2)
+            //        //    totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y - translatingDis);
+            //        //else
+            //        //    totalThickness = Math.Abs(modelDup.GetBoundingBox(true).Max.Y - modelDup.GetBoundingBox(true).Min.Y);
+            //        ////double outDiameter = Double.MaxValue;
+
+            //        //Brep innerCavityBrep = innerCavity.DuplicateBrep();
+            //        //innerCavityBrep.Transform(dirToXTranlation);
+            //        //innerCavityBrep.Transform(dirToXRotation);
+
+            //        //double xSpaceEnd = innerCavityBrep.GetBoundingBox(true).Max.X;
+
+            //        #endregion
+
+            //        motion.ConstructGearTrain(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
+            //            transSkeletonBack, eeYAxisToDirection, rotateAxisToOrientation);
+            //        motion.ConstructSpring(inputPt, xEnd, innerHeight, innerDepth, xSpaceEnd, outputAxle,
+            //            transSkeletonBack, eeYAxisToDirection, rotateAxisToOrientation);
+
+            //        //motion.ConstructGearTrain(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
+            //        //    dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
+            //        //motion.ConstructSpring(startPoint, xEnd, outDiameter, totalThickness, xSpaceEnd, outputAxle,
+            //        //    dirToXTranlationBack, dirToXRotationBack, yToPoseTrans);
+
+            //        foreach (var obj in myDoc.Objects)
+            //        {
+            //            Guid tempID = obj.Id;
+            //            ObjRef currObj = new ObjRef(tempID);
+
+            //            Brep tempBrep = currObj.Brep();
+
+            //            bool isFind = false;
+            //            foreach (Entity en in motion.EntityList)
+            //            {
+            //                if (en.Model == tempBrep)
+            //                {
+            //                    isFind = true;
+            //                    break;
+            //                }
+
+            //            }
+
+            //            if (!isFind)
+            //            {
+            //                motion.EntityList.Add(new Shape(tempBrep, false, ""));
+            //            }
+            //        }
+
+
+            //    }
+            //    #endregion
+
+            //}
+
+            #endregion
 
             if (toAddLock)
             {
@@ -1192,8 +1268,33 @@ namespace ConRotation
             {
                 if (motion != null)
                     // Reconstruct spiral and the gear train
-                    motion.AdjustParameter(energyLevel, speedLevel);
+                    motion.AdjustParameter(speedLevel, roundLevel);
             }
+
+
+            if (toSetMotionControl)
+            {
+
+            }
+
+            if (toSetEEPos)
+            {
+
+            }
+
+            if (toSetAxisDir)
+            {
+
+            }
+
+
+            if (toRemoveLock)
+            {
+
+            }
+
+          
+            
 
             DA.SetData(0, motion);
             //DA.SetData(1, model);

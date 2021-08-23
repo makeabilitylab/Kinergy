@@ -41,7 +41,7 @@ namespace Kinergy
             public override bool Move(Movement move)
             {
                 Gear g1 = (Gear)move.Obj, g2 = (Gear)base.TheOtherEntity(move.Obj);
-                Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, -move.MovementValue * g1.Z / g2.Z); // ToDo: update this
+                Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, -move.MovementValue * g1.NumTeeth / g2.NumTeeth); // ToDo: update this
                 return transmittedMovement.Activate();
             }
         }

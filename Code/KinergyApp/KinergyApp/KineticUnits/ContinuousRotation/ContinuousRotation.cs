@@ -1333,7 +1333,7 @@ namespace Kinergy.KineticUnit
 
                     #region Step 1: create the pinion from the output gear end
                     gearDir = gearCenters.ElementAt(gearCenters.IndexOf(pt) + 1) - pt;
-                    Gear PinionGear = new Gear(pt, gearDir, pinionTeethNum, currModule, pressureAngle, thickness + tolerance);
+                    Gear PinionGear = new Gear(pt, gearDir, pinionTeethNum, currModule, pressureAngle, thickness + tolerance, 0, false);
                     Brep pinion = PinionGear.Model;
 
                     gearEntities.Add(PinionGear);
@@ -1509,7 +1509,7 @@ namespace Kinergy.KineticUnit
                     // create the big gear 
                     gearDir = pt - gearCenters.ElementAt(gearCenters.IndexOf(pt) - 1);
                     gearTeethNum = (int)(pinionTeethNum * grNew);
-                    Gear BigGear = new Gear(pt, gearDir, gearTeethNum, currModule, pressureAngle, thickness);
+                    Gear BigGear = new Gear(pt, gearDir, gearTeethNum, currModule, pressureAngle, thickness, 0, false);
                     Brep bigGear = BigGear.Model;
 
                     _ = new Engagement(BigGear, gearEntities.Last());
@@ -1574,7 +1574,7 @@ namespace Kinergy.KineticUnit
 
                                 // create the small pinion that engages with the rack
                                 Point3d pinionPt = pt + new Vector3d(0, 1, 0) * (thickness + tolerance);
-                                Gear pinion = new Gear(pinionPt, -gearDir, pinionTeethNum, currModule, pressureAngle, thickness+tolerance);
+                                Gear pinion = new Gear(pinionPt, -gearDir, pinionTeethNum, currModule, pressureAngle, thickness+tolerance, 0, false);
                                 Brep pinionGear = pinion.Model;
 
                                 _ = new Fixation(pinion, gearEntities.Last());

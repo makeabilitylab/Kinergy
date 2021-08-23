@@ -19,31 +19,36 @@ namespace Kinergy
         public class Gear : Component
         {
             //private double factorA = -1, factorB = -1;//Cancelled since adjustment of teeth should be automatically done.
-            private int z = 0;//Total number of teeth
-            private double pitch = 0;//pitch ,distance between corresponding points on adjacent teeth. p=m*Pi;
-            private double module = 0;//module of teeth size, 
-            private double faceWidth = 0;
-            private double pressureAngle = 20;
-            private double coneAngle = 0;
-            private double clearance = 0.167;
-            private double involSample = 10;
-            private double tipRadius = 0;
-            private double rootRadius = 0;
-            private double toothDepth = 0;
+            private int _numTeeth = 0;//Total number of teeth
+            private double _pitch = 0;//pitch ,distance between corresponding points on adjacent teeth. p=m*Pi;
+            private double _module = 0;//module of teeth size, 
+            private double _faceWidth = 0;
+            private double _pressureAngle = 20; // degree
+            private double _coneAngle = 0;
+            private double _clearance = 0.167;
+            private double _involSample = 10;
+            private double _tipRadius = 0;
+            private double _rootRadius = 0;
+            private double _toothDepth = 0;
+            private double _selfRotAngle = 0; // degree
+            private bool _isMovable = false;
 
-            private Point3d centerPoint = Point3d.Unset;
-            private Vector3d direction = Vector3d.Unset;
-            private Boolean twoLayer = false;
+            private RhinoDoc mydoc = RhinoDoc.ActiveDoc;
 
-            public int Z { get => z; protected set => z = value; }
-            public double Pitch { get => pitch; protected set => pitch = value; }
-            public double Module { get => module; protected set => module = value; }
-            public double FaceWidth { get => faceWidth; protected set => faceWidth = value; }
-            public double TipRadius { get => tipRadius; protected set => tipRadius = value; }
-            public double RootRadius { get => rootRadius; protected set => rootRadius = value; }
-            public double ToothDepth { get => toothDepth; protected set => toothDepth = value; }
-            public Point3d CenterPoint { get => centerPoint; protected set => centerPoint = value; }
-            public Vector3d Direction { get => direction; protected set => direction = value; }
+            private Point3d _centerPoint = Point3d.Unset;
+            private Vector3d _direction = Vector3d.Unset;
+            private Boolean _twoLayer = false;
+
+            public int NumTeeth { get => _numTeeth; protected set => _numTeeth = value; }
+            public double Pitch { get => _pitch; protected set => _pitch = value; }
+            public double Module { get => _module; protected set => _module = value; }
+            public double FaceWidth { get => _faceWidth; protected set => _faceWidth = value; }
+            public double TipRadius { get => _tipRadius; protected set => _tipRadius = value; }
+            public double RootRadius { get => _rootRadius; protected set => _rootRadius = value; }
+            public double ToothDepth { get => _toothDepth; protected set => _toothDepth = value; }
+            public Point3d CenterPoint { get => _centerPoint; protected set => _centerPoint = value; }
+            public Vector3d Direction { get => _direction; protected set => _direction = value; }
+            public bool IsMovable { get => _isMovable; set => _isMovable = value; }
 
             //private Brep surface = null;
 
@@ -53,60 +58,43 @@ namespace Kinergy
             /// <param name="module">Module of gear teeth, this parameter determines how big teeth are</param>            
             /// <summary> Constructor with parameter but no center point given </summary>
             /// <returns> Returns instance with gear brep generated</returns>            
-
-
-
-            public Gear(Point3d center_point, Vector3d gear_direction, int teethNum, double mod, double pressure_angle = 20, double Thickness = 1.6, Boolean two_layer = false)
+            public Gear(Point3d center_point, Vector3d gear_direction, int teethNum, double mod, double pressure_angle, double Thickness, double selfRotAngle, bool movable)
             {
-                centerPoint = center_point;
-                direction = gear_direction;
-                z = teethNum;
-                module = mod;
-                pressureAngle = pressure_angle;
-                faceWidth = Thickness;
-                two_layer = false;
+                _centerPoint = center_point;
+                _direction = gear_direction;
+                _numTeeth = teethNum;
+                _module = mod;
+                _pressureAngle = pressure_angle;
+                _faceWidth = Thickness;
+                _twoLayer = false;
+                _selfRotAngle = selfRotAngle;
+                _isMovable = movable;
+
                 GenerateGear();
             }
 
-            public Gear(int teethNum, double mod, double pressure_angle = 20, double Thickness = 1.6, Boolean two_layer = false)
-            {
-                z = teethNum;
-                module = mod;
-                pressureAngle = pressure_angle;
-                faceWidth = Thickness;
-                two_layer = false;
-                GenerateGear();
-            }
+            //protected List<Point3d> GenerateInvolPoints(double baseDiameter, double startAngle, double endAngle, double angleModule, double samples)
+            //{
+            //    List<Point3d> involPoints = new List<Point3d>();
+            //    double step = (startAngle - angleModule - endAngle) / samples;
+            //    double baseRadius = baseDiameter / 2;
 
-            public Gear(int teethNum, double mod, double cone_angle, double pressure_angle = 20, double Thickness = 1.6, Boolean two_layer = false)
-            {
-                z = teethNum;
-                module = mod;
-                pressureAngle = pressure_angle;
-                coneAngle = cone_angle;
-                faceWidth = Thickness;
-                GenerateGear();
-            }
+            //    for (int i = 0; i <= samples; i++)
+            //    {
+            //        double position = angleModule + i * step;
+            //        double height = Math.Sqrt(Math.Pow(position, 2) * Math.Pow(baseRadius, 2) + Math.Pow(baseRadius, 2));
+            //        double heightAngle = startAngle - position + Math.Atan(position);
 
-            protected List<Point3d> GenerateInvolPoints(double baseDiameter, double startAngle, double endAngle, double angleModule, double samples)
-            {
-                List<Point3d> involPoints = new List<Point3d>();
-                double step = (startAngle - angleModule - endAngle) / samples;
-                double baseRadius = baseDiameter / 2;
+            //        Point3d point = new Point3d(height * Math.Cos(heightAngle), height * Math.Sin(heightAngle), 0);
 
-                for (int i = 0; i <= samples; i++)
-                {
-                    double position = angleModule + i * step;
-                    double height = Math.Sqrt(Math.Pow(position, 2) * Math.Pow(baseRadius, 2) + Math.Pow(baseRadius, 2));
-                    double heightAngle = startAngle - position + Math.Atan(position);
+            //        //RhinoDoc.ActiveDoc.Objects.AddPoint(point);
+            //        //RhinoDoc.ActiveDoc.Views.Redraw();
+            //        //RhinoApp.Write("involPoint" + point);
+            //        involPoints.Add(point);
+            //    }
 
-                    Point3d point = new Point3d(height * Math.Cos(heightAngle), height * Math.Sin(heightAngle), 0);
-                    RhinoApp.Write("involPoint" + point);
-                    involPoints.Add(point);
-                }
-
-                return involPoints;
-            }
+            //    return involPoints;
+            //}
 
 
             protected Point3d tiltPointAroundCircle(Point3d pt, double coneAngle, double circleDiameter)
@@ -124,59 +112,81 @@ namespace Kinergy
                 Point3d tiltPt = new Point3d(pt.X * xy_scale_factor, pt.Y * xy_scale_factor, dist_to_circle * Math.Sin(coneAngle));
                 return tiltPt;
             }
+            public List<Point3d> GenerateToothSide(double baseDia, double outDia, double sampleNum, double pressureAngle, double module, double s0, double pitchDia)
+            {
+                List<Point3d> result = new List<Point3d>();
+                double stepLen = (outDia - baseDia) / sampleNum;
+
+                for(int i = 0; i <= sampleNum; i++)
+                {
+                    double d = baseDia + i * stepLen;
+                    double alpha = Math.Acos(pitchDia / d * Math.Cos(pressureAngle));
+                    double theta = s0 / pitchDia + Math.Tan(pressureAngle) - pressureAngle + alpha - Math.Tan(alpha);
+
+                    Point3d pt = new Point3d(-d/2 * Math.Sin(theta), d/2 * Math.Cos(theta), 0);
+                    result.Add(pt);
+                }
+
+                return result;
+            }
 
             protected override void GenerateBaseCurve()
             {
-                pressureAngle = (Math.PI / 180) * pressureAngle;
+                double pressureAngle = (Math.PI / 180) * _pressureAngle; // convert the pressure angle into radian
 
-                RhinoDoc mydoc = RhinoDoc.ActiveDoc;
-                double pitchDiameter = module * z;
+                double pitchDiameter = _module * _numTeeth;
                 double baseDiameter = pitchDiameter * Math.Cos(pressureAngle);
-                double addendum = module;
-                double dedendum = (1 + clearance) * module;
-                double outDiameter = pitchDiameter + 2 * addendum;
+                double addendum = _module;
+                double dedendum = (1 + _clearance) * _module;
+                double outDiameter = pitchDiameter + 2 * _module;
                 double rootDiameter = pitchDiameter - 2 * dedendum;
-                double chordalThickness = pitchDiameter * Math.Sin((Math.PI / 2) / z);
+                //double chordalThickness = pitchDiameter * Math.Sin((Math.PI / 2) / _numTeeth);
+                //double x = 1 - (_numTeeth * Math.Pow(Math.Sin(pressureAngle), 2)) / 2.0;
+                double x = 0;
+                double chordalThickness = Math.PI / 2 * _module + _module * 2 * x * Math.Tan(pressureAngle);
+                
+                //double chordalThickness = (Math.PI / 2 + 2 * x * Math.Tan(pressureAngle)) * _module; 
 
-                tipRadius = outDiameter / 2;
-                rootRadius = rootDiameter / 2;
-                toothDepth = tipRadius - rootRadius;
-                pitch = Math.PI * module;
+                _tipRadius = outDiameter / 2;
+                _rootRadius = rootDiameter / 2;
+                _toothDepth = _tipRadius - _rootRadius;
+                _pitch = Math.PI * _module;
 
-                /*
-                RhinoApp.WriteLine("pitchDiameter" + pitchDiameter);
-                RhinoApp.WriteLine("baseDiameter" + baseDiameter);
-                RhinoApp.WriteLine("outDiameter" + outDiameter);
-                RhinoApp.WriteLine("rootDiameter" + rootDiameter);
-                RhinoApp.WriteLine("chordalThickness" + chordalThickness);
-                */
+                // More details about involute spur gear: https://www.tec-science.com/mechanical-power-transmission/involute-gear/calculation-of-involute-gears/
+                double fi = Math.Tan(pressureAngle) - pressureAngle;
+                double maxAngle = Math.Sqrt(Math.Pow(outDiameter / 2, 2) - Math.Pow(baseDiameter / 2, 2)) / (baseDiameter / 2) + fi;
 
-                double invol_start_angle = (Math.PI / 2 + Math.Asin(chordalThickness / pitchDiameter)
-                    - pressureAngle
-                    + Math.Sqrt(Math.Pow((pitchDiameter / baseDiameter), 2) - 1));
-                double invol_end_angle = (invol_start_angle - Math.Sqrt(Math.Pow((outDiameter / baseDiameter), 2) - 1));
+                List<Point3d> involPts = GenerateToothSide(baseDiameter, outDiameter, _involSample, pressureAngle, _module, chordalThickness, pitchDiameter);
 
-                /*
-                RhinoApp.WriteLine("invol_start_angle" + invol_start_angle);
-                RhinoApp.WriteLine("invol_end_angle" + invol_start_angle);
-                */
+                #region old algorithm for generating the points on the tooth
+                //double invol_start_angle = (Math.PI / 2 + Math.Asin(chordalThickness / pitchDiameter)
+                //    - pressureAngle
+                //    + Math.Sqrt(Math.Pow((pitchDiameter / baseDiameter), 2) - 1));
+                //double invol_end_angle = (invol_start_angle - Math.Sqrt(Math.Pow((outDiameter / baseDiameter), 2) - 1));
 
-                double invol_angle_module = 0;
+                ///*
+                //RhinoApp.WriteLine("invol_start_angle" + invol_start_angle);
+                //RhinoApp.WriteLine("invol_end_angle" + invol_start_angle);
+                //*/
 
-                if (rootDiameter > baseDiameter)
-                {
-                    invol_angle_module = Math.Sqrt(Math.Pow((rootDiameter / baseDiameter), 2) - 1);
-                    RhinoApp.WriteLine("invol_angle_module" + invol_angle_module);
-                }
+                //double invol_angle_module = 0;
 
-                List<Point3d> involPts = GenerateInvolPoints(baseDiameter, invol_start_angle, invol_end_angle, invol_angle_module, involSample);
+                //if (rootDiameter > baseDiameter)
+                //{
+                //    invol_angle_module = Math.Sqrt(Math.Pow((rootDiameter / baseDiameter), 2) - 1);
+                //    RhinoApp.WriteLine("invol_angle_module" + invol_angle_module);
+                //}
+
+                //List<Point3d> involPts = GenerateInvolPoints(baseDiameter, invol_start_angle, invol_end_angle, invol_angle_module, _involSample, _module);
+                #endregion
 
                 List<Curve> toothCrv = new List<Curve>();
                 Curve involCrv1 = Curve.CreateInterpolatedCurve(involPts, 3, CurveKnotStyle.Chord);
                 Transform mirror = Transform.Mirror(new Point3d(0, 0, 0), new Vector3d(1, 0, 0));
                 Curve involCrv2 = involCrv1.DuplicateCurve();
                 involCrv2.Transform(mirror);
-                Point3d ptArc = tiltPointAroundCircle(new Point3d(0, outDiameter / 2, 0), coneAngle / 2, pitchDiameter);
+
+                Point3d ptArc = tiltPointAroundCircle(new Point3d(0, _tipRadius, 0), _coneAngle / 2, pitchDiameter);
                 //RhinoApp.WriteLine("point on up arc" + ptArc);
                 Arc topArc = new Arc(involCrv1.PointAtEnd, ptArc, involCrv2.PointAtEnd);
                 Curve arcCrv = new ArcCurve(topArc);
@@ -185,10 +195,10 @@ namespace Kinergy
                 if (rootDiameter < baseDiameter)
                 {
                     RhinoApp.WriteLine("rootDiameter < baseDiameter");
-                    Point3d pt = new Point3d(rootDiameter / 2 * Math.Cos(invol_start_angle),
-                        rootDiameter / 2 * Math.Sin(invol_start_angle), 0);
+                    double theta = Math.PI * _module / (2 * baseDiameter);
+                    Point3d pt = new Point3d(-_rootRadius * Math.Sin(theta), _rootRadius * Math.Cos(theta), 0);
 
-                    Curve dedCrv1 = new Line(involCrv1.PointAtStart, tiltPointAroundCircle(pt, coneAngle / 2, pitchDiameter)).ToNurbsCurve();
+                    Curve dedCrv1 = new Line(involCrv1.PointAtStart, tiltPointAroundCircle(pt, _coneAngle / 2, pitchDiameter)).ToNurbsCurve();
                     Curve dedCrv2 = dedCrv1.DuplicateCurve();
                     dedCrv2.Transform(mirror);
 
@@ -206,16 +216,16 @@ namespace Kinergy
                 }
 
                 //RhinoApp.WriteLine("toothCrv got Crvs" + toothCrv.Count());
-                Curve tooth = Curve.JoinCurves(toothCrv, 0.00000001, false)[0];
+                Curve tooth = Curve.JoinCurves(toothCrv, mydoc.ModelAbsoluteTolerance, false)[0];
 
                 //tooth bottom
-                double angle = 2 * Math.PI / z;
+                double angle = 2 * Math.PI / _numTeeth;
                 Point3d startPt = tooth.PointAtStart;
                 Point3d endPt = tooth.PointAtEnd;
                 Point3d btEndPt = new Point3d(endPt.X * Math.Cos(angle) - endPt.Y * Math.Sin(angle),
                     endPt.Y * Math.Cos(angle) + endPt.X * Math.Sin(angle), endPt.Z);
                 Point3d bottomPt = new Point3d(-Math.Sin(angle / 2) * rootDiameter / 2, Math.Cos(angle / 2) * rootDiameter / 2, 0);
-                bottomPt = tiltPointAroundCircle(bottomPt, coneAngle / 2, pitchDiameter);
+                bottomPt = tiltPointAroundCircle(bottomPt, _coneAngle / 2, pitchDiameter);
                 //RhinoApp.WriteLine("pt on bottom arc" + bottomPt);
                 Arc bottomArc = new Arc(startPt, bottomPt, btEndPt);
                 Curve bottomCrv = new ArcCurve(bottomArc);
@@ -230,7 +240,7 @@ namespace Kinergy
                 List<Curve> gearTooth = new List<Curve>();
                 //gearTooth.Add(tooth);
 
-                for (int i = 0; i < z; i++)
+                for (int i = 0; i < _numTeeth; i++)
                 {
                     Transform rotat = Transform.Rotation(-i * angle, new Vector3d(0, 0, 1), new Point3d(0, 0, 0));
                     Curve nextTooth = tooth.DuplicateCurve();
@@ -249,43 +259,73 @@ namespace Kinergy
                 //}
 
                 base.BaseCurve = gear_tooth_crv;
+
             }
 
             private void GenerateGear()
             {
                 GenerateBaseCurve();
-                RhinoApp.WriteLine("extruding facewidth" + faceWidth);
-                Extrusion extrudeCrv = Extrusion.Create(base.BaseCurve, faceWidth, true);
+                RhinoApp.WriteLine("extruding facewidth" + _faceWidth);
+                var sweep = new SweepOneRail();
+                sweep.AngleToleranceRadians = mydoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = mydoc.ModelAbsoluteTolerance;
 
-                base.Model = extrudeCrv.ToBrep();
+                Curve gearPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _faceWidth)).ToNurbsCurve();
+                Brep[] gearBreps = sweep.PerformSweep(gearPathCrv, base.BaseCurve);
+                Brep gearBrep = gearBreps[0];
+                Brep gearSolid = gearBrep.CapPlanarHoles(mydoc.ModelAbsoluteTolerance);
 
-                /*
-                if (twoLayer == true) {
+                gearSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == gearSolid.SolidOrientation)
+                    gearSolid.Flip();
 
-                }
-                */
-
-                if (centerPoint != Point3d.Unset)
+                if (_isMovable)
                 {
-                    Vector3d centerDirection = new Vector3d(centerPoint);
+                    // drill a central hole so that the gear will be movable on the shaft
+                    double clearance = 0.4;
+                    double shaftRadius = 1.5;
+                    double holdRadius = clearance + shaftRadius;
+                    Brep holeBrep = Brep.CreatePipe(gearPathCrv, holdRadius, false, PipeCapMode.Round, true, mydoc.ModelAbsoluteTolerance, mydoc.ModelAngleToleranceRadians)[0];
+
+                    holeBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                    if (BrepSolidOrientation.Inward == holeBrep.SolidOrientation)
+                        holeBrep.Flip();
+
+                    gearSolid = Brep.CreateBooleanDifference(gearSolid, holeBrep, mydoc.ModelAbsoluteTolerance)[0];
+                }
+
+                base.Model = gearSolid;
+
+                if (_centerPoint != Point3d.Unset)
+                {
+                    Vector3d centerDirection = new Vector3d(_centerPoint);
                     Transform centerTrans = Transform.Translation(centerDirection);
                     base.Model.Transform(centerTrans);
+                    base.BaseCurve.Transform(centerTrans);
                 }
 
-                if (direction != Vector3d.Unset)
+                if (_direction != Vector3d.Unset)
                 {
-                    if(base.BaseCurve.ClosedCurveOrientation() == CurveOrientation.Clockwise)
-                    {
-                        Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), new Vector3d(0, -1, 0), centerPoint);
-                        base.Model.Transform(centerRotate);
-                    }
-                    else
-                    {
-                        Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), new Vector3d(0, 1, 0), centerPoint);
-                        base.Model.Transform(centerRotate);
-                    }
-                    
+                    Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), _direction, _centerPoint);
+                    base.Model.Transform(centerRotate);
+                    base.BaseCurve.Transform(centerRotate);
+
+                    //if (base.BaseCurve.ClosedCurveOrientation() == CurveOrientation.Clockwise)
+                    //{
+                    //    Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), _direction, _centerPoint);
+                    //    base.Model.Transform(centerRotate);
+                    //}
+                    //else
+                    //{
+                    //    Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), new Vector3d(0, 1, 0), _centerPoint);
+                    //    base.Model.Transform(centerRotate);
+                    //} 
                 }
+
+                double selfRotRad = Math.PI / 180 * _selfRotAngle;
+                Transform selfRotation = Transform.Rotation(selfRotRad, _direction, _centerPoint);
+                base.Model.Transform(selfRotation);
 
                 //generate standard gears first and then do tranlation and rotation from the upper level;
                 //Vector3d v = direction / direction.Length * faceWidth;
@@ -306,11 +346,12 @@ namespace Kinergy
             {
                 GenerateGear();
             }
+
             public void SetPosition(Point3d CP, Vector3d GearDirection)
             {
-                centerPoint = CP;
+                _centerPoint = CP;
                 center = CP;
-                direction = GearDirection;
+                _direction = GearDirection;
                 GenerateGear();
             }
 
@@ -325,11 +366,11 @@ namespace Kinergy
                 {
                     Gear g = (Gear)obj;
                     //If two gears are engaged, they have to be in same direction, their interval of z direction have to overlap
-                    Vector3d d1 = direction / direction.Length;
+                    Vector3d d1 = _direction / _direction.Length;
                     Vector3d d2 = g.Direction / g.Direction.Length;
                     if (Math.Abs(d1 * d2) < 0.99)
                     { return false; }
-                    if (Math.Abs(new Vector3d(CenterPoint) * d1) - Math.Abs(new Vector3d(g.CenterPoint) * d2) > (faceWidth + g.FaceWidth) / 2)
+                    if (Math.Abs(new Vector3d(CenterPoint) * d1) - Math.Abs(new Vector3d(g.CenterPoint) * d2) > (_faceWidth + g.FaceWidth) / 2)
                     { return false; }
                     //and the distance of centers have to be between R1+R2 and r1+r2+h(smaller)
                     Vector3d vCP1 = new Vector3d(CenterPoint);
@@ -337,10 +378,10 @@ namespace Kinergy
                     vCP1 -= vCP1 * d1 * d1;
                     vCP2 -= vCP2 * d2 * d2;
                     double distance = (vCP1 - vCP2).Length;
-                    if (distance > tipRadius + g.TipRadius || distance < rootRadius + g.RootRadius + (toothDepth + g.ToothDepth) / 2)
+                    if (distance > _tipRadius + g.TipRadius || distance < _rootRadius + g.RootRadius + (_toothDepth + g.ToothDepth) / 2)
                     { return false; }
                     //Their teeth relationship
-                    if (Math.Abs(module - g.Module) > 0.01)
+                    if (Math.Abs(_module - g.Module) > 0.01)
                     { return false; }
                     //Actually the engagement of gears could be very complicated. Herer I only cover the basic parts due to my very limited knowledge in this field.
                 }
@@ -348,22 +389,22 @@ namespace Kinergy
                 {
                     Rack r = (Rack)obj;
                     //If the gear is engaged with a rack, their direction vector should be prependicular and their interval of z direction have to overlap
-                    Vector3d d1 = direction / direction.Length;
+                    Vector3d d1 = _direction / _direction.Length;
                     Vector3d d2 = r.RackDirection / r.RackDirection.Length;
                     if (Math.Abs(d1 * d2) > 0.01)
                     { return false; }
-                    double distance1 = new Plane(centerPoint, direction).DistanceTo(r.CenterPoint);
-                    if (distance1 > (faceWidth + r.FaceWidth) / 2)
+                    double distance1 = new Plane(_centerPoint, _direction).DistanceTo(r.CenterPoint);
+                    if (distance1 > (_faceWidth + r.FaceWidth) / 2)
                     { return false; }
                     //and the distance should be between R1+R2 and r1+r2+h(smaller).
-                    double distance2 = r.BackBone.DistanceTo(centerPoint, true);
-                    if (Math.Sqrt(distance2 * distance2 - distance1 * distance1) > tipRadius + r.TipHeight
-                        || Math.Sqrt(distance2 * distance2 - distance1 * distance1) < rootRadius + r.RootHeight + (toothDepth + r.ToothDepth) / 2)
+                    double distance2 = r.BackBone.DistanceTo(_centerPoint, true);
+                    if (Math.Sqrt(distance2 * distance2 - distance1 * distance1) > _tipRadius + r.TipHeight
+                        || Math.Sqrt(distance2 * distance2 - distance1 * distance1) < _rootRadius + r.RootHeight + (_toothDepth + r.ToothDepth) / 2)
                     {
                         return false;
                     }
                     //Their teeth relationship
-                    if (Math.Abs(module - r.Module) > 0.01)
+                    if (Math.Abs(_module - r.Module) > 0.01)
                     { return false; }
                 }
                 else { return false; }
