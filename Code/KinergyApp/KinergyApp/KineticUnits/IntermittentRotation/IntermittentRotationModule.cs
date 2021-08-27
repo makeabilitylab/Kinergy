@@ -25,6 +25,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         Curve skeleton;     // skeleton
         int speedLevel;         // value of the strength slide bar
         int stepAngleLevel;   // value of the step angle slide bar
+        int strokeLevel;    // value of the stroke number
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
         List<Arrow> lockDirCandidates;
@@ -80,7 +81,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             skeleton = null;
             speedLevel = 5;
             stepAngleLevel = 5;
-            speedLevel = 4;
+            strokeLevel = 5;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -127,6 +128,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
+
+            pManager.AddIntegerParameter("Stroke", "Str", "number of strokes", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -165,6 +168,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             int motion_control_method = -1;
             int speed_input = 5;
             int step_angle_input = 5;
+            int stroke_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -186,6 +190,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             if (!DA.GetData(8, ref step_angle_input))
                 return;
             if (!DA.GetData(9, ref bake_input))
+                return;
+            if (!DA.GetData(10, ref stroke_input))
                 return;
             #endregion
 
@@ -262,7 +268,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
                 testBakeBtn = true;
             }
 
-            if (speedLevel == speed_input && stepAngleLevel == step_angle_input)
+            if (speedLevel == speed_input && stepAngleLevel == step_angle_input && strokeLevel == stroke_input)
             {
                 toAdjustParam = false;
             }
@@ -270,6 +276,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             {
                 speedLevel = speed_input;
                 stepAngleLevel = step_angle_input;
+                strokeLevel = stroke_input;
                 toAdjustParam = true;
             }
 

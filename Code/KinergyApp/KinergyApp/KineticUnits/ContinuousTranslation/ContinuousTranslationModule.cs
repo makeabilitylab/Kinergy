@@ -737,9 +737,9 @@ namespace ConTranslation
 
                 #region geneva drive test
 
-                //GenevaDrive tempGD = new GenevaDrive(new Point3d(0, 0, 0), 6, new Vector3d(0, 0, 1), 3.6, new Vector3d(1,0,0));
+                //GenevaDrive tempGD = new GenevaDrive(new Point3d(0, 0, 0), 6, new Vector3d(0, 0, 1), 3.6, new Vector3d(1, 0, 0));
 
-                //foreach(Brep b in tempGD.GenevaModels)
+                //foreach (Brep b in tempGD.GenevaModels)
                 //{
                 //    myDoc.Objects.AddBrep(b);
                 //    myDoc.Views.Redraw();
@@ -749,17 +749,25 @@ namespace ConTranslation
 
                 #region quick-return test
 
-                QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 40);
+                //QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
 
-                foreach (Brep b in tempQR.QuickReturnModels)
-                {
-                    myDoc.Objects.AddBrep(b);
-                    myDoc.Views.Redraw();
-                }
+                //foreach (Brep b in tempQR.QuickReturnModels)
+                //{
+                //    myDoc.Objects.AddBrep(b);
+                //    myDoc.Views.Redraw();
+                //}
 
                 #endregion
 
                 #region crank and slotted lever
+
+                CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
+
+                foreach (Brep b in tempCSL.CrankSlottedLeverModels)
+                {
+                    myDoc.Objects.AddBrep(b);
+                    myDoc.Views.Redraw();
+                }
 
                 #endregion
             }

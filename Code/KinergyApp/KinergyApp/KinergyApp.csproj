@@ -113,6 +113,7 @@
     <Compile Include="Geometry\BoxLike.cs" />
     <Compile Include="Geometry\Cam.cs" />
     <Compile Include="Geometry\Component.cs" />
+    <Compile Include="Geometry\CranSlottedLever.cs" />
     <Compile Include="Geometry\Entity.cs" />
     <Compile Include="Geometry\Follower.cs" />
     <Compile Include="Geometry\Gear.cs" />

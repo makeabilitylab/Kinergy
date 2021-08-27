@@ -38,9 +38,11 @@ namespace Kinergy
             private List<Brep> _quickReturnModels;
             private Curve _bearingBlockCrv;
             private Curve _yokeCrv;
+            private Curve _yokeOuterCrv;
             private Curve _pinCrv;
             private Curve _crankCrv;
             private Curve _sliderCrv;
+            private Curve _stopWallCrv;
 
             public double Amplitude { get => _amplitude; set => _amplitude = value; }
             public double CrankRadius { get => _crankRadius; set => _crankRadius = value; }
@@ -61,6 +63,8 @@ namespace Kinergy
             public double Thickness { get => _thickness; set => _thickness = value; }
             public double YokeWidth { get => _yokeWidth; set => _yokeWidth = value; }
             public Curve SliderCrv { get => _sliderCrv; set => _sliderCrv = value; }
+            public Curve YokeOuterCrv { get => _yokeOuterCrv; set => _yokeOuterCrv = value; }
+            public Curve StopWallCrv { get => _stopWallCrv; set => _stopWallCrv = value; }
 
             public QuickReturn(Point3d startPt, Vector3d axisDir, Vector3d motionDir, double amplitude, double thickness, double sliderLen)
             {
@@ -118,8 +122,21 @@ namespace Kinergy
 
                 _yokeCrv = Curve.JoinCurves(yokeCrvs, _mydoc.ModelAbsoluteTolerance, false)[0];
 
-                Transform yokeMove = Transform.Translation(new Vector3d(0, 0, 2 + _thickness));
+                Transform yokeMove = Transform.Translation(new Vector3d(0, 0, 2.2 + _thickness));
                 _yokeCrv.Transform(yokeMove);
+
+                List<Curve> yokeOuterCrvs = new List<Curve>();
+                Curve rightSideLnOuter = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, _amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, -_amplitude / 2, 0)).ToNurbsCurve();
+                Curve bottomHalfCircleOuter = new Arc(new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, -_amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, -_amplitude / 2 - (_p + 2 * _t) / 2 - _yokeWidth, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, -_amplitude / 2, 0)).ToNurbsCurve();
+                Curve leftSideLnOuter = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, -_amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, _amplitude / 2, 0)).ToNurbsCurve();
+                Curve topHalfCircleOuter = new Arc(new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, _amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, _amplitude / 2 + (_p + 2 * _t) / 2 + _yokeWidth, 0), new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, _amplitude / 2, 0)).ToNurbsCurve();
+                yokeOuterCrvs.Add(rightSideLnOuter);
+                yokeOuterCrvs.Add(bottomHalfCircleOuter);
+                yokeOuterCrvs.Add(leftSideLnOuter);
+                yokeOuterCrvs.Add(topHalfCircleOuter);
+
+                _yokeOuterCrv = Curve.JoinCurves(yokeOuterCrvs, _mydoc.ModelAbsoluteTolerance, false)[0];
+                _yokeOuterCrv.Transform(yokeMove);
 
                 #endregion
 
@@ -127,7 +144,7 @@ namespace Kinergy
 
                 double sliderLen = _connectorLen + _p + _crankRadius + _blockLen;
                 _sliderCrv = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t, 0, 0), new Point3d(sliderLen - (_amplitude / 2 + _p / 2 + _t), 0, 0)).ToNurbsCurve();
-                Transform slidingMove = Transform.Translation(new Vector3d(0, 0, 2 + _thickness + _sliderRadius));
+                Transform slidingMove = Transform.Translation(new Vector3d(0, 0, 2.2 + _thickness + _sliderRadius));
                 _sliderCrv.Transform(slidingMove);
 
                 #endregion
@@ -152,8 +169,42 @@ namespace Kinergy
                 sweep.SweepTolerance = _mydoc.ModelAbsoluteTolerance;
 
                 Curve crankWheelPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _thickness)).ToNurbsCurve();
-                Curve pinPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 2 + _thickness + 2 * SliderRadius)).ToNurbsCurve();
-                Curve yokePathCrv = new Line(new Point3d(0, 0, 2 + _thickness), new Point3d(0, 0, 2 + _thickness + 2 * SliderRadius)).ToNurbsCurve();
+                Curve pinPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 2.2 + _thickness +  2 * SliderRadius + _t - 0.1 + _t/2)).ToNurbsCurve();
+                Curve yokePathCrv = new Line(new Point3d(0, 0, 2.2 + _thickness), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius)).ToNurbsCurve();
+                Curve yokePathInnerCrv = new Line(new Point3d(0, 0, 2.2 + _thickness-_t), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius +_t)).ToNurbsCurve();
+                _stopWallCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1 + 3 * _t)).ToNurbsCurve();
+                Curve stopWallGrooveCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1 + 1.5 * _t)).ToNurbsCurve();
+
+                // generate the stop wall
+
+                double wallOuterRadius = _amplitude / 2 + _p / 2 + _t + _p;
+                double wallGrooveRadius = _amplitude / 2 + _p / 2 + _t;
+                double wallInnerRadius = _amplitude / 2 - _p / 2 - _t;
+
+                Brep wallOuterSolid = Brep.CreatePipe(_stopWallCrv, wallOuterRadius, false, PipeCapMode.Flat, true, _mydoc.ModelAbsoluteTolerance, _mydoc.ModelAngleToleranceRadians)[0];
+                wallOuterSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == wallOuterSolid.SolidOrientation)
+                    wallOuterSolid.Flip();
+
+                Brep wallGrooveSolid = Brep.CreatePipe(stopWallGrooveCrv, wallGrooveRadius, false, PipeCapMode.Flat, true, _mydoc.ModelAbsoluteTolerance, _mydoc.ModelAngleToleranceRadians)[0];
+                wallGrooveSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == wallGrooveSolid.SolidOrientation)
+                    wallGrooveSolid.Flip();
+
+                Brep wallInnerSolid = Brep.CreatePipe(_stopWallCrv, wallInnerRadius, false, PipeCapMode.Flat, true, _mydoc.ModelAbsoluteTolerance, _mydoc.ModelAngleToleranceRadians)[0];
+                wallInnerSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == wallInnerSolid.SolidOrientation)
+                    wallInnerSolid.Flip();
+
+                Brep wallHalfSolid1 = Brep.CreateBooleanDifference(wallOuterSolid, wallGrooveSolid, _mydoc.ModelAbsoluteTolerance)[0];
+                wallHalfSolid1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == wallHalfSolid1.SolidOrientation)
+                    wallHalfSolid1.Flip();
+
+                Brep stopWallSolid = Brep.CreateBooleanUnion(new List<Brep> { wallHalfSolid1, wallInnerSolid }, _mydoc.ModelAbsoluteTolerance)[0];
+                stopWallSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == stopWallSolid.SolidOrientation)
+                    stopWallSolid.Flip();
 
                 Brep[] crankWheelBreps = sweep.PerformSweep(crankWheelPathCrv, _crankCrv);
                 Brep crankWheelBrep = crankWheelBreps[0];
@@ -184,16 +235,17 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == pinSolid.SolidOrientation)
                     pinSolid.Flip();
 
-                Curve yokeOuterCrv = _yokeCrv.Offset(new Point3d(100, 0, 0), new Vector3d(0, 0, 1), _yokeWidth, _mydoc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Round)[0];
-
-                Brep[] yokeOuterBreps = sweep.PerformSweep(yokePathCrv, yokeOuterCrv);
+                Brep[] yokeOuterBreps = sweep.PerformSweep(yokePathCrv, _yokeOuterCrv);
                 Brep yokeOuterBrep = yokeOuterBreps[0];
                 Brep yokeOuterSolid = yokeOuterBrep.CapPlanarHoles(_mydoc.ModelAbsoluteTolerance);
                 yokeOuterSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == yokeOuterSolid.SolidOrientation)
                     yokeOuterSolid.Flip();
 
-                Brep[] yokeInnerBreps = sweep.PerformSweep(yokePathCrv, _yokeCrv);
+                Transform innerYokeTrans = Transform.Translation(new Vector3d(0, 0, -_t));
+                _yokeCrv.Transform(innerYokeTrans);
+
+                Brep[] yokeInnerBreps = sweep.PerformSweep(yokePathInnerCrv, _yokeCrv);
                 Brep yokeInnerBrep = yokeInnerBreps[0];
                 Brep yokeInnerSolid = yokeInnerBrep.CapPlanarHoles(_mydoc.ModelAbsoluteTolerance);
                 yokeInnerSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
@@ -207,7 +259,6 @@ namespace Kinergy
                 sliderSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == sliderSolid.SolidOrientation)
                     sliderSolid.Flip();
-
 
                 Brep blockOuterSolid = Brep.CreatePipe(_bearingBlockCrv, _sliderRadius + _t + _p, false, PipeCapMode.Flat, true, _mydoc.ModelAbsoluteTolerance, _mydoc.ModelAngleToleranceRadians)[0];
                 blockOuterSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
@@ -255,6 +306,10 @@ namespace Kinergy
                 bearingBlockSolid.Transform(rotation);
                 bearingBlockSolid.Transform(selfRot);
 
+                stopWallSolid.Transform(move);
+                stopWallSolid.Transform(rotation);
+                stopWallSolid.Transform(selfRot);
+
                 #endregion
 
                 _quickReturnModels.Add(crankWheelSolid);
@@ -262,6 +317,7 @@ namespace Kinergy
                 _quickReturnModels.Add(yokeSolid);
                 _quickReturnModels.Add(sliderSolid);
                 _quickReturnModels.Add(bearingBlockSolid);
+                _quickReturnModels.Add(stopWallSolid);
 
             }
         }

@@ -49,6 +49,8 @@ namespace Kinergy
             private Curve _GenevaWheelCurve;
             private Curve _drivePinCurve;
             private Curve _driveWheelCurve;
+            private Curve _spacerHalveCurve;
+            private Curve _spacerHalveInnerCurve;
             private Vector3d _trajDir;
 
             private List<Brep> _genevaModels;
@@ -69,6 +71,11 @@ namespace Kinergy
             public double V { get => _v; set => _v = value; }
             public List<Brep> GenevaModels { get => _genevaModels; set => _genevaModels = value; }
             public Vector3d TrajDir { get => _trajDir; set => _trajDir = value; }
+            public Curve GenevaWheelCurve { get => _GenevaWheelCurve; set => _GenevaWheelCurve = value; }
+            public Curve DrivePinCurve { get => _drivePinCurve; set => _drivePinCurve = value; }
+            public Curve DriveWheelCurve { get => _driveWheelCurve; set => _driveWheelCurve = value; }
+            public Curve SpacerHalveCurve { get => _spacerHalveCurve; set => _spacerHalveCurve = value; }
+            public Curve SpacerHalveInnerCurve { get => _spacerHalveInnerCurve; set => _spacerHalveInnerCurve = value; }
 
             public GenevaDrive(Point3d drivenCen, int numSlot, Vector3d axisDir, double thickness, Vector3d motionDir)
             {
@@ -79,7 +86,7 @@ namespace Kinergy
                 _trajDir = motionDir;
 
                 // constant
-                _b = 12;
+                _b = 15.5;
                 _p = 2;
                 _t = 0.4;
 
@@ -253,18 +260,32 @@ namespace Kinergy
                     dw_crvs.Add(c);
                 }
 
-                _GenevaWheelCurve = Curve.JoinCurves(dw_crvs, _myDoc.ModelAbsoluteTolerance, false)[0]; ;
+                _GenevaWheelCurve = Curve.JoinCurves(dw_crvs, _myDoc.ModelAbsoluteTolerance, false)[0];
                 //_myDoc.Objects.AddCurve(drivenWheelCrv);
                 //_myDoc.Views.Redraw();
                 #endregion
 
                 #region Generate the driving crank
 
-                Point3d driveCen = new Point3d(-_c, 0, -_t - _thickness);
+                Point3d driveCen = new Point3d(-_c, 0, -_t - _thickness + 0.1);
                 _driveWheelCurve = new Circle(new Plane(driveCen, new Vector3d(0, 0, 1)), driveCen, _a + _p).ToNurbsCurve();
 
-                Point3d pinCen = new Point3d(-_c, _a, -_t - _thickness);
+                Point3d pinCen = new Point3d(-_c, _a, -_t - _thickness + 0.1);
                 _drivePinCurve = new Circle(new Plane(pinCen, new Vector3d(0, 0, 1)), pinCen, _p/2).ToNurbsCurve();
+                Transform pinRot = Transform.Rotation(Math.PI / 2 - Math.Atan(_b / _a), new Vector3d(0, 0, -1), driveCen);
+                _drivePinCurve.Transform(pinRot);
+
+                #endregion
+
+                #region generate the halve of spacer
+
+                Curve spacerBridgeCrv = new Line(new Point3d(-_c, 3, 0), new Point3d(-_c, -3, 0)).ToNurbsCurve();
+                Curve spacerArcCrv = new Arc(new Point3d(-_c, -3, 0), new Point3d(-_c - 3, 0, 0), new Point3d(-_c, 3, 0)).ToNurbsCurve();
+                _spacerHalveCurve = Curve.JoinCurves(new List<Curve> { spacerBridgeCrv, spacerArcCrv }, _myDoc.ModelAbsoluteTolerance, false)[0];
+
+                Curve spacerInnerBridgeCrv = new Line(new Point3d(-_c - 0.6, 2.12, 0), new Point3d(-_c - 0.6, -2.12, 0)).ToNurbsCurve();
+                Curve spacerInnerArcCrv = new Arc(new Point3d(-_c - 0.6, -2.12, 0), new Point3d(-_c - 2.2, 0, 0), new Point3d(-_c - 0.6, 2.12, 0)).ToNurbsCurve();
+                _spacerHalveInnerCurve = Curve.JoinCurves(new List<Curve> { spacerInnerBridgeCrv, spacerInnerArcCrv }, _myDoc.ModelAbsoluteTolerance, false)[0];
 
                 #endregion
             }
@@ -279,12 +300,34 @@ namespace Kinergy
                 sweep.ClosedSweep = false;
                 sweep.SweepTolerance = _myDoc.ModelAbsoluteTolerance;
 
-                Point3d driveCen = new Point3d(-_c, 0, -_t - _thickness);
-                Point3d pinCen = new Point3d(-_c, _a, -_t - _thickness);
+                Point3d driveCen = new Point3d(-_c, 0, -_t - _thickness + 0.1);
+                Point3d pinCen = new Point3d(-_c, _a, -_t - _thickness + 0.1);
 
                 Curve genevaWheelPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _thickness)).ToNurbsCurve();
                 Curve driveWheelPathCrv = new Line(driveCen, new Point3d(driveCen.X, driveCen.Y, driveCen.Z + _thickness)).ToNurbsCurve();
-                Curve pinPathCrv = new Line(pinCen, new Point3d(pinCen.X, pinCen.Y, pinCen.Z + 2 * _thickness + _t)).ToNurbsCurve();
+                Curve pinPathCrv = new Line(pinCen, new Point3d(pinCen.X, pinCen.Y, pinCen.Z + 1.5 * _thickness + _t - 0.1)).ToNurbsCurve();
+                Curve spacerPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 1)).ToNurbsCurve();
+
+                Brep[] spacerOuterBreps = sweep.PerformSweep(spacerPathCrv, _spacerHalveCurve);
+                Brep spacerOuterBrep = spacerOuterBreps[0];
+                Brep spacerOuterSolid = spacerOuterBrep.CapPlanarHoles(_myDoc.ModelAbsoluteTolerance);
+
+                spacerOuterSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == spacerOuterSolid.SolidOrientation)
+                    spacerOuterSolid.Flip();
+
+                Brep[] spacerInnerBreps = sweep.PerformSweep(spacerPathCrv, _spacerHalveInnerCurve);
+                Brep spacerInnerBrep = spacerInnerBreps[0];
+                Brep spacerInnerSolid = spacerInnerBrep.CapPlanarHoles(_myDoc.ModelAbsoluteTolerance);
+
+                spacerInnerSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == spacerInnerSolid.SolidOrientation)
+                    spacerInnerSolid.Flip();
+
+                Brep spacerSolid = Brep.CreateBooleanDifference(spacerOuterSolid, spacerInnerSolid, _myDoc.ModelAbsoluteTolerance)[0];
+                spacerSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == spacerSolid.SolidOrientation)
+                    spacerSolid.Flip();
 
                 Brep[] genevaWheelBreps = sweep.PerformSweep(genevaWheelPathCrv, _GenevaWheelCurve);
                 Brep genevaWheelBrep = genevaWheelBreps[0];
@@ -347,11 +390,16 @@ namespace Kinergy
                 pinSolid.Transform(rotate);
                 pinSolid.Transform(selfRotate);
 
+                spacerSolid.Transform(move);
+                spacerSolid.Transform(rotate);
+                spacerSolid.Transform(selfRotate);
+
                 #endregion
 
                 _genevaModels.Add(genevaWheelSolid);
                 _genevaModels.Add(driveWheelSolid);
                 _genevaModels.Add(pinSolid);
+                _genevaModels.Add(spacerSolid);
 
             }
         }

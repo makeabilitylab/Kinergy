@@ -25,6 +25,7 @@ namespace InterReciprocation
         Curve skeleton;     // skeleton
         int speedLevel;         // value of the strength slide bar
         int amplitudeLevel;      // value of the speed slide bar
+        int strokeLevel;    // value of the stroke number
         int pattern;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
@@ -80,6 +81,7 @@ namespace InterReciprocation
             t2 = 1;
             skeleton = null;
             speedLevel = 5;
+            strokeLevel = 5;
             amplitudeLevel = 5;
             pattern = 1;
             direction = new Vector3d();
@@ -129,6 +131,8 @@ namespace InterReciprocation
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
+
+            pManager.AddIntegerParameter("Stroke", "Str", "number of strokes", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -175,6 +179,7 @@ namespace InterReciprocation
             int motion_control_method = -1;
             int speed_input = 5;
             int amp_input = 5;
+            int stroke_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -196,6 +201,8 @@ namespace InterReciprocation
             if (!DA.GetData(8, ref amp_input))
                 return;
             if (!DA.GetData(9, ref bake_input))
+                return;
+            if (!DA.GetData(10, ref stroke_input))
                 return;
             #endregion
 
@@ -273,7 +280,7 @@ namespace InterReciprocation
                 testBakeBtn = true;
             }
 
-            if (speedLevel == speed_input && amplitudeLevel == amp_input)
+            if (speedLevel == speed_input && amplitudeLevel == amp_input && strokeLevel == stroke_input)
             {
                 toAdjustParam = false;
             }
@@ -281,6 +288,7 @@ namespace InterReciprocation
             {
                 speedLevel = speed_input;
                 amplitudeLevel = amp_input;
+                strokeLevel = stroke_input;
                 toAdjustParam = true;
             }
 
