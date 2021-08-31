@@ -26,6 +26,7 @@ namespace InterOscillation
         int speedLevel;         // value of the strength slide bar
         int rangeLevel;   // value of the range slide bar
         int strokeLevel;    // value of the stroke number
+        int energyLevel;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
         List<Arrow> lockDirCandidates;
@@ -82,6 +83,7 @@ namespace InterOscillation
             speedLevel = 5;
             rangeLevel = 5;
             strokeLevel = 5;
+            energyLevel = 5;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -130,6 +132,7 @@ namespace InterOscillation
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
 
             pManager.AddIntegerParameter("Stroke", "Str", "number of strokes", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Energy", "E", "Energy of the output motion", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -166,6 +169,7 @@ namespace InterOscillation
             int speed_input = 5;
             int range_input = 5;
             int stroke_input = 5;
+            int energy_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -189,6 +193,8 @@ namespace InterOscillation
             if (!DA.GetData(9, ref bake_input))
                 return;
             if (!DA.GetData(10, ref stroke_input))
+                return;
+            if (!DA.GetData(11, ref energy_input))
                 return;
             #endregion
 
@@ -265,7 +271,7 @@ namespace InterOscillation
                 testBakeBtn = true;
             }
 
-            if (speedLevel == speed_input && rangeLevel == range_input && strokeLevel == stroke_input)
+            if (speedLevel == speed_input && rangeLevel == range_input && strokeLevel == stroke_input && energyLevel == energy_input)
             {
                 toAdjustParam = false;
             }

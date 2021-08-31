@@ -53,3 +53,33 @@ C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\ob
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\3DPEnergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
+D:\Code\KinergyApp\KinergyApp\bin\Resources\AddElements.png
+D:\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll.config
+D:\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll
+D:\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.pdb
+D:\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy\Styles.Default.baml
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy_MarkupCompile.cache
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.g.resources
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.ProcessingWin.resources
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.Properties.Resources.resources
+D:\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.GenerateResource.cache
+D:\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CoreCompileInputs.cache
+D:\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
+D:\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\Resources\AddElements.png
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll.config
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.pdb
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy\Styles.Default.baml
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy_MarkupCompile.cache
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.g.resources
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.ProcessingWin.resources
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.Properties.Resources.resources
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.GenerateResource.cache
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CoreCompileInputs.cache
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
+C:\Users\Makeability Lab\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb

@@ -56,8 +56,8 @@ namespace Kinergy
                 _thickness = 3.6;
                 _p = 2;
                 _leverThickness = 2;
-                _t = 0.4;
-                _anchorRadius = 1.9;
+                _t = 0.5;
+                _anchorRadius = 2.0;
                 _anchorLeverClearance = 1.2;
 
                 // calculated
@@ -141,14 +141,14 @@ namespace Kinergy
                 sweep.SweepTolerance = _mydoc.ModelAbsoluteTolerance;
 
                 Curve wheelPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _thickness)).ToNurbsCurve();
-                Curve pinPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _thickness + 2.2 + _leverThickness + _t - 0.1 + _t / 2)).ToNurbsCurve();
+                Curve pinPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _thickness + 2.2 + _leverThickness + _t - 0.2 + _t / 2)).ToNurbsCurve();
                 Curve anchorPathCrv = new Line(new Point3d(-_anchorDis, 0, 0), new Point3d(-_anchorDis, 0, _thickness + 2.2)).ToNurbsCurve();
                 Transform trans = Transform.Translation(new Vector3d(0, 0, _thickness));
                 anchorPathCrv.Transform(trans);
                 Curve slottedLeverPathCrv = new Line(new Point3d(0, 0, _thickness + 2.2), new Point3d(0, 0, _thickness + 2.2 + _leverThickness)).ToNurbsCurve();
                 Curve slotPathCrv = new Line(new Point3d(0, 0, _thickness), new Point3d(0, 0, _thickness + 2.2 + _leverThickness + _t)).ToNurbsCurve();
-                _stopWallCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.1), new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.1 + 3 * _t)).ToNurbsCurve();
-                Curve stopWallGrooveCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.1), new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.1 + 1.5 * _t)).ToNurbsCurve();
+                _stopWallCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.2), new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.2 + 3 * _t)).ToNurbsCurve();
+                Curve stopWallGrooveCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.2), new Point3d(0, 0, 2.2 + _thickness + _leverThickness + _t - 0.2 + 1.5 * _t)).ToNurbsCurve();
 
                 // generate the stop wall
                 double wallOuterRadius = _wheelRadius;

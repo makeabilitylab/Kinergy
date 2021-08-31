@@ -25,6 +25,7 @@ namespace ConRotation
         Curve skeleton;     // skeleton
         int speedLevel;         // value of the strength slide bar
         int roundLevel;   // value of the speed slide bar
+        int energyLevel;
         Vector3d direction;             // kinetic unit direction
         ContinuousRotation motion;
         List<Arrow> lockDirCandidates;
@@ -110,6 +111,7 @@ namespace ConRotation
             skeleton = null;
             roundLevel = 5;
             speedLevel = 5;
+            energyLevel = 5;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -163,6 +165,7 @@ namespace ConRotation
             // Value listeners 
             pManager.AddIntegerParameter("Speed", "S", "Speed of motion", GH_ParamAccess.item);
             pManager.AddIntegerParameter("Rounds", "R", "The rounds of the output motion", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Energy", "E", "The energy of the output motion", GH_ParamAccess.item);
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -189,6 +192,7 @@ namespace ConRotation
             int motion_control_method = -1;
             int speed_input = 5;
             int round_input = 5;
+            int energy_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -209,7 +213,9 @@ namespace ConRotation
                 return;
             if (!DA.GetData(8, ref round_input))
                 return;
-            if (!DA.GetData(9, ref bake_input))
+            if (!DA.GetData(9, ref energy_input))
+                return;
+            if (!DA.GetData(10, ref bake_input))
                 return;
             #endregion
 
@@ -287,7 +293,7 @@ namespace ConRotation
                 testBakeBtn = true;
             }
 
-            if (speedLevel == speed_input && roundLevel == round_input)
+            if (speedLevel == speed_input && roundLevel == round_input && energyLevel == energy_input)
             {
                 toAdjustParam = false;
             }

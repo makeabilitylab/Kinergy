@@ -76,7 +76,7 @@ namespace Kinergy
 
                 // constant
                 _p = 2;
-                _t = 0.4;
+                _t = 0.5;
                 _sliderRadius = 1.5;
                 _yokeWidth = 1;
 
@@ -169,11 +169,11 @@ namespace Kinergy
                 sweep.SweepTolerance = _mydoc.ModelAbsoluteTolerance;
 
                 Curve crankWheelPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _thickness)).ToNurbsCurve();
-                Curve pinPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 2.2 + _thickness +  2 * SliderRadius + _t - 0.1 + _t/2)).ToNurbsCurve();
+                Curve pinPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 2.2 + _thickness +  2 * SliderRadius + _t - 0.2 + _t/2)).ToNurbsCurve();
                 Curve yokePathCrv = new Line(new Point3d(0, 0, 2.2 + _thickness), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius)).ToNurbsCurve();
                 Curve yokePathInnerCrv = new Line(new Point3d(0, 0, 2.2 + _thickness-_t), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius +_t)).ToNurbsCurve();
-                _stopWallCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1 + 3 * _t)).ToNurbsCurve();
-                Curve stopWallGrooveCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.1 + 1.5 * _t)).ToNurbsCurve();
+                _stopWallCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.2), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.2 + 3 * _t)).ToNurbsCurve();
+                Curve stopWallGrooveCrv = new Line(new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.2), new Point3d(0, 0, 2.2 + _thickness + 2 * SliderRadius + _t - 0.2 + 1.5 * _t)).ToNurbsCurve();
 
                 // generate the stop wall
 

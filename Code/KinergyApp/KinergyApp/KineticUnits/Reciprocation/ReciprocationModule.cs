@@ -26,6 +26,7 @@ namespace InterReciprocation
         int speedLevel;         // value of the strength slide bar
         int amplitudeLevel;      // value of the speed slide bar
         int strokeLevel;    // value of the stroke number
+        int energyLevel;
         int pattern;
         Vector3d direction;             // kinetic unit direction
         InstantRotation motion;
@@ -89,6 +90,7 @@ namespace InterReciprocation
             lockDirCandidates = new List<Arrow>();
             p = null;
             speedLevel = 0;
+            energyLevel = 5;
 
             lockState = false;
             min_wire_diamter = 2.8;
@@ -133,6 +135,7 @@ namespace InterReciprocation
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
 
             pManager.AddIntegerParameter("Stroke", "Str", "number of strokes", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Energy", "E", "Energy of the output motion", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -180,6 +183,7 @@ namespace InterReciprocation
             int speed_input = 5;
             int amp_input = 5;
             int stroke_input = 5;
+            int energy_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -203,6 +207,8 @@ namespace InterReciprocation
             if (!DA.GetData(9, ref bake_input))
                 return;
             if (!DA.GetData(10, ref stroke_input))
+                return;
+            if (!DA.GetData(11, ref energy_input))
                 return;
             #endregion
 
@@ -280,7 +286,7 @@ namespace InterReciprocation
                 testBakeBtn = true;
             }
 
-            if (speedLevel == speed_input && amplitudeLevel == amp_input && strokeLevel == stroke_input)
+            if (speedLevel == speed_input && amplitudeLevel == amp_input && strokeLevel == stroke_input && energy_input == energyLevel)
             {
                 toAdjustParam = false;
             }

@@ -26,6 +26,7 @@ namespace ConTranslation
         Curve skeleton;     // skeleton
         int speedLevel;         // value of the strength slide bar
         int distanceLevel;
+        int energyLevel;
         int distance;   // value of the distance slide bar
         Vector3d direction;             // kinetic unit direction
         ContinuousTranslation motion;
@@ -78,6 +79,18 @@ namespace ConTranslation
         Guid motionCtrlPtID2;
         Point3d motionCtrlPointSelected;
 
+        Guid eeCircleID = Guid.Empty;
+        Point3d eeCircleDotPt = new Point3d();
+        Guid eeLineID = Guid.Empty;
+        Point3d eeLineDotPt = new Point3d();
+        Vector3d kineticUnitDir = new Vector3d();
+        Vector3d axelDir = new Vector3d();
+        Point3d eeCenPt = new Point3d();
+        double finalGearPositionRatio;
+
+        double axelSpace = 0;
+        double gearSpace = 0;
+
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
         /// </summary>
@@ -94,6 +107,7 @@ namespace ConTranslation
             skeleton = null;
             speedLevel = 5;
             distanceLevel = 5;
+            energyLevel = 5;
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
@@ -219,6 +233,8 @@ namespace ConTranslation
             // Value listeners 
             pManager.AddIntegerParameter("Speed", "S", "Speed of motion", GH_ParamAccess.item);
             pManager.AddIntegerParameter("Distance", "S", "Translation distance of motion", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Energy", "E", "The energy of the spring", GH_ParamAccess.item);
+
 
             // Confirm and bake all components
             pManager.AddBooleanParameter("ComponentsBake", "Bk", "comfirm and bake all components", GH_ParamAccess.item);
@@ -245,6 +261,7 @@ namespace ConTranslation
             int motion_control_method = -1;
             int speed_input = 5;
             int dis_input = 5;
+            int energy_input = 5;
 
             #region input param readings
             if (!DA.GetData(0, ref reg_input))
@@ -265,7 +282,9 @@ namespace ConTranslation
                 return;
             if (!DA.GetData(8, ref dis_input))
                 return;
-            if (!DA.GetData(9, ref bake_input))
+            if (!DA.GetData(9, ref energy_input))
+                return;
+            if (!DA.GetData(10, ref bake_input))
                 return;
             #endregion
 
@@ -346,7 +365,7 @@ namespace ConTranslation
                 testBakeBtn = true;
             }
 
-            if (speedLevel == speed_input && distanceLevel== dis_input)
+            if (speedLevel == speed_input && distanceLevel == dis_input && energyLevel == energy_input)
             {
                 toAdjustParam = false;
             }
@@ -354,6 +373,7 @@ namespace ConTranslation
             {
                 speedLevel = speed_input;
                 distanceLevel = dis_input;
+                energyLevel = energy_input;
                 toAdjustParam = true;
             }
             #endregion
@@ -590,9 +610,9 @@ namespace ConTranslation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new ContinuousTranslation(model, direction, innerCavity, motionCtrlPointSelected, speedLevel, distanceLevel, motionControlMethod);
+                    motion = new ContinuousTranslation(model, direction, innerCavity, motionCtrlPointSelected, speedLevel, distanceLevel, energyLevel, motionControlMethod);
 
-                    //motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
+                    motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
                     //toBeBaked.Add(reserveBrepID1);
                     //toBeBaked.Add(reserveBrepID2);
@@ -603,11 +623,90 @@ namespace ConTranslation
 
             if (toSetEEPos)
             {
+                #region select a direction around a circle on the end-effector's side
+
+                // generate the circle
+                Point3d startPt = skeleton.PointAtNormalizedLength(0);
+                Point3d endPt = skeleton.PointAtNormalizedLength(1);
+                
+                if(motionCtrlPointSelected.DistanceTo(startPt) <= motionCtrlPointSelected.DistanceTo(endPt))
+                {
+                    eeCenPt = endPt;
+                }
+                else
+                {
+                    eeCenPt = startPt;
+                }
+
+                Curve eeCircleCrv = new Circle(new Plane(eeCenPt, direction), 30).ToNurbsCurve();
+                eeCircleID = myDoc.Objects.AddCurve(eeCircleCrv, redAttribute);
+                myDoc.Views.Redraw();
+
+                Rhino.Input.Custom.GetPoint gp4 = new Rhino.Input.Custom.GetPoint();
+                gp4.SetCommandPrompt("First, select one position to decide the kinetic unit orientation.");
+                gp4.MouseDown += Gp4_MouseDown;
+                gp4.MouseMove += Gp4_MouseMove;
+                gp4.DynamicDraw += Gp4_DynamicDraw;
+                gp4.AcceptNothing(true);
+                Rhino.Input.GetResult r4;
+                do
+                {
+                    r4 = gp4.Get(true);
+                } while (r4 != Rhino.Input.GetResult.Nothing);
+
+                myDoc.Objects.Delete(eeCircleID, true);
+
+                #endregion
+
+                #region select a position along the diameter that crosses the circle center
+
+                Curve crossLineCrv = new Line(eeCenPt - axelDir * int.MaxValue, eeCenPt + axelDir * int.MaxValue).ToNurbsCurve();
+                Curve[] crvs;
+                Point3d[] pts;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, model, myDoc.ModelAbsoluteTolerance, out crvs, out pts);
+                Curve eeLineCrv = new Line(pts[0], pts[1]).ToNurbsCurve();
+                eeLineID = myDoc.Objects.AddCurve(eeLineCrv, redAttribute);
+                myDoc.Views.Redraw();
+
+                Rhino.Input.Custom.GetPoint gp5 = new Rhino.Input.Custom.GetPoint();
+                gp5.SetCommandPrompt("Second, select one position to decide the position of the end-effector.");
+                gp5.MouseDown += Gp5_MouseDown;
+                gp5.MouseMove += Gp5_MouseMove;
+                gp5.DynamicDraw += Gp5_DynamicDraw;
+                gp5.AcceptNothing(true);
+                Rhino.Input.GetResult r5;
+                do
+                {
+                    r5 = gp5.Get(true);
+                } while (r5 != Rhino.Input.GetResult.Nothing);
+
+                myDoc.Objects.Delete(eeLineID, true);
+
+                if((eeLineDotPt - pts[0]) / eeLineDotPt.DistanceTo(pts[0]) == axelDir)
+                {
+                    finalGearPositionRatio = eeLineDotPt.DistanceTo(pts[0]) / pts[1].DistanceTo(pts[0]);
+                }
+                else
+                {
+                    finalGearPositionRatio = eeLineDotPt.DistanceTo(pts[1]) / pts[1].DistanceTo(pts[0]);
+                }
+
+                #endregion
+
+                #region generate the spring motor, transmission mechanism, and the mechanism mating the end-effector
+
+                motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace);
+                motion.GenerateSpringMotor();
+                motion.GenerateGearTrain(finalGearPositionRatio);
+                #endregion
 
             }
 
-            if(toSetAxisDir)
+            if (toSetAxisDir)
             {
+                // select a direction that is tangent on the final gear circumference
+
+                
 
             }
 
@@ -749,25 +848,25 @@ namespace ConTranslation
 
                 #region quick-return test
 
-                //QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
+                QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
 
-                //foreach (Brep b in tempQR.QuickReturnModels)
-                //{
-                //    myDoc.Objects.AddBrep(b);
-                //    myDoc.Views.Redraw();
-                //}
+                foreach (Brep b in tempQR.QuickReturnModels)
+                {
+                    myDoc.Objects.AddBrep(b);
+                    myDoc.Views.Redraw();
+                }
 
                 #endregion
 
                 #region crank and slotted lever
 
-                CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
+                //CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
 
-                foreach (Brep b in tempCSL.CrankSlottedLeverModels)
-                {
-                    myDoc.Objects.AddBrep(b);
-                    myDoc.Views.Redraw();
-                }
+                //foreach (Brep b in tempCSL.CrankSlottedLeverModels)
+                //{
+                //    myDoc.Objects.AddBrep(b);
+                //    myDoc.Views.Redraw();
+                //}
 
                 #endregion
             }
@@ -785,6 +884,156 @@ namespace ConTranslation
                 DA.SetDataList(1, motion.GetModel());
             DA.SetData(2, toPreview);
         }
+
+        private void Gp5_DynamicDraw(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        {
+            e.Display.DrawSphere(new Sphere(eeLineDotPt, 5), Color.FromArgb(16, 150, 206));
+        }
+
+        private void Gp5_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Curve eeLineCrv = (Curve)myDoc.Objects.Find(eeLineID).Geometry;
+            double t;
+            eeLineCrv.ClosestPoint(currPos, out t);
+            eeLineDotPt = eeLineCrv.PointAt(t);
+        }
+
+        private void Gp5_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Curve eeLineCrv = (Curve)myDoc.Objects.Find(eeLineID).Geometry;
+            double t;
+            eeLineCrv.ClosestPoint(currPos, out t);
+            eeLineDotPt = eeLineCrv.PointAt(t);
+        }
+
+        private void Gp4_DynamicDraw(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        {
+            e.Display.DrawSphere(new Sphere(eeCircleDotPt, 5), Color.FromArgb(16, 150, 206));
+        }
+
+        private void Gp4_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Curve eeCircleCrv = (Curve)myDoc.Objects.Find(eeCircleID).Geometry;
+            double t;
+            eeCircleCrv.ClosestPoint(currPos, out t);
+            eeCircleDotPt = eeCircleCrv.PointAt(t);
+        }
+
+        private void Gp4_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Curve eeCircleCrv = (Curve)myDoc.Objects.Find(eeCircleID).Geometry;
+            double t;
+            eeCircleCrv.ClosestPoint(currPos, out t);
+            eeCircleDotPt = eeCircleCrv.PointAt(t);
+            kineticUnitDir = eeCircleDotPt - eeCenPt;
+            kineticUnitDir.Unitize();
+            axelDir = kineticUnitDir;
+            Transform rot = Transform.Rotation(Math.PI / 2, direction, eeCenPt);
+            axelDir.Transform(rot);
+
+            GetInnerCavitySpaceForDir(brepCut[1], skeleton, direction, axelDir, kineticUnitDir, out axelSpace, out gearSpace);
+        }
+        void GetInnerCavitySpaceForDir(Brep b, Curve c, Vector3d dir, Vector3d targetDir1, Vector3d targetDir2, out double target1Space, out double target2Space )
+        {
+            target1Space = 0;
+            target2Space = 0;
+            double step = 1.0 / 100.0;
+
+            for(int i = 0; i <= 100; i++)
+            {
+                Point3d cen = skeleton.PointAtNormalizedLength(i * step);
+                Plane cenPln = new Plane(cen, dir);
+
+                Curve[] outCrvs;
+                Point3d[] outPts;
+
+                Rhino.Geometry.Intersect.Intersection.BrepPlane(b, cenPln, myDoc.ModelAbsoluteTolerance, out outCrvs, out outPts);
+                if(outCrvs != null && outCrvs.Count() > 0)
+                {
+                    Curve intersectCrv = outCrvs[0];
+
+                    double area = 0;
+    
+                    double increamental = 0.05;
+                    double target1Dis = 0;
+
+                    Curve target1IntersectionCrv1 = new Line(cen, cen + targetDir1 * int.MaxValue).ToNurbsCurve();
+                    Curve target1IntersectionCrv2 = new Line(cen, cen - targetDir1 * int.MaxValue).ToNurbsCurve();
+                    Point3d intersectPt1 = new Point3d();
+                    Point3d intersectPt2 = new Point3d();
+
+                    var events1 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target1IntersectionCrv1, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
+                    if(events1!= null)
+                    {
+                        intersectPt1 = events1[0].PointA;
+                    }
+                    var events2 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target1IntersectionCrv2, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
+                    if (events2 != null)
+                    {
+                        intersectPt2 = events2[0].PointA;
+                    }
+
+                    if(intersectPt1.DistanceTo(cen) <= intersectPt2.DistanceTo(cen))
+                    {
+                        target1Dis = intersectPt1.DistanceTo(cen);
+                    }
+                    else
+                    {
+                        target1Dis = intersectPt2.DistanceTo(cen);
+                    }
+
+                    for(double p = 0; p <= target1Dis; p = p + increamental)
+                    {
+                        Point3d currPt = cen + targetDir1 * p;
+
+                        Curve target2IntersectionCrv1 = new Line(currPt, currPt + targetDir2 * int.MaxValue).ToNurbsCurve();
+                        Curve target2IntersectionCrv2 = new Line(currPt, currPt - targetDir2 * int.MaxValue).ToNurbsCurve();
+                        Point3d intersectTarget2Pt1 = new Point3d();
+                        Point3d intersectTarget2Pt2 = new Point3d();
+                        double target2Dis = 0;
+
+                        var events3 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target2IntersectionCrv1, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
+                        if (events3 != null)
+                        {
+                            intersectTarget2Pt1 = events3[0].PointA;
+                        }
+                        var events4 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target2IntersectionCrv2, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
+                        if (events4 != null)
+                        {
+                            intersectTarget2Pt2 = events4[0].PointA;
+                        }
+
+                        if (intersectTarget2Pt1.DistanceTo(currPt) <= intersectTarget2Pt2.DistanceTo(currPt))
+                        {
+                            target2Dis = intersectTarget2Pt1.DistanceTo(currPt);
+                        }
+                        else
+                        {
+                            target2Dis = intersectTarget2Pt2.DistanceTo(currPt);
+                        }
+
+                        double currArea = targetDir1 * targetDir2;
+                        if(currArea >= area)
+                        {
+                            area = currArea;
+                            target1Space = 2 * p;
+                            target2Space = 2 * target2Dis;
+                        }
+
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+            }
+        }
+
+
 
         void GenerateMotionControlIndicator()
         {

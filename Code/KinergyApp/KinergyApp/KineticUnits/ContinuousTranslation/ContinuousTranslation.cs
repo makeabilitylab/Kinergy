@@ -26,8 +26,9 @@ namespace Kinergy.KineticUnit
     {
         //The initial inputs
         private Brep _model;
-        private int _speed;  // the range on the interface is 0.1-1, the ratio of the max energy
-        private int _distance;    // the range on the interface is 0-9, indicating the level of distance
+        private int _speed;  // the range on the interface is 0-9
+        private int _distance;    // the range on the interface is 0-9
+        private int _energy; //  the range on the interface is 0-9
         private Vector3d _direction = Vector3d.Unset;
         private bool _addLock;
         private RhinoDoc _myDoc;
@@ -41,10 +42,14 @@ namespace Kinergy.KineticUnit
         private List<Lock> _locks;
         private Helix _spring;
 
-        public ContinuousTranslation(Brep Model, Vector3d Direction, Brep innerCylinder, Point3d motionCtrlPt, int speed, int dis, int InputType)
+        Brep b1 = null, b2 = null, b3 = null;
+        double t1 = 0, t2 = 0;
+
+        public ContinuousTranslation(Brep Model, Vector3d Direction, Brep innerCylinder, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
         {
             _model = Model;
             _speed = speed;
+            _energy = eneryg;
             _distance = dis;
             _direction = Direction;
             _modelCut = new List<Shape>();
@@ -77,6 +82,29 @@ namespace Kinergy.KineticUnit
             return cylinder;
         }
 
-       
+        public void Set3Parts(double T1, double T2, Brep B1, Brep B2, Brep B3)
+        {
+            t1 = T1;
+            t2 = T2;
+            b1 = B1;
+            b2 = B2;
+            b3 = B3;
+        }
+
+        public void CalculateSpaceForKineticUnit(Vector3d kineticUnitDir, Vector3d axelDir, double axelSpace, double gearSpace)
+        {
+
+        }
+
+        public void GenerateSpringMotor()
+        {
+
+        }
+
+        public void GenerateGearTrain(double finalGearPosRatio)
+        {
+
+        }
+
     }
 }
