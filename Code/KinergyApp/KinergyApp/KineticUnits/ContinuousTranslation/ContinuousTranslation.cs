@@ -42,8 +42,16 @@ namespace Kinergy.KineticUnit
         private List<Lock> _locks;
         private Helix _spring;
 
+        private int _shaftNum;
+        private List<List<int>> _r_shaft_num_List;
+        private List<List<double>> _shaft_radius_pool;
+
+        public const double clearance = 0.3;
+
         Brep b1 = null, b2 = null, b3 = null;
         double t1 = 0, t2 = 0;
+
+        public int ShaftNum { get => _shaftNum; set => _shaftNum = value; }
 
         public ContinuousTranslation(Brep Model, Vector3d Direction, Brep innerCylinder, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
         {
@@ -65,6 +73,8 @@ namespace Kinergy.KineticUnit
             _skeleton.Transform(currB.RotateBack);
             _skeletonLen = _skeleton.PointAtNormalizedLength(0).DistanceTo(_skeleton.PointAtNormalizedLength(1));
 
+            _shaftNum = 0;
+            _r_shaft_num_List = new List<List<int>>();
         }
 
         private Cylinder GetCylinder(Brep c, Vector3d d)
@@ -91,8 +101,90 @@ namespace Kinergy.KineticUnit
             b3 = B3;
         }
 
-        public void CalculateSpaceForKineticUnit(Vector3d kineticUnitDir, Vector3d axelDir, double axelSpace, double gearSpace)
+        public void CalculateShaftNumAndGearRadius(int level, out double n, out double r)
         {
+            // default shaft number and gear radius
+            n = 2;
+            r = 4.5;
+
+
+
+        }
+
+        public void CalculateSpaceForKineticUnit(Vector3d kineticUnitDir, Vector3d axelDir, double axelSpace, double gearSpace, double unitLen, double initialOffset, double finalGearPositionRatio)
+        {
+            double R = 0;
+            List<double> gearRList = new List<double>();
+            
+            if(_r_shaft_num_List != null && _r_shaft_num_List.Count > 0)
+            {
+                _r_shaft_num_List.Clear();
+            }
+
+            double r_ceiling = Math.Min(unitLen - 4.5, gearSpace / 2 - clearance - 2);
+            if (r_ceiling < 4.5)
+                return;
+            
+            for(R = 5; R <= r_ceiling; R = R + 0.5)
+            {
+                if (R <= (unitLen - 9.3) / 2)
+                {
+                    double n_ceiling = Math.Min((unitLen - 4.5 - R) / (R + 4.8) + 1, (axelSpace - initialOffset + 0.3) / 3.9);
+                    List<int> n_seque = new List<int>();
+                    for(int i=2; i<=Math.Floor(n_ceiling); i++)
+                    {
+                        n_seque.Add(i);
+                    }
+
+                    // update the list r_shaft_num_list and gearRList
+                    _r_shaft_num_List.Add(n_seque);
+                    gearRList.Add(R);
+
+                    // update the list shaft_radius_pool
+                    foreach(int n in n_seque)
+                    {
+                        double gearRatio = Math.Pow(R / 4.5, n);
+
+                        int idx = 0;
+                        foreach(var ele in _shaft_radius_pool)
+                        {
+                            double shaftNum = ele.ElementAt(0);
+                            double gearR = ele.ElementAt(1);
+                            double testGearRatio = Math.Pow(gearR / 4.5, shaftNum);
+
+                            if(gearRatio > testGearRatio)
+                            {
+                                // keep looking 
+                                idx++;
+                            }
+                            else if (gearRatio == testGearRatio)
+                            {
+                                // replace the current item
+                                int currIdx = _shaft_radius_pool.IndexOf(ele);
+                                _shaft_radius_pool.RemoveAt(currIdx);
+                                List<double> temp = new List<double>();
+                                temp.Add(n);
+                                temp.Add(R);
+                                _shaft_radius_pool.Insert(currIdx, temp);
+                            }
+                            else
+                            {
+                                // insert the item
+                                List<double> temp = new List<double>();
+                                temp.Add(n);
+                                temp.Add(R);
+                                int currIdx = _shaft_radius_pool.IndexOf(ele);
+                                _shaft_radius_pool.Insert(currIdx, temp);
+                            }
+                        }
+
+                    }
+                }
+               
+            }
+
+            
+
 
         }
 

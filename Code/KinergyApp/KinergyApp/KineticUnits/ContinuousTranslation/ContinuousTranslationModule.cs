@@ -594,14 +594,15 @@ namespace ConTranslation
                     gp3.SetCommandPrompt("Select one side to add the motion control.");
                     gp3.MouseDown += Gp3_MouseDown;
                     gp3.MouseMove += Gp3_MouseMove;
-                    gp3.AcceptNothing(true);
-                    Rhino.Input.GetResult r3;
-
+                    //gp3.AcceptNothing(true);
                     GenerateMotionControlIndicator();
-                    do
-                    {
-                        r3 = gp3.Get(true);
-                    } while (r3 != Rhino.Input.GetResult.Nothing);
+                    Rhino.Input.GetResult r3;
+                    r3 = gp3.Get(true);
+
+                    //do
+                    //{
+                    //    r3 = gp3.Get(true);
+                    //} while (r3 != Rhino.Input.GetResult.Nothing);
 
                     myDoc.Objects.Hide(motionCtrlPtID1, true);
                     myDoc.Objects.Hide(motionCtrlPtID2, true);
@@ -628,6 +629,17 @@ namespace ConTranslation
                 // generate the circle
                 Point3d startPt = skeleton.PointAtNormalizedLength(0);
                 Point3d endPt = skeleton.PointAtNormalizedLength(1);
+
+                if(t1 > t2)
+                {
+                    endPt = skeleton.PointAtNormalizedLength(t1);
+                    startPt = skeleton.PointAtNormalizedLength(t2);
+                }
+                else
+                {
+                    startPt = skeleton.PointAtNormalizedLength(t1);
+                    endPt = skeleton.PointAtNormalizedLength(t2);
+                }
                 
                 if(motionCtrlPointSelected.DistanceTo(startPt) <= motionCtrlPointSelected.DistanceTo(endPt))
                 {
@@ -647,12 +659,13 @@ namespace ConTranslation
                 gp4.MouseDown += Gp4_MouseDown;
                 gp4.MouseMove += Gp4_MouseMove;
                 gp4.DynamicDraw += Gp4_DynamicDraw;
-                gp4.AcceptNothing(true);
+                //gp4.AcceptNothing(true);
                 Rhino.Input.GetResult r4;
-                do
-                {
-                    r4 = gp4.Get(true);
-                } while (r4 != Rhino.Input.GetResult.Nothing);
+                r4 = gp4.Get(true);
+                //do
+                //{
+                //    r4 = gp4.Get(true);
+                //} while (r4 != Rhino.Input.GetResult.Nothing);
 
                 myDoc.Objects.Delete(eeCircleID, true);
 
@@ -673,12 +686,14 @@ namespace ConTranslation
                 gp5.MouseDown += Gp5_MouseDown;
                 gp5.MouseMove += Gp5_MouseMove;
                 gp5.DynamicDraw += Gp5_DynamicDraw;
-                gp5.AcceptNothing(true);
+                //gp5.AcceptNothing(true);
                 Rhino.Input.GetResult r5;
-                do
-                {
-                    r5 = gp5.Get(true);
-                } while (r5 != Rhino.Input.GetResult.Nothing);
+                r5 = gp5.Get(true);
+
+                //do
+                //{
+                //    r5 = gp5.Get(true);
+                //} while (r5 != Rhino.Input.GetResult.Nothing);
 
                 myDoc.Objects.Delete(eeLineID, true);
 
@@ -695,7 +710,9 @@ namespace ConTranslation
 
                 #region generate the spring motor, transmission mechanism, and the mechanism mating the end-effector
 
-                motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace);
+                double unitLenth = startPt.DistanceTo(endPt);
+                double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
+                motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
                 motion.GenerateSpringMotor();
                 motion.GenerateGearTrain(finalGearPositionRatio);
                 #endregion
@@ -848,13 +865,20 @@ namespace ConTranslation
 
                 #region quick-return test
 
-                QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
+                //QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
+                //QuickReturn tempQR1 = new QuickReturn(new Point3d(0, -100, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
 
-                foreach (Brep b in tempQR.QuickReturnModels)
-                {
-                    myDoc.Objects.AddBrep(b);
-                    myDoc.Views.Redraw();
-                }
+                //foreach (Brep b in tempQR.QuickReturnModels)
+                //{
+                //    myDoc.Objects.AddBrep(b);
+                //    myDoc.Views.Redraw();
+                //}
+
+                //foreach (Brep b in tempQR1.QuickReturnModels)
+                //{
+                //    myDoc.Objects.AddBrep(b);
+                //    myDoc.Views.Redraw();
+                //}
 
                 #endregion
 
@@ -935,6 +959,26 @@ namespace ConTranslation
             Transform rot = Transform.Rotation(Math.PI / 2, direction, eeCenPt);
             axelDir.Transform(rot);
 
+            //myDoc.Objects.AddBrep(brepCut[1], orangeAttribute);
+            //myDoc.Views.Redraw();
+
+            //myDoc.Objects.AddCurve(skeleton, redAttribute);
+            //myDoc.Views.Redraw();
+
+            //Point3d tempPt = skeleton.PointAtEnd;
+            //Curve directionCrv = new Line(tempPt, tempPt + direction).ToNurbsCurve();
+            //myDoc.Objects.AddCurve(directionCrv, redAttribute);
+            //myDoc.Views.Redraw();
+
+            //Curve axelDirectionCrv = new Line(tempPt, tempPt + axelDir).ToNurbsCurve();
+            //myDoc.Objects.AddCurve(axelDirectionCrv, redAttribute);
+            //myDoc.Views.Redraw();
+
+            //Curve kineticUnitDirectionCrv = new Line(tempPt, tempPt + kineticUnitDir).ToNurbsCurve();
+            //myDoc.Objects.AddCurve(kineticUnitDirectionCrv, redAttribute);
+            //myDoc.Views.Redraw();
+
+
             GetInnerCavitySpaceForDir(brepCut[1], skeleton, direction, axelDir, kineticUnitDir, out axelSpace, out gearSpace);
         }
         void GetInnerCavitySpaceForDir(Brep b, Curve c, Vector3d dir, Vector3d targetDir1, Vector3d targetDir2, out double target1Space, out double target2Space )
@@ -967,12 +1011,12 @@ namespace ConTranslation
                     Point3d intersectPt2 = new Point3d();
 
                     var events1 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target1IntersectionCrv1, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
-                    if(events1!= null)
+                    if(events1!= null && events1.Count > 0)
                     {
                         intersectPt1 = events1[0].PointA;
                     }
                     var events2 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target1IntersectionCrv2, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
-                    if (events2 != null)
+                    if (events2 != null && events2.Count > 0)
                     {
                         intersectPt2 = events2[0].PointA;
                     }
@@ -997,12 +1041,12 @@ namespace ConTranslation
                         double target2Dis = 0;
 
                         var events3 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target2IntersectionCrv1, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
-                        if (events3 != null)
+                        if (events3 != null && events3.Count > 0)
                         {
                             intersectTarget2Pt1 = events3[0].PointA;
                         }
                         var events4 = Rhino.Geometry.Intersect.Intersection.CurveCurve(intersectCrv, target2IntersectionCrv2, myDoc.ModelAbsoluteTolerance, myDoc.ModelAbsoluteTolerance);
-                        if (events4 != null)
+                        if (events4 != null && events4.Count > 0)
                         {
                             intersectTarget2Pt2 = events4[0].PointA;
                         }
@@ -1046,8 +1090,8 @@ namespace ConTranslation
             lPt = skePt1;
             rPt = skePt2;
 
-            motionCtrlPtID1 = myDoc.Objects.AddSphere(new Sphere(lPt, 10), blueAttribute);
-            motionCtrlPtID2 = myDoc.Objects.AddSphere(new Sphere(rPt, 10), blueAttribute);
+            motionCtrlPtID1 = myDoc.Objects.AddSphere(new Sphere(lPt, 3), blueAttribute);
+            motionCtrlPtID2 = myDoc.Objects.AddSphere(new Sphere(rPt, 3), blueAttribute);
 
             myDoc.Views.Redraw();
 
