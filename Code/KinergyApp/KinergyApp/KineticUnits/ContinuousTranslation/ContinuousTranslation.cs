@@ -47,6 +47,11 @@ namespace Kinergy.KineticUnit
         private List<List<double>> _shaft_radius_pool;
 
         public const double clearance = 0.3;
+        public const double gearFaceWidth = 3.6;
+        public const double gearModule = 1;
+        public const double gearPressureAngle = 20;
+        public const double shaftRadius = 1.5;
+        public RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
         Brep b1 = null, b2 = null, b3 = null;
         double t1 = 0, t2 = 0;
@@ -107,8 +112,15 @@ namespace Kinergy.KineticUnit
             n = 2;
             r = 4.5;
 
+            if (_shaft_radius_pool == null)
+                return;
 
+            double interval = _shaft_radius_pool.Count / 10.0;
 
+            List<double> ele = _shaft_radius_pool.ElementAt((int)Math.Floor(level * interval));
+
+            n = (int)ele.ElementAt(0);
+            r = ele.ElementAt(1);
         }
 
         public void CalculateSpaceForKineticUnit(Vector3d kineticUnitDir, Vector3d axelDir, double axelSpace, double gearSpace, double unitLen, double initialOffset, double finalGearPositionRatio)
@@ -129,7 +141,8 @@ namespace Kinergy.KineticUnit
             {
                 if (R <= (unitLen - 9.3) / 2)
                 {
-                    double n_ceiling = Math.Min((unitLen - 4.5 - R) / (R + 4.8) + 1, (axelSpace - initialOffset + 0.3) / 3.9);
+                    // double n_ceiling = Math.Min((unitLen - 4.5 - R) / (R + 4.8) + 1, (axelSpace - initialOffset + 0.3) / 3.9);
+                    double n_ceiling = Math.Min((unitLen - 4.5 - R) / (R + 4.8) + 1, (axelSpace/2) / 3.9);
                     List<int> n_seque = new List<int>();
                     for(int i=2; i<=Math.Floor(n_ceiling); i++)
                     {
@@ -143,58 +156,424 @@ namespace Kinergy.KineticUnit
                     // update the list shaft_radius_pool
                     foreach(int n in n_seque)
                     {
-                        double gearRatio = Math.Pow(R / 4.5, n);
+                        double gearRatio = Math.Pow(R / 4.5, n-1);
 
                         int idx = 0;
-                        foreach(var ele in _shaft_radius_pool)
+                        if(_shaft_radius_pool == null)
                         {
-                            double shaftNum = ele.ElementAt(0);
-                            double gearR = ele.ElementAt(1);
-                            double testGearRatio = Math.Pow(gearR / 4.5, shaftNum);
+                            _shaft_radius_pool = new List<List<double>>();
+                            List<double> temp = new List<double>();
+                            temp.Add(n);
+                            temp.Add(R);
 
-                            if(gearRatio > testGearRatio)
+                            _shaft_radius_pool.Add(temp);
+                        }
+                        else
+                        {
+                            bool isDeleted = false;
+
+                            foreach (var ele in _shaft_radius_pool)
                             {
-                                // keep looking 
-                                idx++;
+                                double shaftNum = ele.ElementAt(0);
+                                double gearR = ele.ElementAt(1);
+                                double testGearRatio = Math.Pow(gearR / 4.5, shaftNum-1);
+
+                                if (gearRatio > testGearRatio)
+                                {
+                                    // keep looking 
+                                    idx++;   
+                                }
+                                else if (gearRatio == testGearRatio)
+                                {
+                                    // replace the current item
+                                    isDeleted = true;
+                                    idx = _shaft_radius_pool.IndexOf(ele);
+                                    break;
+                                }
+                                else
+                                {
+                                    // insert the item
+                                    idx = _shaft_radius_pool.IndexOf(ele);
+                                    break;
+                                }
                             }
-                            else if (gearRatio == testGearRatio)
+
+                            if(idx == _shaft_radius_pool.Count)
                             {
-                                // replace the current item
-                                int currIdx = _shaft_radius_pool.IndexOf(ele);
-                                _shaft_radius_pool.RemoveAt(currIdx);
                                 List<double> temp = new List<double>();
                                 temp.Add(n);
                                 temp.Add(R);
-                                _shaft_radius_pool.Insert(currIdx, temp);
+                                _shaft_radius_pool.Add(temp);
                             }
                             else
                             {
-                                // insert the item
-                                List<double> temp = new List<double>();
-                                temp.Add(n);
-                                temp.Add(R);
-                                int currIdx = _shaft_radius_pool.IndexOf(ele);
-                                _shaft_radius_pool.Insert(currIdx, temp);
+                                if (isDeleted)
+                                {
+                                    _shaft_radius_pool.RemoveAt(idx);
+                                    List<double> temp = new List<double>();
+                                    temp.Add(n);
+                                    temp.Add(R);
+                                    _shaft_radius_pool.Insert(idx, temp);
+                                }
+                                else
+                                {
+                                    List<double> temp = new List<double>();
+                                    temp.Add(n);
+                                    temp.Add(R);
+                                    _shaft_radius_pool.Insert(idx, temp);
+                                }
                             }
                         }
-
                     }
                 }
-               
             }
+        }
 
+        public void GenerateSpringMotor(Point3d eeCen, int speed_input, int dis_input, int energy_input)
+        {
+            double shaftNum = 0;
+            double gearRadius = 0;
+            double clearance = 0.3;
+            CalculateShaftNumAndGearRadius(speed_input, out shaftNum, out gearRadius);
+
+            double dis = clearance + 4.5 + (shaftNum - 1) * (gearRadius + clearance + 4.5);
+
+            double t = 0;
+            _skeleton.ClosestPoint(eeCen, out t);
+            if (t > 0.5)
+            {
+                dis = -dis;
+            }
+            Point3d enginePos = eeCen + direction * dis;
             
 
+            if (_inputType == 1)
+            {
+                // press control
+
+
+
+            }
+            else
+            {
+                // turn control
+
+            }
 
         }
 
-        public void GenerateSpringMotor()
+        public void GenerateGearTrain(double finalGearPosRatio, Point3d eeCen, int speed_input, Vector3d kineticUnitDir, Vector3d axelDir)
         {
+            double shaftNum = 0;
+            double gearRadius = 0;
+            CalculateShaftNumAndGearRadius(speed_input, out shaftNum, out gearRadius);
+            Vector3d gearDirection = direction;
 
-        }
+            double dis = clearance + 4.5;
 
-        public void GenerateGearTrain(double finalGearPosRatio)
-        {
+            double t = 0;
+            _skeleton.ClosestPoint(eeCen, out t);
+            if (t > 0.5)
+            {
+                dis = -dis;
+            }
+            else
+            {
+                gearDirection = -direction;
+            }
+            Vector3d gearDevDir = new Vector3d();
+            if(finalGearPosRatio > 0.5)
+            {
+                gearDevDir = axelDir;
+            }
+            else
+            {
+                gearDevDir = -axelDir;
+            }
+
+            //Point3d pinionPosPre = eeCen - axelDir * (0.5 - finalGearPosRatio);
+            Point3d pinionPosPre = eeCen;
+            Point3d pinionPos = pinionPosPre + dis * gearDirection - gearDirection * (shaftNum - 1) * (4.5 + clearance + gearRadius);
+
+            #region create the gears and stoppers on the first shaft (far away from the end gear)
+
+            bool isGroove = false;
+            int numTeeth = 0;
+            double stepAngle = 0;
+            double boundary = 0;
+            int floorNum = 0;
+            int ceilingNum = 0;
+            double selfRotationAngle = 0;
+
+
+            if (_inputType == 1)
+            {
+                #region press control
+
+                numTeeth = 9;
+                stepAngle = 360.0 / numTeeth;
+                boundary = 90.0 / stepAngle;
+                floorNum = (int)Math.Floor(boundary);
+                ceilingNum = (int)Math.Ceiling(boundary);
+                selfRotationAngle = 0;
+
+                if (floorNum == ceilingNum)
+                {
+                    // the mating tooth is actually symmetric around the X axis
+                    selfRotationAngle = stepAngle / 2;
+                }
+                else
+                {
+                    double leftoverAngle = 90 - stepAngle * floorNum;
+                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                }
+                
+
+                // create the pinion gear
+                Point3d pinionGearPos = pinionPos - gearDevDir * gearFaceWidth / 2;
+                Gear pinionGear = new Gear(pinionGearPos, gearDevDir, gearDirection, numTeeth, gearModule, gearPressureAngle, gearFaceWidth + clearance, selfRotationAngle, true);
+                Spacer sp_middle1 = new Spacer(pinionGearPos - gearDevDir * clearance, 1, shaftRadius, 3, -gearDevDir);
+
+                // create the bull gear
+                int bullGearTeethNum = (int)(2 * gearRadius / gearModule);
+
+                numTeeth = bullGearTeethNum;
+                stepAngle = 360.0 / numTeeth;
+                boundary = 90.0 / stepAngle;
+                floorNum = (int)Math.Floor(boundary);
+                ceilingNum = (int)Math.Ceiling(boundary);
+                selfRotationAngle = 0;
+
+                if (floorNum == ceilingNum)
+                {
+                    // the mating tooth is actually symmetric around the X axis
+                    selfRotationAngle = stepAngle / 2;
+                }
+                else
+                {
+                    double leftoverAngle = 90 - stepAngle * floorNum;
+                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                }
+
+                Point3d bullGearPos = pinionGearPos + gearDevDir * (gearFaceWidth + clearance);
+                Gear bullGear = new Gear(bullGearPos, gearDevDir, gearDirection, bullGearTeethNum, gearModule, gearPressureAngle, gearFaceWidth, selfRotationAngle, true);
+                Spacer sp_middle2 = new Spacer(bullGearPos + gearDevDir * (clearance + gearFaceWidth), 1, shaftRadius, 3, gearDevDir);
+
+                // get two intersecting points on the modle to determine the shaft length and the starting point
+                Curve shaftMidCrv = new Line(pinionGearPos - axelDir * 10000, pinionGearPos + axelDir * 10000).ToNurbsCurve();
+                Point3d[] interMidPts;
+                Intersection.CurveBrep(shaftMidCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interMidPts);
+
+                Vector3d shrinkMidVector0 = interMidPts[1] - interMidPts[0];
+                Vector3d shrinkMidVector1 = interMidPts[0] - interMidPts[1];
+                shrinkMidVector0.Unitize();
+                shrinkMidVector1.Unitize();
+
+                Point3d realInterMidPt0 = interMidPts[0] + shrinkMidVector0;
+                Point3d realInterMidPt1 = interMidPts[1] + shrinkMidVector1;
+
+                double shaftMidLen = realInterMidPt0.DistanceTo(realInterMidPt1);
+                Shaft shaftMid = new Shaft(realInterMidPt0, shaftMidLen, shaftRadius, axelDir);
+
+                EntityList.Add(bullGear);
+                EntityList.Add(pinionGear);
+                EntityList.Add(sp_middle1);
+                EntityList.Add(sp_middle2);
+                EntityList.Add(shaftMid);
+
+                #endregion
+
+                pinionPos = bullGearPos;
+            }
+            else
+            {
+                #region turn control
+
+                // create the bull gear
+                int bullGearTeethNum = (int)(2 * gearRadius / gearModule);
+                numTeeth = bullGearTeethNum;
+                stepAngle = 360.0 / numTeeth;
+                boundary = 90.0 / stepAngle;
+                floorNum = (int)Math.Floor(boundary);
+                ceilingNum = (int)Math.Ceiling(boundary);
+                selfRotationAngle = 0;
+
+                if (floorNum == ceilingNum)
+                {
+                    // the mating tooth is actually symmetric around the X axis
+                    selfRotationAngle = stepAngle / 2;
+                }
+                else
+                {
+                    double leftoverAngle = 90 - stepAngle * floorNum;
+                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                }
+
+                Point3d bullGearPos = pinionPos - gearDevDir * gearFaceWidth / 2;
+                Gear bullGear = new Gear(bullGearPos, gearDevDir, gearDirection, bullGearTeethNum, gearModule, gearPressureAngle, gearFaceWidth, selfRotationAngle, false);
+
+                // get two intersecting points on the modle to determine the shaft length and the starting point
+                Curve shaftMidCrv = new Line(bullGearPos - axelDir * 10000, bullGearPos + axelDir * 10000).ToNurbsCurve();
+                Point3d[] interMidPts;
+                Intersection.CurveBrep(shaftMidCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interMidPts);
+
+                Vector3d shrinkMidVector0 = interMidPts[1] - interMidPts[0];
+                Vector3d shrinkMidVector1 = interMidPts[0] - interMidPts[1];
+                shrinkMidVector0.Unitize();
+                shrinkMidVector1.Unitize();
+
+                Point3d realInterMidPt0 = interMidPts[0] + shrinkMidVector0;
+                Point3d realInterMidPt1 = interMidPts[1] + shrinkMidVector1;
+
+                double shaftMidLen = realInterMidPt0.DistanceTo(realInterMidPt1);
+                Shaft shaftMid = new Shaft(realInterMidPt0, shaftMidLen, shaftRadius, axelDir);
+
+                EntityList.Add(bullGear);
+                EntityList.Add(shaftMid);
+
+                #endregion
+
+                pinionPos = bullGearPos;
+            }
+
+            isGroove = true;
+
+            #endregion
+
+            #region generate the rest of the gears and shaft except for the last shaft and the gear(s) on it
+
+            for (int i = 1; i < shaftNum-1; i++)
+            {
+                // create the pinion gear
+
+                numTeeth = 9;
+                int bullGearTeethNum = (int)(2 * gearRadius / gearModule);
+
+                if (isGroove)
+                {
+                    selfRotationAngle = 90;
+                    if (bullGearTeethNum % 2 == 1)
+                    {
+                        isGroove = true;
+                    }
+                    else
+                    {
+                        isGroove = false;
+                    }
+                }
+                else
+                {
+                    stepAngle = 360.0 / numTeeth;
+                    selfRotationAngle = 90 - stepAngle / 2;
+
+                    if (bullGearTeethNum % 2 == 1)
+                    {
+                        isGroove = false;
+                    }
+                    else
+                    {
+                        isGroove = true;
+                    }
+                }
+
+                Point3d pinionGearPos = pinionPos + gearDirection * (clearance + gearRadius + 4.5);
+                Gear pinionGear = new Gear(pinionGearPos, gearDevDir, gearDirection, numTeeth, gearModule, gearPressureAngle, gearFaceWidth + clearance, selfRotationAngle, true);
+                Spacer sp_middle1 = new Spacer(pinionGearPos - gearDevDir * clearance, 1, shaftRadius, 3, -gearDevDir);
+
+                // create the bull gear
+                Point3d bullGearPos = pinionGearPos + gearDevDir * (clearance + gearFaceWidth);
+                Gear bullGear = new Gear(bullGearPos, gearDevDir, gearDirection, bullGearTeethNum, gearModule, gearPressureAngle, gearFaceWidth, selfRotationAngle, true);
+                Spacer sp_middle2 = new Spacer(bullGearPos + gearDevDir * (clearance + gearFaceWidth), 1, shaftRadius, 3, gearDevDir);
+
+                // get two intersecting points on the modle to determine the shaft length and the starting point
+                Curve shaftMidCrv = new Line(pinionGearPos - axelDir * 10000, pinionGearPos + axelDir * 10000).ToNurbsCurve();
+                Point3d[] interMidPts;
+                Intersection.CurveBrep(shaftMidCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interMidPts);
+
+                Vector3d shrinkMidVector0 = interMidPts[1] - interMidPts[0];
+                Vector3d shrinkMidVector1 = interMidPts[0] - interMidPts[1];
+                shrinkMidVector0.Unitize();
+                shrinkMidVector1.Unitize();
+
+                Point3d realInterMidPt0 = interMidPts[0] + shrinkMidVector0;
+                Point3d realInterMidPt1 = interMidPts[1] + shrinkMidVector1;
+
+                double shaftMidLen = realInterMidPt0.DistanceTo(realInterMidPt1);
+                Shaft shaftMid = new Shaft(realInterMidPt0, shaftMidLen, shaftRadius, axelDir);
+
+                EntityList.Add(bullGear);
+                EntityList.Add(pinionGear);
+                EntityList.Add(sp_middle1);
+                EntityList.Add(sp_middle2);
+                EntityList.Add(shaftMid);
+
+                pinionPos = bullGearPos;
+            }
+
+            #endregion
+
+            #region generate the last shaft and the gear on it
+
+            numTeeth = 9;
+
+            if (isGroove)
+            {
+                selfRotationAngle = 90;
+                if (numTeeth % 2 == 1)
+                {
+                    isGroove = true;
+                }
+                else
+                {
+                    isGroove = false;
+                }
+            }
+            else
+            {
+                stepAngle = 360.0 / numTeeth;
+                selfRotationAngle = 90 - stepAngle / 2;
+
+                if (numTeeth % 2 == 1)
+                {
+                    isGroove = false;
+                }
+                else
+                {
+                    isGroove = true;
+                }
+            }
+
+            Point3d lastGearPos = pinionPos + gearDirection * (clearance + gearRadius + 4.5);
+            Curve shaftLastCrv = new Line(lastGearPos - axelDir * 10000, lastGearPos + axelDir * 10000).ToNurbsCurve();
+            Point3d[] interLastPts;
+            Intersection.CurveBrep(shaftLastCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interLastPts);
+
+            Vector3d shrinkLastVector0 = interLastPts[1] - interLastPts[0];
+            Vector3d shrinkLastVector1 = interLastPts[0] - interLastPts[1];
+            shrinkLastVector0.Unitize();
+            shrinkLastVector1.Unitize();
+
+            Point3d realInterLastPt0 = interLastPts[0] + shrinkLastVector0;
+            Point3d realInterLastPt1 = interLastPts[1] + shrinkLastVector1;
+
+            double shaftLastLen = realInterLastPt0.DistanceTo(realInterLastPt1);
+            Shaft shaftLast = new Shaft(realInterLastPt0, shaftLastLen, shaftRadius, axelDir);
+
+            double shaftLenFull = shaftLastLen + 2;
+            Point3d shaftMidPt = eeCen + dis * direction;
+            Point3d shaftTargetPt = shaftMidPt - axelDir * (0.5 - finalGearPosRatio) * shaftLenFull;
+            double lastGearFaceWidth = shaftTargetPt.DistanceTo(lastGearPos) + gearFaceWidth / 2;
+
+            Gear lastPinionGear = new Gear(lastGearPos, gearDevDir, gearDirection, numTeeth, gearModule, gearPressureAngle, lastGearFaceWidth, selfRotationAngle, true);
+            Spacer sp_last1 = new Spacer(lastGearPos - gearDevDir * clearance, 1, shaftRadius, 3, -gearDevDir);
+            Spacer sp_last2 = new Spacer(lastGearPos + gearDevDir * (clearance + lastGearFaceWidth), 1, shaftRadius, 3, gearDevDir);
+
+            EntityList.Add(shaftLast);
+            EntityList.Add(lastPinionGear);
+            EntityList.Add(sp_last1);
+            EntityList.Add(sp_last2);
+
+            #endregion
 
         }
 

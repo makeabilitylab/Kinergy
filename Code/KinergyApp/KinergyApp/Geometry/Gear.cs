@@ -32,6 +32,8 @@ namespace Kinergy
             private double _toothDepth = 0;
             private double _selfRotAngle = 0; // degree
             private bool _isMovable = false;
+            private Vector3d _x_direction = Vector3d.Unset;
+            private Vector3d _x_original_direction = new Vector3d(1, 0, 0);
 
             private RhinoDoc mydoc = RhinoDoc.ActiveDoc;
 
@@ -49,6 +51,7 @@ namespace Kinergy
             public Point3d CenterPoint { get => _centerPoint; protected set => _centerPoint = value; }
             public Vector3d Direction { get => _direction; protected set => _direction = value; }
             public bool IsMovable { get => _isMovable; set => _isMovable = value; }
+            public Vector3d X_direction { get => _x_direction; set => _x_direction = value; }
 
             //private Brep surface = null;
 
@@ -58,7 +61,7 @@ namespace Kinergy
             /// <param name="module">Module of gear teeth, this parameter determines how big teeth are</param>            
             /// <summary> Constructor with parameter but no center point given </summary>
             /// <returns> Returns instance with gear brep generated</returns>            
-            public Gear(Point3d center_point, Vector3d gear_direction, int teethNum, double mod, double pressure_angle, double Thickness, double selfRotAngle, bool movable)
+            public Gear(Point3d center_point, Vector3d gear_direction, Vector3d gear_x_dir, int teethNum, double mod, double pressure_angle, double Thickness, double selfRotAngle, bool movable)
             {
                 _centerPoint = center_point;
                 _direction = gear_direction;
@@ -69,6 +72,7 @@ namespace Kinergy
                 _twoLayer = false;
                 _selfRotAngle = selfRotAngle;
                 _isMovable = movable;
+                _x_direction = gear_x_dir;
 
                 GenerateGear();
             }
@@ -303,6 +307,7 @@ namespace Kinergy
                     Transform centerTrans = Transform.Translation(centerDirection);
                     base.Model.Transform(centerTrans);
                     base.BaseCurve.Transform(centerTrans);
+                    _x_original_direction.Transform(centerTrans);
                 }
 
                 if (_direction != Vector3d.Unset)
@@ -310,6 +315,7 @@ namespace Kinergy
                     Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), _direction, _centerPoint);
                     base.Model.Transform(centerRotate);
                     base.BaseCurve.Transform(centerRotate);
+                    _x_original_direction.Transform(centerRotate);
 
                     //if (base.BaseCurve.ClosedCurveOrientation() == CurveOrientation.Clockwise)
                     //{
@@ -321,6 +327,10 @@ namespace Kinergy
                     //    Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), new Vector3d(0, 1, 0), _centerPoint);
                     //    base.Model.Transform(centerRotate);
                     //} 
+
+                    Transform centerRotate1 = Transform.Rotation(_x_original_direction, _x_direction, _centerPoint);
+                    base.Model.Transform(centerRotate1);
+                    base.BaseCurve.Transform(centerRotate1);
                 }
 
                 double selfRotRad = Math.PI / 180 * _selfRotAngle;
