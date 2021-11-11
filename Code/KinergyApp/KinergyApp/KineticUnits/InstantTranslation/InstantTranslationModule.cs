@@ -30,6 +30,7 @@ namespace InstTranslation
         List<Guid> lockPosPointIDs;
         Guid endEffectorID;
         double innerSpaceRadius;
+        
 
         // Variables used for different functions
         bool lockState;
@@ -355,6 +356,20 @@ namespace InstTranslation
                             Brep tempB = b.GetModelinWorldCoordinate();
                             myDoc.Objects.AddBrep(tempB);
                         }
+                        if(motion.Spring.SpringDimensions!=null)
+                        {
+                            foreach(LinearDimension d in motion.Spring.SpringDimensions)
+                            {
+                                if(myDoc.Objects.AddLinearDimension(d)!=Guid.Empty)
+                                {
+                                    RhinoApp.WriteLine("Added a dimension!");
+                                }
+                                else
+                                {
+                                    RhinoApp.WriteLine("fail to add dimension!");
+                                }
+                            }
+                        }
                         myDoc.Views.Redraw();
                         this.ExpirePreview(true);
                     }
@@ -446,6 +461,18 @@ namespace InstTranslation
                         if (!PlaneGenerated)
                             GeneratePlanes();
                         r2 = gp2.Get(true);
+                        //TODO Add notifications here if the planes are too close to ends and there won't be enough space for a lock!
+                        double dis1 = 0, dis2 = 0;
+                        if(t1<=t2)
+                        {
+                            dis1 = t1;dis2 = 1 - t2;
+                        }
+                        else
+                        {
+                            dis1 = t2; dis2 = 1 - t1;
+                        }
+                        double minDis = Math.Min(dis1, dis2)*skeleton.GetLength();
+                        //if(minDis<)
 
                     } while (r2 != Rhino.Input.GetResult.Nothing);
                     //RhinoDoc.ActiveDoc.Objects.Delete(ArrowCurve, true);

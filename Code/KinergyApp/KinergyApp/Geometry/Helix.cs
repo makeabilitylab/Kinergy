@@ -38,6 +38,7 @@ namespace Kinergy
             private double maxPressDistance = 0;
             private double velocity = 0;
             private double travel = 0;
+            private List<LinearDimension> springDimensions;
 
             public Point3d StartPoint { get => startPoint;private set => startPoint = value; }
             public Point3d EndPoint { get => endPoint; private set => endPoint = value; }
@@ -47,6 +48,7 @@ namespace Kinergy
             public double RoundNum { get => roundNum; private set => roundNum = value; }
             public Vector3d Direction { get => direction;private set => direction = value; }
             public Curve Skeleton { get => skeleton;private set => skeleton = value; }
+            public List<LinearDimension> SpringDimensions { get => springDimensions;private set => springDimensions = value; }
 
             /// <summary> Constructor with only start point and end point given.</summary>
             /// <returns> Returns instance with brep generated</returns>
@@ -171,6 +173,29 @@ namespace Kinergy
 
                 RoundNum = (Length - compressionCurr) / WireRadius;
 
+                #endregion
+
+                #region Xia: Adding dimension lines for user to see the pressed and full length of spring
+                if(springDimensions==null)
+                {
+                    Vector3d v = new Vector3d(new Vector3d(endPoint) - new Vector3d(startPoint));
+                    v = v  / v.Length;
+                    Plane plane = new Plane(startPoint, v);
+                    Vector3d v1 = plane.XAxis, v2 = plane.YAxis;
+                    Plane dimensionPlane = new Plane(startPoint, v1);
+                    Point3d pt1 = startPoint + v2 * springRadius*1.2, pt2 = endPoint + v2 * springRadius*1.2, pt12 = pt1 + v * new Line(pt1, pt2).Length / 2;
+                    Point3d pt3 = startPoint + v2 * springRadius*1.2+v* (Length - compressionCurr), pt13 = pt1 + v * new Line(pt1, pt3).Length / 2;
+                    Point3d pt4 = endPoint + v2 * springRadius*1.2-v* (Length - compressionCurr), pt24 = pt2 - v * new Line(pt2, pt4).Length / 2;
+                    springDimensions = new List<LinearDimension>();
+                    DimensionStyle style = RhinoDoc.ActiveDoc.DimStyles.Current;
+                    LinearDimension fullLength = LinearDimension.Create(AnnotationType.Aligned,style, dimensionPlane, v2, pt1, pt2, pt12,0);
+                    LinearDimension pressedLength1 = LinearDimension.Create(AnnotationType.Aligned, style, dimensionPlane, v2, pt1, pt3, pt13, 0);
+                    LinearDimension pressedLength2 = LinearDimension.Create(AnnotationType.Aligned, style, dimensionPlane, v2, pt2, pt4, pt24, 0);
+                    springDimensions.Add(fullLength);
+                    springDimensions.Add(pressedLength1);
+                    springDimensions.Add(pressedLength2);
+                }
+                
                 #endregion
             }
             private void GenerateSpring()

@@ -19,7 +19,6 @@ using Kinergy.KineticUnit;
 using Kinergy;
 using System.Diagnostics;
 
-using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 
@@ -140,6 +139,16 @@ namespace Kinergy.KineticUnit
 
                 stationary_brep = modelCut[0].GetModelinWorldCoordinate();
             }
+
+            #region Xia: judge which pressed spring dimension is not needed, and remove it
+            if(spring.SpringDimensions!=null)
+            {
+                foreach(LinearDimension d in spring.SpringDimensions)
+                {
+                    //TODO judge!
+                }
+            }
+            #endregion
 
             Point3d p = p_stationary;
             Vector3d v = p_stationary - p_ee;
@@ -495,11 +504,16 @@ namespace Kinergy.KineticUnit
             }
 
             Vector3d extrusionDir = (p_stationary - p_ee) / (p_stationary - p_ee).Length;
+            //Xia: These parameters need to be adjusted with spring radius when the lock gets bigger.
+            double thicknessScaler = 1;
+            if (spring.SpringRadius > 15)
+                thicknessScaler = Math.Pow(spring.SpringRadius / 15, 0.5);
+
             double gap_spring_hook = 0.8;
             double holderHeight = 3.6;
-            double lockBridgeThickness = 1.2;
+            double lockBridgeThickness = 1.2*thicknessScaler;
             double lockQuarterSphereRadius = 3.6;
-            double beamThickness = 1.2;
+            double beamThickness = 1.2*thicknessScaler;
             double gap_beam_spring = 1.4;
             double gap_beam_wall = 2;
             double gap_spring_bridge = 3;
@@ -513,7 +527,7 @@ namespace Kinergy.KineticUnit
 
             double bridgeGap = spring.SpringRadius + gap_spring_bridge;
             Point3d bridgePos = lockBtnPos + lockBtnDir * spring.SpringRadius;
-
+            
             double lockBtnThickness = 3.6;
             double lockBtnLength = 10;
             double lockBtnHolderThickness = 2.5;
@@ -911,7 +925,7 @@ namespace Kinergy.KineticUnit
             Line linkLeftLn = new Line(bridgeMidPt, linkLeftPt);
             Curve linkLeftCrv = linkLeftLn.ToNurbsCurve();
 
-            double linkThickness = 1;
+            double linkThickness = 1*thicknessScaler;
 
             Point3d lr0 = bridgeMidPt + linkThickness / 2 * bridgeRightDir + holderHeight / 2 * extrusionDir;
             Point3d lr1 = bridgeMidPt + linkThickness / 2 * bridgeRightDir - holderHeight / 2 * extrusionDir;
@@ -1079,7 +1093,7 @@ namespace Kinergy.KineticUnit
             Line cavProjPath = new Line(p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + bottom_clearance), cavProjEndPt);
             Curve capProjCrv = cavProjPath.ToNurbsCurve();
 
-            Point3d cavProjEndPt1 = p_stationary - extrusionDir * lockOffset;
+            Point3d cavProjEndPt1 = p_stationary - extrusionDir * (lockOffset+5);//TODO : Xia Su added this +5 to ensure that cavity cylinder always cut the bottom part through. Don't know why
             Line cavProjPath1 = new Line(p_stationary + extrusionDir * (lockOffset + lockQuarterSphereRadius + 1.4 + bottom_clearance), cavProjEndPt1);
             Curve capProjCrv1 = cavProjPath1.ToNurbsCurve();
             Brep cavCylinder = Brep.CreatePipe(capProjCrv1, outerR /*spring.SpringRadius - gap_beam_wall*/ + clearance * 2, 
