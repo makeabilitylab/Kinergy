@@ -713,8 +713,9 @@ namespace ConTranslation
                 double unitLenth = startPt.DistanceTo(endPt);
                 double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
                 motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
-                motion.GenerateSpringMotor();
-                motion.GenerateGearTrain(finalGearPositionRatio);
+                motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
+                motion.GenerateSpringMotor(eeCenPt, speed_input, dis_input, energy_input);
+                
                 #endregion
 
             }
@@ -767,7 +768,7 @@ namespace ConTranslation
                 //}
                 //isGroove = true;
 
-                //Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
+                //Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
 
                 //numTeeth = 20;
                 //if (isGroove)
@@ -797,7 +798,7 @@ namespace ConTranslation
                 //    }
 
                 //}
-                //Gear temp1 = new Gear(new Point3d(14.8, 0, 0), new Vector3d(0, 0, 1), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
+                //Gear temp1 = new Gear(new Point3d(14.8, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
 
                 //numTeeth = 45;
                 //if (isGroove)
@@ -827,10 +828,10 @@ namespace ConTranslation
                 //    }
 
                 //}
-                //Gear temp2 = new Gear(new Point3d(14.8 + 0.4 + 32.5, 0, 0), new Vector3d(0, 0, 1), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
+                //Gear temp2 = new Gear(new Point3d(14.8 + 0.4 + 32.5, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
 
 
-                //// the tolerance between two mating gears is 0.4
+                //////// the tolerance between two mating gears is 0.4
 
                 //myDoc.Objects.AddBrep(temp.Model);
                 //myDoc.Views.Redraw();
@@ -842,13 +843,38 @@ namespace ConTranslation
                 #endregion
 
                 #region rack test
+
+                //bool isGroove = false;
+                //int numTeeth = 9;
+                //double stepAngle = 360.0 / numTeeth;
+                //double boundary = 90.0 / stepAngle;
+                //int floorNum = (int)Math.Floor(boundary);
+                //int ceilingNum = (int)Math.Ceiling(boundary);
+                //double selfRotationAngle = 0;
+
+                //if (floorNum == ceilingNum)
+                //{
+                //    // the mating tooth is actually symmetric around the X axis
+                //    selfRotationAngle = stepAngle / 2;
+                //}
+                //else
+                //{
+                //    double leftoverAngle = 90 - stepAngle * floorNum;
+                //    selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                //}
+                //isGroove = true;
+
+                //Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
+                //myDoc.Objects.AddBrep(temp.Model);
+                //myDoc.Views.Redraw();
+
                 //Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
                 //myDoc.Objects.AddBrep(tempRack.Model);
                 //myDoc.Views.Redraw();
 
-                //Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
-                //myDoc.Objects.AddBrep(spacer.Model);
-                //myDoc.Views.Redraw();
+                ////Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
+                ////myDoc.Objects.AddBrep(spacer.Model);
+                ////myDoc.Views.Redraw();
                 #endregion
 
                 #region geneva drive test
@@ -884,13 +910,13 @@ namespace ConTranslation
 
                 #region crank and slotted lever
 
-                //CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
+                CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
 
-                //foreach (Brep b in tempCSL.CrankSlottedLeverModels)
-                //{
-                //    myDoc.Objects.AddBrep(b);
-                //    myDoc.Views.Redraw();
-                //}
+                foreach (Brep b in tempCSL.CrankSlottedLeverModels)
+                {
+                    myDoc.Objects.AddBrep(b);
+                    myDoc.Views.Redraw();
+                }
 
                 #endregion
             }
@@ -978,8 +1004,17 @@ namespace ConTranslation
             //myDoc.Objects.AddCurve(kineticUnitDirectionCrv, redAttribute);
             //myDoc.Views.Redraw();
 
+            Curve selectedSegment = null;
+            if (t1 > t2)
+            {
+                selectedSegment = new Line(skeleton.PointAtNormalizedLength(t2), skeleton.PointAtNormalizedLength(t1)).ToNurbsCurve();
+            }
+            else
+            {
+                selectedSegment = new Line(skeleton.PointAtNormalizedLength(t1), skeleton.PointAtNormalizedLength(t2)).ToNurbsCurve();
+            }
 
-            GetInnerCavitySpaceForDir(brepCut[1], skeleton, direction, axelDir, kineticUnitDir, out axelSpace, out gearSpace);
+            GetInnerCavitySpaceForDir(brepCut[1], selectedSegment, direction, axelDir, kineticUnitDir, out axelSpace, out gearSpace);
         }
         void GetInnerCavitySpaceForDir(Brep b, Curve c, Vector3d dir, Vector3d targetDir1, Vector3d targetDir2, out double target1Space, out double target2Space )
         {
@@ -989,7 +1024,7 @@ namespace ConTranslation
 
             for(int i = 0; i <= 100; i++)
             {
-                Point3d cen = skeleton.PointAtNormalizedLength(i * step);
+                Point3d cen = c.PointAtNormalizedLength(i * step);
                 Plane cenPln = new Plane(cen, dir);
 
                 Curve[] outCrvs;
