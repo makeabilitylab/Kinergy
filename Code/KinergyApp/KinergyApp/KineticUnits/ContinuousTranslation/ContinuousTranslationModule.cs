@@ -747,7 +747,7 @@ namespace ConTranslation
             {
 
                 #region gear test
-
+                //参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
                 //bool isGroove = false;
                 //int numTeeth = 9;
                 //double stepAngle = 360.0 / numTeeth;

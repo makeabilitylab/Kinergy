@@ -360,14 +360,10 @@ namespace InstTranslation
                         {
                             foreach(LinearDimension d in motion.Spring.SpringDimensions)
                             {
-                                if(myDoc.Objects.AddLinearDimension(d)!=Guid.Empty)
-                                {
-                                    RhinoApp.WriteLine("Added a dimension!");
-                                }
-                                else
-                                {
-                                    RhinoApp.WriteLine("fail to add dimension!");
-                                }
+                                //if(d.Plane.ClosestPoint(d.Arrowhead1End))
+                                //{
+                                    myDoc.Objects.AddLinearDimension(d);
+                                //}
                             }
                         }
                         myDoc.Views.Redraw();
