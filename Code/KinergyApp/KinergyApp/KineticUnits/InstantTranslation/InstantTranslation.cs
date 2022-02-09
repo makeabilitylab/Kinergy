@@ -239,7 +239,7 @@ namespace Kinergy.KineticUnit
 
             springRadius = Math.Min(strCrv.PointAt(pos1).DistanceTo(ptS), endCrv.PointAt(pos2).DistanceTo(ptE)) * 1.5;
             //wireRadius = springRadius / 7.5 * 1;
-            wireRadius = 3.0; // by default and it should be constant
+            wireRadius = 2.0; // by default and it should be constant. Xia changed this from 3 to 2
 
             skeletonVector = new Vector3d(skeleton.PointAtEnd) - new Vector3d(skeleton.PointAtStart);
             if (skeleton.GetLength() > 0)
@@ -511,7 +511,7 @@ namespace Kinergy.KineticUnit
 
             double gap_spring_hook = 0.8;
             double holderHeight = 3.6;
-            double lockBridgeThickness = 1.2*thicknessScaler;
+            double lockBridgeThickness = 1.2*thicknessScaler;//Xia: Added a scaler to make bridge thicker when spring become bigger.
             double lockQuarterSphereRadius = 3.6;
             double beamThickness = 1.2*thicknessScaler;
             double gap_beam_spring = 1.4;
@@ -836,10 +836,15 @@ namespace Kinergy.KineticUnit
             beamRightRectCorners.Add(br3);
             beamRightRectCorners.Add(br4);
 
-            Point3d bpr0 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeLeftDir - holderHeight / 2 * extrusionDir;
-            Point3d bpr1 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeLeftDir + holderHeight / 2 * extrusionDir;
-            Point3d bpr2 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeLeftDir + holderHeight / 2 * extrusionDir;
-            Point3d bpr3 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeLeftDir - holderHeight / 2 * extrusionDir;
+            //Point3d bpr0 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeLeftDir - holderHeight / 2 * extrusionDir;
+            //Point3d bpr1 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeLeftDir + holderHeight / 2 * extrusionDir;
+            //Point3d bpr2 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeLeftDir + holderHeight / 2 * extrusionDir;
+            //Point3d bpr3 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeLeftDir - holderHeight / 2 * extrusionDir;
+            //Xia cancelled the pivot part to make beams stronger
+            Point3d bpr0 = beamRightOrigin + (lockWallThickness + gap_beam_wall ) * bridgeLeftDir - holderHeight / 2 * extrusionDir;
+            Point3d bpr1 = beamRightOrigin + (lockWallThickness + gap_beam_wall ) * bridgeLeftDir + holderHeight / 2 * extrusionDir;
+            Point3d bpr2 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness) * bridgeLeftDir + holderHeight / 2 * extrusionDir;
+            Point3d bpr3 = beamRightOrigin + (lockWallThickness + gap_beam_wall + beamThickness) * bridgeLeftDir - holderHeight / 2 * extrusionDir;
             Point3d bpr4 = bpr0;
             List<Point3d> beamRightPivotRectCorners = new List<Point3d>();
             beamRightPivotRectCorners.Add(bpr0);
@@ -877,10 +882,16 @@ namespace Kinergy.KineticUnit
             beamLeftRectCorners.Add(bl3);
             beamLeftRectCorners.Add(bl4);
 
-            Point3d bpl0 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeRightDir + holderHeight / 2 * extrusionDir;
-            Point3d bpl1 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeRightDir - holderHeight / 2 * extrusionDir;
-            Point3d bpl2 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeRightDir - holderHeight / 2 * extrusionDir;
-            Point3d bpl3 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeRightDir + holderHeight / 2 * extrusionDir;
+            //Point3d bpl0 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeRightDir + holderHeight / 2 * extrusionDir;
+            //Point3d bpl1 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness / 4) * bridgeRightDir - holderHeight / 2 * extrusionDir;
+            //Point3d bpl2 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeRightDir - holderHeight / 2 * extrusionDir;
+            //Point3d bpl3 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness * 3 / 4) * bridgeRightDir + holderHeight / 2 * extrusionDir;
+            //Xia cancelled the pivot part to make beams stronger
+            Point3d bpl0 = beamLeftOrigin + (lockWallThickness + gap_beam_wall ) * bridgeRightDir + holderHeight / 2 * extrusionDir;
+            Point3d bpl1 = beamLeftOrigin + (lockWallThickness + gap_beam_wall ) * bridgeRightDir - holderHeight / 2 * extrusionDir;
+            Point3d bpl2 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness) * bridgeRightDir - holderHeight / 2 * extrusionDir;
+            Point3d bpl3 = beamLeftOrigin + (lockWallThickness + gap_beam_wall + beamThickness) * bridgeRightDir + holderHeight / 2 * extrusionDir;
+
             Point3d bpl4 = bpl0;
             List<Point3d> beamLeftPivotRectCorners = new List<Point3d>();
             beamLeftPivotRectCorners.Add(bpl0);
@@ -950,10 +961,11 @@ namespace Kinergy.KineticUnit
             #region Step 5: construct the notches on the end-effecor
 
             double clearance = 0.4;
-
+            double latch_extension = wireRadius * 2;//Xia: The latch could be short for some cases. Extend it by some distance to solve this
             // ring
 
-            Point3d ringBottomPt = p_ee + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
+            Point3d ringBottomPt = p_ee + extrusionDir * 
+                (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance + latch_extension); 
             Point3d ringTopPt = ringBottomPt - extrusionDir * 2;
             Line ringLn = new Line(ringBottomPt, ringTopPt);
             Curve ringCrv = ringLn.ToNurbsCurve();
@@ -987,8 +999,8 @@ namespace Kinergy.KineticUnit
 
             Point3d nr0 = notchRightStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
             Point3d nr1 = notchRightStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
-            Point3d nr2 = notchRightStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
-            Point3d nr3 = notchRightStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
+            Point3d nr2 = notchRightStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance + latch_extension);
+            Point3d nr3 = notchRightStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance + latch_extension);
             Point3d nr4 = nr0;
             List<Point3d> notchRightRectCorners = new List<Point3d>();
             notchRightRectCorners.Add(nr0);
@@ -1017,8 +1029,8 @@ namespace Kinergy.KineticUnit
 
             Point3d nl0 = notchLeftStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
             Point3d nl1 = notchLeftStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3);
-            Point3d nl2 = notchLeftStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
-            Point3d nl3 = notchLeftStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance);
+            Point3d nl2 = notchLeftStartPt - lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance + latch_extension);
+            Point3d nl3 = notchLeftStartPt + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance * 3) + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + 1 + holderHeight + spring.RoundNum * bottom_clearance + latch_extension);
             Point3d nl4 = nl0;
             List<Point3d> notchLeftRectCorners = new List<Point3d>();
             notchLeftRectCorners.Add(nl0);
@@ -1045,7 +1057,7 @@ namespace Kinergy.KineticUnit
             if (BrepSolidOrientation.Inward == latch.SolidOrientation)
                 latch.Flip();
 
-            Point3d notchRightHookCen = notchRightStartPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight + spring.RoundNum * bottom_clearance)
+            Point3d notchRightHookCen = notchRightStartPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight + spring.RoundNum * bottom_clearance + latch_extension)
                                        + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance) + bridgeRightDir * gap_beam_spring;
             Brep hookRightOffset = createQuaterSphere(notchRightHookCen, lockQuarterSphereRadius + clearance * 2, -extrusionDir, bridgeLeftDir, -lockBtnDir);
 
@@ -1061,7 +1073,7 @@ namespace Kinergy.KineticUnit
             //}
             //Brep notchRight = notchRights[0];
 
-            Point3d notchLeftHookCen = notchLeftEndPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight + spring.RoundNum * bottom_clearance) 
+            Point3d notchLeftHookCen = notchLeftEndPt + extrusionDir * (lockOffset + springStationaryHeight + lockQuarterSphereRadius + holderHeight + spring.RoundNum * bottom_clearance + latch_extension) 
                                             + lockBtnDir * (lockQuarterSphereRadius / 2 + clearance) + bridgeLeftDir * gap_beam_spring;
             Brep hookLeftOffset = createQuaterSphere(notchLeftHookCen, lockQuarterSphereRadius + clearance * 2, -extrusionDir, -bridgeLeftDir, -lockBtnDir);
 
