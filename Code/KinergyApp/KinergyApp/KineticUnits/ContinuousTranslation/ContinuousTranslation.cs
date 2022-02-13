@@ -598,11 +598,11 @@ namespace Kinergy.KineticUnit
                 double bullDaimeter = t * gearModule / Math.PI;
                 for (int n=1;n<Math.Min(maxDis/bullDaimeter,5);n++)//TODO check if there would be a maximum count of gear set
                 {
-                    GearTrainParam param = new GearTrainParam(t, num_teeth_pinion, n, distance_between_gears);
-                    if(param.IfValid(length1,length2,length3))
-                    {
-                        possibleParams.Add(param);
-                    }
+                    //GearTrainParam param = new GearTrainParam(t, num_teeth_pinion, n, distance_between_gears);
+                    //if(param.IfValid(length1,length2,length3))
+                    //{
+                        //possibleParams.Add(param);
+                    //}
                 }
             }
             possibleParams.Sort();
@@ -634,7 +634,7 @@ namespace Kinergy.KineticUnit
                     Circle centerCircleFromStart = new Circle(gearPlane, gearCenterPoints[i - 1], gearCenterDis);
                     Circle centerCircleFromLast= new Circle(gearPlane, lastGearCenter, gearCenterDis);
                 }
-                success = selectedParam.CheckCenterPointValidity(gearCenterPoints);
+                //success = selectedParam.CheckCenterPointValidity(gearCenterPoints);
                 if(!success)
                 {
                     possibleParams.RemoveAt(selectedIndex);
