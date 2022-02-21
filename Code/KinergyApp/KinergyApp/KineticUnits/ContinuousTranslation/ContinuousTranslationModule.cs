@@ -650,7 +650,7 @@ namespace ConTranslation
                     eeCenPt = startPt;
                 }
 
-                Curve eeCircleCrv = new Circle(new Plane(eeCenPt, direction), 30).ToNurbsCurve();
+                Curve eeCircleCrv = new Circle(new Plane(eeCenPt, direction), 50).ToNurbsCurve();
                 eeCircleID = myDoc.Objects.AddCurve(eeCircleCrv, redAttribute);
                 myDoc.Views.Redraw();
 
@@ -712,7 +712,7 @@ namespace ConTranslation
 
                 double unitLenth = startPt.DistanceTo(endPt);
                 double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
-                motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
+                //motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
                 motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
                 motion.GenerateSpringMotor(eeCenPt, speed_input, dis_input, energy_input);
                 
