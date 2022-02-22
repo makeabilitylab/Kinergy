@@ -40,7 +40,7 @@ namespace KinergyUtilities
             double distance = (firstGearCenter - (axisDirection * (new Vector3d(firstGearCenter) * axisDirection))).DistanceTo
                 (lastGearCenter - (axisDirection * (new Vector3d(lastGearCenter) * axisDirection)));
             int gearsetCount = 1;
-            while(distance/(gearsetCount+1)>0.3+(PinionMinTeeth+BullMinTeeth) *GearModule/2)
+            while(distance/(gearsetCount+1)>0.3+(PinionMinTeeth+BullMinTeeth) * GearModule/2)
             {
                 //R+r+0.3=distance/(gearsetCount+1)
                 double unitLength = distance / (gearsetCount + 1);
