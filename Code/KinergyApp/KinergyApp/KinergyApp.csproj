@@ -110,6 +110,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\GearTrainTestComponent.cs" />
     <Compile Include="Components\SpiralSpring\SpiralSpringComponent.cs" />
     <Compile Include="Components\SpiralSpring\SpiralSpringComponentNew.cs" />
     <Compile Include="Geometry\BoxLike.cs" />
@@ -263,6 +264,7 @@
     <Compile Include="KinergyUtilities\CalculateSkeletonOfBrep.cs" />
     <Compile Include="KinergyUtilities\EntityReader.cs" />
     <Compile Include="KinergyUtilities\FileOperation.cs" />
+    <Compile Include="KinergyUtilities\GenerateGearTrain.cs" />
     <Compile Include="KinergyUtilities\GeometryMethods.cs" />
     <Compile Include="KinergyUtilities\KineticUnitLoader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitReader.cs" />

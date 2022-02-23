@@ -576,6 +576,116 @@ namespace Kinergy.KineticUnit
             #endregion
 
         }
+        public List<Gear> GenerateGearTrain(Vector3d mainDirection, Vector3d axisDirection, Vector3d otherDirection, Point3d lastGearCenter, double length1,double length2,double length3,int gearRatioUserSelection)
+        {
+            List<Gear> generated_gears = new List<Gear>();
+            #region First list all key parameters
+            // The module, facewidth, clearance, shaftRadius and pressure angle are given as const values. Just use them
+            int numTeethPinion = 9;
+            double clearance = 0.3;//This is the distance between gear teeths.
+            //Unitize all input vectors
+            Vector3d dir1 = mainDirection / mainDirection.Length;
+            Vector3d dir2 = axisDirection / axisDirection.Length;
+            Vector3d dir3 = otherDirection / otherDirection.Length;
+            #endregion
 
+            #region Secondly, list all possible gear parameters,and sort them by gear ratio. Select one by user input
+            List < GearTrainParam > possibleParams= new List<GearTrainParam>();
+            // The minimum bull teeth would be 15, and maximum would be limited by total size.
+            double maxDis = Math.Sqrt(length1 * length1 + length3 * length3);
+            for (int t=15;t<maxDis/Math.PI/2/gearModule;t++)
+            {
+                double bullDaimeter = t * gearModule / Math.PI;
+                for (int n=1;n<Math.Min(maxDis/bullDaimeter,5);n++)//TODO check if there would be a maximum count of gear set
+                {
+                    //GearTrainParam param = new GearTrainParam(t, num_teeth_pinion, n, distance_between_gears);
+                    //if(param.IfValid(length1,length2,length3))
+                    //{
+                        //possibleParams.Add(param);
+                    //}
+                }
+            }
+            possibleParams.Sort();
+            //select one param by 1-10 given by user
+            int selectedIndex = possibleParams.Count / 10 * gearRatioUserSelection;
+            if (selectedIndex >= possibleParams.Count)
+                selectedIndex -= 1;
+            #endregion
+            #region Lastly, use the selected param to generate gears. Just pick center pos one by one?
+            bool success = false;
+            GearTrainParam selectedParam;
+            do
+            {
+                if (selectedIndex >= possibleParams.Count)
+                    selectedIndex -= 1;
+                selectedParam = possibleParams[selectedIndex];
+                //calculate params
+                double bullRadius = selectedParam.bullGearTeeth * gearModule / Math.PI / 2;
+                double pinionRadius = selectedParam.pinionTeeth * gearModule / Math.PI / 2;
+                double gearCenterDis = bullRadius + pinionRadius + ContinuousTranslation.clearance;
+                Point3d firstGearCenter = lastGearCenter - dir1 * (length1 - bullRadius) - dir3 * (length3 - bullRadius);
+                Plane gearPlane = new Plane(lastGearCenter, dir1, dir3);
+                //loop from 1st to last.Everytime try to stretch distance.
+                List<Point3d> gearCenterPoints = new List<Point3d>();
+                gearCenterPoints.Add(firstGearCenter);
+                bool dirIndicator = false;
+                for(int i=1;i<selectedParam.gearSetNumber;i++)
+                {
+                    Circle centerCircleFromStart = new Circle(gearPlane, gearCenterPoints[i - 1], gearCenterDis);
+                    Circle centerCircleFromLast= new Circle(gearPlane, lastGearCenter, gearCenterDis);
+                }
+                //success = selectedParam.CheckCenterPointValidity(gearCenterPoints);
+                if(!success)
+                {
+                    possibleParams.RemoveAt(selectedIndex);
+                }
+            } while (!success);
+            //Generate gears with selected params
+            #endregion
+            return generated_gears;
+        }
+        private class GearTrainParam:IComparable<GearTrainParam>
+        {
+            public int bullGearTeeth;
+            public int gearSetNumber;
+            public int pinionTeeth;
+            public double gearRatio;
+            public double clearance;
+            public GearTrainParam(int BullGearTeeth,int PinionTeeth,int GearSetNumber,double Clearance)
+            {
+                bullGearTeeth = BullGearTeeth;
+                gearSetNumber = GearSetNumber;
+                pinionTeeth = PinionTeeth;
+                clearance = Clearance;
+                gearRatio = Math.Pow(bullGearTeeth / pinionTeeth, gearSetNumber);
+            }
+            public bool IfValid(double l1,double l2,double l3)
+            {
+                //See if we could arrange this param into the space
+                //Threshold 1 is thickness. If l2 is not enough for all gears, then not okay
+                if ((l2 - gearFaceWidth) / 2 + gearFaceWidth / 2 < gearFaceWidth * gearSetNumber + clearance * (gearSetNumber - 1))
+                    return false;
+                //Threshold 2 is distance. All gears need to be able to fit in
+                
+                double bullRadius = bullGearTeeth * gearModule / Math.PI / 2;
+                double pinionRadius = pinionTeeth * gearModule / Math.PI / 2;
+                double maxDis = Math.Sqrt(Math.Pow(l1-bullRadius,2) +Math.Pow( l3-bullRadius,2));
+                double dis =bullRadius+pinionRadius+clearance;
+                if (dis * gearSetNumber < maxDis || dis * gearSetNumber > l1+l3-bullRadius*2)
+                    return false;//gears wouldn't be able to fill the distance or couldn't fit in.
+                //I think it could be filled by reasonably more gear sets since the trail could zigzag.So just set l1+l3 upper limit
+
+                return false;
+            }
+            public int CompareTo(GearTrainParam other)
+            {
+                if (gearRatio > other.gearRatio)
+                    return -1;
+                else if (gearRatio < other.gearRatio)
+                    return 1;
+                else
+                    return 0;
+            }
+        }
     }
 }
