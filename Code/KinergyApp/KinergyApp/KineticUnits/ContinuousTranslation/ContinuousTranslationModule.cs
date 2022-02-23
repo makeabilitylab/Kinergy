@@ -697,7 +697,7 @@ namespace ConTranslation
 
                 myDoc.Objects.Delete(eeLineID, true);
 
-                if((eeLineDotPt - pts[0]) / eeLineDotPt.DistanceTo(pts[0]) == axelDir)
+                if ((eeLineDotPt - pts[0]) / eeLineDotPt.DistanceTo(pts[0]) == axelDir)
                 {
                     finalGearPositionRatio = eeLineDotPt.DistanceTo(pts[0]) / pts[1].DistanceTo(pts[0]);
                 }
@@ -711,9 +711,12 @@ namespace ConTranslation
                 #region generate the spring motor, transmission mechanism, and the mechanism mating the end-effector
 
                 double unitLenth = startPt.DistanceTo(endPt);
-                double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
+                //double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
                 //motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
-                motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
+
+                // wait for Xia, eeLineDotPt is the point passed to Xia's function 
+                //motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
+                ConvertUserInput
                 motion.GenerateSpringMotor(eeCenPt, speed_input, dis_input, energy_input);
                 
                 #endregion

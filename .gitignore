@@ -8,3 +8,12 @@ Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/stora
 Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/storage.ide-wal
 Code/MotionSolver/InstantExtension/.vs/InstantExtension/v15/Server/sqlite3/storage.ide-wal
 
+Code/KinergyApp/KinergyApp/.vs/KinergyApp/v15/Server/sqlite3/storage.ide
+Code/KinergyApp/KinergyApp/.vs/KinergyApp/v15/Server/sqlite3/storage.ide-shm
+Code/KinergyApp/KinergyApp/.vs/KinergyApp/v15/Server/sqlite3/storage.ide-wal
+*.ide
+*.ide-shm
+*.ide-wal
+Code/KinergyApp/KinergyApp/.vs/KinergyApp/v15/.suo
+*.lock
+*.ide
