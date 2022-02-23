@@ -38,6 +38,7 @@ namespace HumanUIforKinergy.Components
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddBrepParameter("Models", "M", "The brep models of gears", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("ResultCount", "C", "How many results there are", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -60,16 +61,31 @@ namespace HumanUIforKinergy.Components
             if (!DA.GetData(5, ref selection)) { return; }
             List<GearTrainScheme> schemes = GenerateGearTrain.GetGearTrainSchemes(main,axis, lgct, innerCavity, faceWidth);
             //TODO Generate all the gears and output
-            List<GearParameter> parameters = schemes[0].parameters[0].parameters;
+            List<GearTrainParam> plist= new List<GearTrainParam>();
+            foreach(GearTrainScheme s in schemes)
+            {
+                plist.AddRange(s.parameters);
+            }
+            plist.Sort();
+            if (plist.Count == 0)
+            {
+                DA.SetData(1, plist.Count);
+                return;
+            }
+            List<GearParameter> parameters = plist[Math.Min(selection,plist.Count-1)].parameters;
             List<Brep> models = new List<Brep>();
             for (int i = 0; i < parameters.Count; i++)
             {
                 GearParameter p = parameters[i];
-                Gear newGear = new Gear(p.center, p.norm, p.xDirection, (int)Math.Floor(p.radius * 2), 1, 20, p.faceWidth, 0, false);
-                newGear.Generate();
-                models.Add(newGear.Model);
+                //Gear newGear = new Gear(p.center, p.norm, p.xDirection, (int)Math.Floor(p.radius * 2), 1, 20, p.faceWidth, 0, false);
+                //newGear.Generate();
+
+                //Use cylinder to speed up generating process
+                Cylinder c = new Cylinder(new Circle(new Plane(p.center, p.norm), p.radius), p.faceWidth);
+                models.Add(c.ToBrep(true,true));
             }
             DA.SetDataList(0, models);
+            DA.SetData(1, plist.Count);
         }
 
         /// <summary>
