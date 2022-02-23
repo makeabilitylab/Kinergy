@@ -57,6 +57,7 @@ namespace ConTranslation
         Vector3d skeletonVec = Vector3d.Unset;
         Vector3d v = Vector3d.Unset;
         ProcessingWin processingwin = new ProcessingWin();
+        WarningWin warningwin = new WarningWin();
 
         RhinoDoc myDoc;
         bool testBodySelBtn;
@@ -716,9 +717,101 @@ namespace ConTranslation
 
                 // wait for Xia, eeLineDotPt is the point passed to Xia's function 
                 //motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
-                ConvertUserInput
-                motion.GenerateSpringMotor(eeCenPt, speed_input, dis_input, energy_input);
-                
+
+                // convert the inner cavity brep into box
+                Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
+                // gear's facewidth is fixed for our project except for the first gear in the gear train
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(kineticUnitDir, axelDir, eeLineDotPt, innerCavityBox, 3.6);
+
+                if(gear_schemes.Count == 0)
+                {
+                    // the selected body is too small to embed the kinetic unit
+                    warningwin.Text = "The selected body is too small to add the kinetic unit!";
+                    warningwin.Show();
+                }
+                else
+                {
+                    List<GearParameter> parameters = gear_schemes[0].parameters[0].parameters;
+                    for (int i = 0; i < parameters.Count; i++)
+                    {
+                        GearParameter p = parameters[i];
+                        Gear newGear = new Gear(p.center, p.norm, p.xDirection, (int)Math.Floor(p.radius * 2), 1, 20, p.faceWidth, 0, false);
+                        newGear.Generate();
+
+                        myDoc.Objects.AddBrep(newGear.Model);
+                        myDoc.Views.Redraw();
+                    }
+                }
+
+                #region map the gear ratio to the speed control
+                List<double> gr_list = new List<double>();
+                foreach(GearTrainScheme gts in gear_schemes)
+                {
+                    foreach(GearTrainParam gtp in gts.parameters)
+                    {
+                        gr_list.Add(gtp.gearRatio);
+                    }
+                }
+
+                gr_list.Sort();
+
+                int schemeNum = -1;
+                int paramNum = -1;
+                double target_gr = 0;
+
+                if (gr_list.Count < 10)
+                {
+                    // the number of generated gearsets is less than 10
+                    int leftover = 10 - gr_list.Count;
+                    int left_leftover = leftover / 2;
+                    int right_leftover = leftover - left_leftover;
+                    
+
+                    if (speed_input <= left_leftover)
+                    {
+                        target_gr = gr_list.ElementAt(0);
+                    }
+                    else if(speed_input >= (gr_list.Count + left_leftover))
+                    {
+                        target_gr = gr_list.ElementAt(gr_list.Count - 1);
+                    }
+                    else
+                    {
+                        target_gr = gr_list.ElementAt(speed_input - left_leftover - 1);
+                    }
+                }
+                else
+                {
+                    // the number of generated gear sets is more than 10
+                    target_gr = gr_list.ElementAt(gr_list.Count / 10 * (speed_input-1));
+                }
+
+                #region find the schemeNum and paramNum based on the calculated target_gr
+                bool isfoundIndexes = false;
+                foreach (GearTrainScheme gts in gear_schemes)
+                {
+                    schemeNum = gear_schemes.IndexOf(gts);
+                    foreach (GearTrainParam gtp in gts.parameters)
+                    {
+                        if (gtp.gearRatio == target_gr)
+                        {
+                            paramNum = gts.parameters.IndexOf(gtp);
+                            isfoundIndexes = true;
+                            break;
+                        }
+                    }
+
+                    if (isfoundIndexes)
+                        break;
+                }
+                #endregion
+
+                #endregion
+
+                #region generate all the axels for the gears
+                //motion.GenerateSpringMotor(eeCenPt, speed_input, dis_input, energy_input);
+                #endregion
+
                 #endregion
 
             }

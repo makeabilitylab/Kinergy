@@ -272,6 +272,12 @@
     <Compile Include="KinergyUtilities\Get3InnerBox.cs" />
     <Compile Include="KinergyUtilities\ModelPreprocess.cs" />
     <Compile Include="KinergyUtilities\ModelPreprocessNew2.cs" />
+    <Compile Include="KinergyUtilities\WarningWin.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="KinergyUtilities\WarningWin.Designer.cs">
+      <DependentUpon>WarningWin.cs</DependentUpon>
+    </Compile>
     <Compile Include="KinergyUtilities\ProcessingWin.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -330,6 +336,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="HumanUIforKinergy\Icon-16.png" />
+    <EmbeddedResource Include="KinergyUtilities\WarningWin.resx">
+      <DependentUpon>WarningWin.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="KinergyUtilities\ProcessingWin.resx">
       <DependentUpon>ProcessingWin.cs</DependentUpon>
     </EmbeddedResource>

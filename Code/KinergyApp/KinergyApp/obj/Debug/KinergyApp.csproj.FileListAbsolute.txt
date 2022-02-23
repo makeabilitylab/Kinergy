@@ -113,3 +113,4 @@ D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.cspro
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
+C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.WarningWin.resources
