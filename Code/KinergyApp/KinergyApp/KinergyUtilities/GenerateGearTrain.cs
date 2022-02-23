@@ -253,10 +253,10 @@ namespace KinergyUtilities
         }
         public bool IfValid()//See if we could arrange this param into the box
         {
-            //just try to get the bounding box of all gears and see if they could fit into inner cavity
-            //TODO
-            foreach(GearParameter param in parameters)
+            //just try to get the bounding box of all gears and see if they could fit into inner cavity. Exclude the last pinion
+            for(int i=0;i<parameters.Count-1;i++)
             {
+                GearParameter param = parameters[i];
                 Box box = new Box(new Plane(param.center, mainDirection, otherDirection), new Interval(-param.radius, param.radius), new Interval(-param.radius, param.radius),
                     new Interval(-param.faceWidth/2, param.faceWidth / 2));
                 BoundingBox bbox=box.BoundingBox;
