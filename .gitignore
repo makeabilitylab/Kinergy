@@ -14,3 +14,6 @@ Code/KinergyApp/KinergyApp/.vs/KinergyApp/v15/Server/sqlite3/storage.ide-wal
 *.ide
 *.ide-shm
 *.ide-wal
+Code/KinergyApp/KinergyApp/.vs/KinergyApp/v15/.suo
+*.lock
+*.ide
