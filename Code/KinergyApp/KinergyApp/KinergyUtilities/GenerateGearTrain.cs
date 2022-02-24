@@ -56,10 +56,10 @@ namespace KinergyUtilities
             double unitLength = distance / gearsetCount;
             //For each gearset count, list all possible R and rs, add them to the possible list
             int pinionTeeth = 9;
-            while (unitLength - 0.3 - pinionTeeth * GearModule / 2 > BullMinTeeth * GearModule / 2 && unitLength - 0.3 - pinionTeeth * GearModule / 2 > pinionTeeth * GearModule / 2)
+            while (unitLength - 0.3 - pinionTeeth * GearModule / 2 > BullMinTeeth * GearModule / 2 && unitLength - 0.3 - pinionTeeth * GearModule / 2 > pinionTeeth * GearModule / 2 + 1)
             {
                 double pinionRadius = pinionTeeth * GearModule / 2;
-                double bullGearRadius = unitLength - 0.3 - pinionRadius;
+                double bullGearRadius =Math.Floor(unitLength - 0.3 - pinionRadius);
                 GearTrainParam param = new GearTrainParam(mainDirection, otherDirection, axisDirection, firstGearCenter, lastGearCenter, InnerCavity,InnerCavityEnlarged, bullGearRadius, pinionRadius, gearSetNumber, GearFaceWidth);
                 if (param.IfValid())
                 {
@@ -222,6 +222,7 @@ namespace KinergyUtilities
         public GearTrainParam(Vector3d _mainDirection, Vector3d _otherDirection, Vector3d _axisDirection, Point3d firstGearCenter, Point3d lastGearCenter, Box InnerCavity, Box InnerCavityEnlarged,double BullGearRadius, double PinionRadius, int GearSetNumber, double GearFaceWidth, double Clearance = 0.3, double ClearanceDepth = 0.3)
         {
             mainDirection = _mainDirection;
+            mainDirection.Unitize();
             otherDirection = _otherDirection;
             axisDirection = _axisDirection;
             bullGearRadius = BullGearRadius;
@@ -234,7 +235,10 @@ namespace KinergyUtilities
             fgct = firstGearCenter;
             lgct = lastGearCenter;
             //calculate the position of first and last gear, and the box thickness
-
+            //First consider the distance between fgct and lgct along main axis. It should be exactly n(R+r+c)
+            Vector3d first2last = new Vector3d(lgct) - new Vector3d(fgct);
+            double disAlongMain = first2last * mainDirection;
+            fgct += mainDirection * (disAlongMain - gearSetNumber * (bullGearRadius + pinionRadius + clearance));
             boxXaxis = InnerCavity.Plane.XAxis;
             boxYaxis = InnerCavity.Plane.YAxis;
             boxZaxis = InnerCavity.Plane.Normal;
