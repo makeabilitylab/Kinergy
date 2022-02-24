@@ -90,6 +90,10 @@ namespace ConTranslation
         Point3d eeCenPt = new Point3d();
         double finalGearPositionRatio;
 
+        Guid mainAxisArrow = Guid.Empty;
+        Guid perpAxisArrow = Guid.Empty;
+        int eeMovingDirectionSelection = 0;//-1 for error, 0 for unset, 1 for perp, 2 for main axis
+
         double axelSpace = 0;
         double gearSpace = 0;
 
@@ -782,10 +786,78 @@ namespace ConTranslation
 
             if (toSetAxisDir)
             {
-                // select a direction that is tangent on the final gear circumference
+                #region Select End Effector Moving Direction
+                // offer 2 options for user: one arrow referring to movement along the main axis, another one perpendicular to the main axis.
+                Vector3d mainAxis =Vector3d.Unset,perpAxis;
+                BoundingBox Bbox = model.GetBoundingBox(false);
+                double x=0, y=0;
+                switch (selectedAxis)
+                {
+                    case 1: mainAxis = Vector3d.XAxis;x = Bbox.Max.Y - Bbox.Min.Y; y = Bbox.Max.Z - Bbox.Min.Z; break;
+                    case 2: mainAxis = Vector3d.YAxis; x = Bbox.Max.X - Bbox.Min.X; y = Bbox.Max.Z - Bbox.Min.Z; break;
+                    case 3: mainAxis = Vector3d.ZAxis; x = Bbox.Max.X - Bbox.Min.X; y = Bbox.Max.Y - Bbox.Min.Y; break;
+                    default: break;
+                }
+                perpAxis = kineticUnitDir;
+                perpAxis.Unitize();
+                mainAxis.Unitize();
+                Vector3d otherAxis = new Plane(eeCenPt, mainAxis, perpAxis).Normal;
+                otherAxis.Unitize();
+                double offsetDistance = Math.Max(x, y) + 10;
+                perpAxisArrow = GenerateDoubleArrow(eeCenPt +otherAxis*offsetDistance, perpAxis);
+                mainAxisArrow= GenerateDoubleArrow(eeCenPt + perpAxis * offsetDistance, mainAxis);
+                Rhino.Input.Custom.GetPoint gp6 = new Rhino.Input.Custom.GetPoint();
+                gp6.SetCommandPrompt("Please select the desired direction for the end effector to move along.");
+                gp6.MouseDown += Gp6_MouseDown;
+                gp6.MouseMove += Gp6_MouseMove;
+                //gp5.AcceptNothing(true);
+                Rhino.Input.GetResult r6;
+                r6 = gp6.Get(true);
+                //do
+                //{
+                //    r5 = gp5.Get(true);
+                //} while (r5 != Rhino.Input.GetResult.Nothing);
+                myDoc.Objects.Delete(mainAxisArrow, true);
+                myDoc.Objects.Delete(perpAxisArrow, true);
+                RhinoApp.WriteLine("The selected end effector moving direction is "+eeMovingDirectionSelection);
+                #endregion
 
-                
+                #region Build Rack and Constraining Structure
+                //First calculate ee moving distance based on motion params.
+                //double eeMovingDistance=;
+                //double rackExtraLength = 10;//TODO check this const value.
+                //if(eeMovingDirectionSelection==1)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
+                //{
+                //    //The rack should be linked to last gear
+                //    //TODO find out the parameter of the last gear and the user selected position (eeLineDotPt)
+                //    double lastGearRadius=0;
+                //    Point3d contactPoint = eeLineDotPt + mainAxis * lastGearRadius;
+                //    //Calculate rack length based on eeMovingDistance
 
+                //}
+                //else//The selected moving direction is exactly the main direction, so the rack would get into the model
+                //{
+                //    double lastGearRadius = 0;
+                //    Point3d contactPoint = eeLineDotPt + perpAxis * lastGearRadius;//TODO select up or down based on gear position!
+                //    //Calculate rack length based on eeMovingDistance and inner cavity space
+                //    double innerCavityMainAxisLength = 0;
+                //    Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
+                //    switch (selectedAxis)
+                //    {
+                //        case 1: innerCavityMainAxisLength=innerCavityBox.X.Length; break;
+                //        case 2: innerCavityMainAxisLength = innerCavityBox.Y.Length; ; break;
+                //        case 3: innerCavityMainAxisLength=innerCavityBox.Z.Length; break;
+                //        default: break;
+                //    }
+                //    if(innerCavityMainAxisLength<eeMovingDistance)
+                //    {
+                //        eeMovingDistance = innerCavityMainAxisLength;
+                //        //TODO Check if we need to change other structures to fit this limited distance.
+
+                //    }
+
+                //}
+                #endregion
             }
 
             if (toAddLock)
@@ -1296,6 +1368,29 @@ namespace ConTranslation
             zArrowID = myDoc.Objects.AddBrep(zAxisArrow, blueAttribute);
             myDoc.Views.Redraw();
         }
+        private Guid GenerateDoubleArrow(Point3d arrowCenter,Vector3d direction)
+        {
+            ArrowGenerated = true;
+
+            double axisRadius = 2;
+            Point3d EndPt1 = arrowCenter + direction * 30;
+            Point3d EndPt2 = arrowCenter - direction * 30;
+
+            Line Ln = new Line(EndPt1, EndPt2);
+            Curve Crv = Ln.ToNurbsCurve();
+            Brep AxisBrep = Brep.CreatePipe(Crv, axisRadius, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Plane ArrowPln1 = new Plane(EndPt1, direction);
+            Plane ArrowPln2 = new Plane(EndPt2, -direction);
+            Cone ArrowTipCone1 = new Cone(ArrowPln1, 5, 2 * axisRadius);
+            Cone ArrowTipCone2 = new Cone(ArrowPln2, 5, 2 * axisRadius);
+            Brep ArrowTipBrep1 = ArrowTipCone1.ToBrep(true);
+            Brep ArrowTipBrep2 = ArrowTipCone2.ToBrep(true);
+            Brep Arrow = Brep.CreateBooleanUnion(new List<Brep> { AxisBrep, ArrowTipBrep1, ArrowTipBrep2 }, myDoc.ModelAbsoluteTolerance)[0];
+
+            Guid ID = myDoc.Objects.AddBrep(Arrow, redAttribute);
+            myDoc.Views.Redraw();
+            return ID;
+        }
 
         private void GeneratePlanes()
         {
@@ -1419,7 +1514,53 @@ namespace ConTranslation
                 selectedAxis = -1;
             }
         }
+        private void Gp6_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Brep perpBrep = (Brep)myDoc.Objects.Find(perpAxisArrow).Geometry;
+            Brep mainBrep = (Brep)myDoc.Objects.Find(mainAxisArrow).Geometry;
 
+            double perp_dis = perpBrep.ClosestPoint(currPos).DistanceTo(currPos);
+            double main_dis = mainBrep.ClosestPoint(currPos).DistanceTo(currPos);
+
+            if (perp_dis <= main_dis)
+            {
+                myDoc.Objects.UnselectAll();
+                myDoc.Objects.Select(perpAxisArrow);
+            }
+            else if (main_dis < perp_dis)
+            {
+                myDoc.Objects.UnselectAll();
+                myDoc.Objects.Select(mainAxisArrow);
+            }
+            else
+            {
+                myDoc.Objects.UnselectAll();
+            }
+        }
+
+        private void Gp6_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Brep perpBrep = (Brep)myDoc.Objects.Find(perpAxisArrow).Geometry;
+            Brep mainBrep = (Brep)myDoc.Objects.Find(mainAxisArrow).Geometry;
+
+            double perp_dis = perpBrep.ClosestPoint(currPos).DistanceTo(currPos);
+            double main_dis = mainBrep.ClosestPoint(currPos).DistanceTo(currPos);
+
+            if (perp_dis <= main_dis)
+            {
+                eeMovingDirectionSelection = 1;
+            }
+            else if (main_dis < perp_dis)
+            {
+                eeMovingDirectionSelection = 2;
+            }
+            else
+            {
+                eeMovingDirectionSelection = -1;
+            }
+        }
         private void Gp_SelectionMouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             if (selected != Guid.Empty)
