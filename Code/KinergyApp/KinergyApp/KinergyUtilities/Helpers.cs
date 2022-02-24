@@ -139,7 +139,7 @@ namespace KinergyUtilities
                             models.Add(sp2);
                         }
                     }
-                    else if(idx % 2 == 1)
+                    else
                     {
                         // bull gear
                         Spacer sp2 = new Spacer(gearCen + axelDir * (offset + gp.faceWidth), 1, rad, 3, axelDir);
@@ -212,6 +212,77 @@ namespace KinergyUtilities
             else
             {
                 // turn control using spiral springs
+
+                foreach (GearParameter gp in gear_info)
+                {
+                    int idx = gear_info.IndexOf(gp);
+
+                    if (idx == 0)
+                        continue;
+                    
+                    Vector3d axelDir = gp.norm;
+                    Point3d gearCen = gp.center;
+                    double rad = 1.5;
+
+                    #region generate the axel
+
+                    // only genearting the shaft when it is the odd gear order 
+                    if (idx % 2 == 1)
+                    {
+                        Curve crossLineCrv = new Line(gearCen - axelDir * int.MaxValue, gearCen + axelDir * int.MaxValue).ToNurbsCurve();
+                        Curve[] crvs;
+                        Point3d[] pts;
+                        Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, body, myDoc.ModelAbsoluteTolerance, out crvs, out pts);
+
+                        Point3d ptEnd = new Point3d();
+                        Point3d ptStart = new Point3d();
+                        if ((pts[0] - pts[1]) / (pts[0].DistanceTo(pts[1])) == axelDir)
+                        {
+                            ptEnd = pts[0] - axelDir * 1;
+                            ptStart = pts[1] + axelDir * 1;
+                        }
+                        else
+                        {
+                            ptEnd = pts[1] - axelDir * 1;
+                            ptStart = pts[0] + axelDir * 1;
+                        }
+                        Curve lineCrv = new Line(ptStart, ptEnd).ToNurbsCurve();
+                        Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad, axelDir);
+                        models.Add(axelShaft);
+                    }
+                    #endregion
+
+                    #region generate the spacers
+
+                    double offset = gp.faceWidth + clearance;
+
+                    if (idx % 2 == 0)
+                    {
+                        // pinion gear
+
+                        // add the first spacer
+                        Spacer sp1 = new Spacer(gearCen - axelDir * offset, 1, rad, 3, axelDir);
+                        models.Add(sp1);
+
+                        if (idx == gear_info.Count - 1)
+                        {
+                            // the last gear is a pinion
+                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset + gp.faceWidth), 1, rad, 3, axelDir);
+                            models.Add(sp2);
+                        }
+                    }
+                    else
+                    {
+                        // bull gear
+                        if (idx != 1)
+                        {
+                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset + gp.faceWidth), 1, rad, 3, axelDir);
+                            models.Add(sp2);
+                        }
+                    }
+
+                    #endregion
+                }
             }
 
             
