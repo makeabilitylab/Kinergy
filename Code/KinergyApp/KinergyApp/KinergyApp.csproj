@@ -266,6 +266,7 @@
     <Compile Include="KinergyUtilities\FileOperation.cs" />
     <Compile Include="KinergyUtilities\GenerateGearTrain.cs" />
     <Compile Include="KinergyUtilities\GeometryMethods.cs" />
+    <Compile Include="KinergyUtilities\Helpers.cs" />
     <Compile Include="KinergyUtilities\KineticUnitLoader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitReader.cs" />
     <Compile Include="KinergyUtilities\KineticUnitSimulator.cs" />
