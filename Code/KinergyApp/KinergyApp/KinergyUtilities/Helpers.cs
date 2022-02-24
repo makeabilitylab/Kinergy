@@ -71,6 +71,14 @@ namespace KinergyUtilities
             #endregion
         }
 
+        /// <summary>
+        /// Return the axel and spacer entities (if the control is press-helix, the last three elements in the return list are the connector bars)
+        /// </summary>
+        /// <param name="gear_info">the list of gear parameters for the calculated gear train</param>
+        /// <param name="body">the model body</param>
+        /// <param name="controlType">the selected controlling method: helix or spiral</param>
+        /// <param name="clearance">the clearance for printing - 0.3mm</param>
+        /// <returns></returns>
         public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance)
         {
             List<Entity> models = new List<Entity>();
@@ -288,6 +296,54 @@ namespace KinergyUtilities
             
 
 
+            return models;
+        }
+
+        /// <summary>
+        /// Return the gear entitites
+        /// </summary>
+        /// <param name="gear_info">the list of gear parameters for the calculated gear train</param>
+        /// <param name="controlType">the selected controlling method: helix or spiral</param>
+        /// <param name="clearance">the clearance between the shaft and the gear - 0.4mm</param>
+        /// <returns></returns>
+        public List<Entity> genGears(List<GearParameter> gear_info, int controlType, double clearance)
+        {
+            List<Entity> models = new List<Entity>();
+            RhinoDoc myDoc = RhinoDoc.ActiveDoc;
+
+            if(controlType == 1)
+            {
+                // press control with helix springs
+                foreach(GearParameter gp in gear_info)
+                {
+                    Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, 0, true);
+                    newGear.Generate(); 
+                    models.Add(newGear);
+                }
+            }
+            else
+            {
+                // turn control with spiral springs
+                foreach (GearParameter gp in gear_info)
+                {
+                    if(gear_info.IndexOf(gp) != 0)
+                    {
+                        if(gear_info.IndexOf(gp) == 1)
+                        {
+                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, 0, false);
+                            newGear.Generate();
+                            models.Add(newGear);
+                        }
+                        else
+                        {
+                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, 0, true);
+                            newGear.Generate();
+                            models.Add(newGear);
+                        }
+                    }
+                }
+
+            }
             return models;
         }
     }
