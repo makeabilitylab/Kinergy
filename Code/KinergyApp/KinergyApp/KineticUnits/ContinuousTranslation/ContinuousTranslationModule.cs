@@ -859,14 +859,40 @@ namespace ConTranslation
                 #endregion
 
                 #region Build Rack and Constraining Structure
-                if(eeMovingDirectionSelection==1)
-                {
+                //First calculate ee moving distance based on motion params.
+                //double eeMovingDistance=;
+                //double rackExtraLength = 10;//TODO check this const value.
+                //if(eeMovingDirectionSelection==1)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
+                //{
+                //    //The rack should be linked to last gear
+                //    //TODO find out the parameter of the last gear and the user selected position (eeLineDotPt)
+                //    double lastGearRadius=0;
+                //    Point3d contactPoint = eeLineDotPt + mainAxis * lastGearRadius;
+                //    //Calculate rack length based on eeMovingDistance
 
-                }
-                else
-                {
+                //}
+                //else//The selected moving direction is exactly the main direction, so the rack would get into the model
+                //{
+                //    double lastGearRadius = 0;
+                //    Point3d contactPoint = eeLineDotPt + perpAxis * lastGearRadius;//TODO select up or down based on gear position!
+                //    //Calculate rack length based on eeMovingDistance and inner cavity space
+                //    double innerCavityMainAxisLength = 0;
+                //    Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
+                //    switch (selectedAxis)
+                //    {
+                //        case 1: innerCavityMainAxisLength=innerCavityBox.X.Length; break;
+                //        case 2: innerCavityMainAxisLength = innerCavityBox.Y.Length; ; break;
+                //        case 3: innerCavityMainAxisLength=innerCavityBox.Z.Length; break;
+                //        default: break;
+                //    }
+                //    if(innerCavityMainAxisLength<eeMovingDistance)
+                //    {
+                //        eeMovingDistance = innerCavityMainAxisLength;
+                //        //TODO Check if we need to change other structures to fit this limited distance.
 
-                }
+                //    }
+
+                //}
                 #endregion
             }
 
