@@ -91,8 +91,9 @@ namespace ConTranslation
         double finalGearPositionRatio;
 
         Guid mainAxisArrow = Guid.Empty;
-        Guid perpAxisArrow = Guid.Empty;
-        int eeMovingDirectionSelection = 0;//-1 for error, 0 for unset, 1 for perp, 2 for main axis
+        Guid perpAxisArrowUp = Guid.Empty;
+        Guid perpAxisArrowDown = Guid.Empty;
+        int eeMovingDirectionSelection = 0;//-1 for error, 0 for unset, 1 for main, 2 for perp up, 3 for perp down
 
         double axelSpace = 0;
         double gearSpace = 0;
@@ -804,8 +805,9 @@ namespace ConTranslation
                 Vector3d otherAxis = new Plane(eeCenPt, mainAxis, perpAxis).Normal;
                 otherAxis.Unitize();
                 double offsetDistance = Math.Max(x, y) + 10;
-                perpAxisArrow = GenerateDoubleArrow(eeCenPt +otherAxis*offsetDistance, perpAxis);
-                mainAxisArrow= GenerateDoubleArrow(eeCenPt + perpAxis * offsetDistance, mainAxis);
+                perpAxisArrowUp = GenerateDoubleArrow(eeCenPt +otherAxis*offsetDistance*0.7+perpAxis*offsetDistance/2, perpAxis,false);
+                perpAxisArrowDown = GenerateDoubleArrow(eeCenPt + otherAxis * offsetDistance*0.7-perpAxis*offsetDistance/2, -perpAxis,false);
+                mainAxisArrow = GenerateDoubleArrow(eeCenPt + perpAxis * offsetDistance*0.7, mainAxis);
                 Rhino.Input.Custom.GetPoint gp6 = new Rhino.Input.Custom.GetPoint();
                 gp6.SetCommandPrompt("Please select the desired direction for the end effector to move along.");
                 gp6.MouseDown += Gp6_MouseDown;
@@ -818,7 +820,8 @@ namespace ConTranslation
                 //    r5 = gp5.Get(true);
                 //} while (r5 != Rhino.Input.GetResult.Nothing);
                 myDoc.Objects.Delete(mainAxisArrow, true);
-                myDoc.Objects.Delete(perpAxisArrow, true);
+                myDoc.Objects.Delete(perpAxisArrowUp, true);
+                myDoc.Objects.Delete(perpAxisArrowDown, true);
                 RhinoApp.WriteLine("The selected end effector moving direction is "+eeMovingDirectionSelection);
                 #endregion
 
@@ -1368,26 +1371,37 @@ namespace ConTranslation
             zArrowID = myDoc.Objects.AddBrep(zAxisArrow, blueAttribute);
             myDoc.Views.Redraw();
         }
-        private Guid GenerateDoubleArrow(Point3d arrowCenter,Vector3d direction)
+        private Guid GenerateDoubleArrow(Point3d arrowCenter,Vector3d direction,bool isDouble=true)
         {
-            ArrowGenerated = true;
-
             double axisRadius = 2;
             Point3d EndPt1 = arrowCenter + direction * 30;
             Point3d EndPt2 = arrowCenter - direction * 30;
+            Brep arrow = null;
+            if (isDouble)
+            {
+                Line Ln = new Line(EndPt1, EndPt2);
+                Curve Crv = Ln.ToNurbsCurve();
+                Brep AxisBrep = Brep.CreatePipe(Crv, axisRadius, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                Plane ArrowPln1 = new Plane(EndPt1+direction*4.5, -direction);
+                Plane ArrowPln2 = new Plane(EndPt2-direction*4.5, direction);
+                Cone ArrowTipCone1 = new Cone(ArrowPln1, 5, 2 * axisRadius);
+                Cone ArrowTipCone2 = new Cone(ArrowPln2, 5, 2 * axisRadius);
+                Brep ArrowTipBrep1 = ArrowTipCone1.ToBrep(true);
+                Brep ArrowTipBrep2 = ArrowTipCone2.ToBrep(true);
+                arrow = Brep.CreateBooleanUnion(new List<Brep> { AxisBrep, ArrowTipBrep1, ArrowTipBrep2 }, myDoc.ModelAbsoluteTolerance)[0];
+            }
+            else 
+            {
+                Line Ln = new Line(arrowCenter, EndPt1);
+                Curve Crv = Ln.ToNurbsCurve();
+                Brep AxisBrep = Brep.CreatePipe(Crv, axisRadius, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                Plane ArrowPln1 = new Plane(EndPt1+direction*4.5, -direction);
+                Cone ArrowTipCone1 = new Cone(ArrowPln1, 5, 2 * axisRadius);
+                Brep ArrowTipBrep1 = ArrowTipCone1.ToBrep(true);
+                arrow = Brep.CreateBooleanUnion(new List<Brep> { AxisBrep, ArrowTipBrep1}, myDoc.ModelAbsoluteTolerance)[0];
+            }
 
-            Line Ln = new Line(EndPt1, EndPt2);
-            Curve Crv = Ln.ToNurbsCurve();
-            Brep AxisBrep = Brep.CreatePipe(Crv, axisRadius, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-            Plane ArrowPln1 = new Plane(EndPt1, direction);
-            Plane ArrowPln2 = new Plane(EndPt2, -direction);
-            Cone ArrowTipCone1 = new Cone(ArrowPln1, 5, 2 * axisRadius);
-            Cone ArrowTipCone2 = new Cone(ArrowPln2, 5, 2 * axisRadius);
-            Brep ArrowTipBrep1 = ArrowTipCone1.ToBrep(true);
-            Brep ArrowTipBrep2 = ArrowTipCone2.ToBrep(true);
-            Brep Arrow = Brep.CreateBooleanUnion(new List<Brep> { AxisBrep, ArrowTipBrep1, ArrowTipBrep2 }, myDoc.ModelAbsoluteTolerance)[0];
-
-            Guid ID = myDoc.Objects.AddBrep(Arrow, redAttribute);
+            Guid ID = myDoc.Objects.AddBrep(arrow, redAttribute);
             myDoc.Views.Redraw();
             return ID;
         }
@@ -1517,21 +1531,27 @@ namespace ConTranslation
         private void Gp6_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             Point3d currPos = e.Point;
-            Brep perpBrep = (Brep)myDoc.Objects.Find(perpAxisArrow).Geometry;
+            Brep perpBrepUp = (Brep)myDoc.Objects.Find(perpAxisArrowUp).Geometry;
+            Brep perpBrepDown = (Brep)myDoc.Objects.Find(perpAxisArrowDown).Geometry;
             Brep mainBrep = (Brep)myDoc.Objects.Find(mainAxisArrow).Geometry;
 
-            double perp_dis = perpBrep.ClosestPoint(currPos).DistanceTo(currPos);
+            double perp_dis_up = perpBrepUp.ClosestPoint(currPos).DistanceTo(currPos);
+            double perp_dis_down = perpBrepDown.ClosestPoint(currPos).DistanceTo(currPos);
             double main_dis = mainBrep.ClosestPoint(currPos).DistanceTo(currPos);
 
-            if (perp_dis <= main_dis)
+            if (perp_dis_up <= main_dis && perp_dis_up <= perp_dis_down)
             {
                 myDoc.Objects.UnselectAll();
-                myDoc.Objects.Select(perpAxisArrow);
+                myDoc.Objects.Select(perpAxisArrowUp);
             }
-            else if (main_dis < perp_dis)
+            else if (  main_dis<=perp_dis_up && main_dis <= perp_dis_down)
             {
                 myDoc.Objects.UnselectAll();
                 myDoc.Objects.Select(mainAxisArrow);
+            }
+            else if (perp_dis_down <= perp_dis_up && perp_dis_down <= main_dis)
+            {
+                myDoc.Objects.UnselectAll();
             }
             else
             {
@@ -1542,19 +1562,25 @@ namespace ConTranslation
         private void Gp6_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             Point3d currPos = e.Point;
-            Brep perpBrep = (Brep)myDoc.Objects.Find(perpAxisArrow).Geometry;
+            Brep perpBrepUp = (Brep)myDoc.Objects.Find(perpAxisArrowUp).Geometry;
+            Brep perpBrepDown = (Brep)myDoc.Objects.Find(perpAxisArrowDown).Geometry;
             Brep mainBrep = (Brep)myDoc.Objects.Find(mainAxisArrow).Geometry;
 
-            double perp_dis = perpBrep.ClosestPoint(currPos).DistanceTo(currPos);
+            double perp_dis_up = perpBrepUp.ClosestPoint(currPos).DistanceTo(currPos);
+            double perp_dis_down = perpBrepDown.ClosestPoint(currPos).DistanceTo(currPos);
             double main_dis = mainBrep.ClosestPoint(currPos).DistanceTo(currPos);
 
-            if (perp_dis <= main_dis)
+            if (perp_dis_up <= main_dis && perp_dis_up <= perp_dis_down)
+            {
+                eeMovingDirectionSelection = 2;
+            }
+            else if (main_dis <= perp_dis_up && main_dis <= perp_dis_down)
             {
                 eeMovingDirectionSelection = 1;
             }
-            else if (main_dis < perp_dis)
+            else if(perp_dis_down <= perp_dis_up && perp_dis_down <= main_dis)
             {
-                eeMovingDirectionSelection = 2;
+                eeMovingDirectionSelection = 3;
             }
             else
             {
