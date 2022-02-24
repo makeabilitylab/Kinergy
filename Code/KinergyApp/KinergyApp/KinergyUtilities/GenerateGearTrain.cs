@@ -46,7 +46,7 @@ namespace KinergyUtilities
         /// <param name="InnerCavity">The available space for gear train, as a box. Be sure that this box has 3 dimensions same as world XYZ</param>
         /// <param name="GearFaceWidth"></param>
         /// <returns></returns>
-        public static List<GearTrainParam> GetGearTrainByParameter(int gearSetNumber,Vector3d mainDirection,Vector3d otherDirection, Vector3d axisDirection, Point3d firstGearCenter, Point3d lastGearCenter,Box InnerCavity ,double GearFaceWidth)
+        public static List<GearTrainParam> GetGearTrainByParameter(int gearSetNumber,Vector3d mainDirection,Vector3d otherDirection, Vector3d axisDirection, Point3d firstGearCenter, Point3d lastGearCenter,Box InnerCavity ,Box InnerCavityEnlarged,double GearFaceWidth)
         {
             List<GearTrainParam> paramList=new List<GearTrainParam>();
             axisDirection.Unitize();
@@ -60,7 +60,7 @@ namespace KinergyUtilities
             {
                 double pinionRadius = pinionTeeth * GearModule / 2;
                 double bullGearRadius = unitLength - 0.3 - pinionRadius;
-                GearTrainParam param = new GearTrainParam(mainDirection, otherDirection, axisDirection, firstGearCenter, lastGearCenter, InnerCavity, bullGearRadius, pinionRadius, gearSetNumber, GearFaceWidth);
+                GearTrainParam param = new GearTrainParam(mainDirection, otherDirection, axisDirection, firstGearCenter, lastGearCenter, InnerCavity,InnerCavityEnlarged, bullGearRadius, pinionRadius, gearSetNumber, GearFaceWidth);
                 if (param.IfValid())
                 {
                     paramList.Add(param);
@@ -112,6 +112,7 @@ namespace KinergyUtilities
             Vector3d boxYaxis = innerCavity.Plane.YAxis;
             Vector3d boxZaxis = innerCavity.Plane.Normal;
             double middle_part_thickness = gearSetNumber * (gearFaceWidth + clearance);
+            Box innerCavityEnlarged = new Box(innerCavity.BoundingBox);
             
             if (Math.Abs(mainDirection * boxXaxis) > 0.9)
             {
@@ -125,6 +126,7 @@ namespace KinergyUtilities
                 {
                     distanceAvailable = boxLength + innerCavity.X.Min - lastGearCenter.X;
                 }
+                innerCavityEnlarged.Inflate(1,0,0);
             }
             else if (Math.Abs(mainDirection * boxYaxis) > 0.9)
             {
@@ -138,7 +140,7 @@ namespace KinergyUtilities
                 {
                     distanceAvailable = boxLength + innerCavity.Y.Min - lastGearCenter.Y;
                 }
-                
+                innerCavityEnlarged.Inflate(0, 1, 0);
             }
             else
             {
@@ -152,16 +154,18 @@ namespace KinergyUtilities
                 {
                     distanceAvailable = boxLength + innerCavity.Z.Min - lastGearCenter.Z;
                 }
+                innerCavityEnlarged.Inflate(0, 0, 1);
             }
             //Threshold 1 is not exceeding box edges
             Line l1 = new Line(lastGearCenter, axisDirection, 1);//Try to draw a line to intersect with inner cavity box
             Interval interval1, interval2;
             Point3d midpoint;
-            if (Intersection.LineBox(l1, innerCavity, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval1))
+            
+            if (Intersection.LineBox(l1, innerCavityEnlarged, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval1))
             {
                 midpoint = l1.PointAt(interval1.Mid);
                 Line l2 = new Line(midpoint, otherDirection, 1);//Try to draw a line to intersect with inner cavity box
-                Intersection.LineBox(l1, innerCavity, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval2);
+                Intersection.LineBox(l1, innerCavityEnlarged, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval2);
                 Point3d p1 = l2.PointAt(interval2.Max);
                 Point3d p2 = l2.PointAt(interval2.Min);
                 maxBullGearRadius = Math.Min(p1.DistanceTo(midpoint), p2.DistanceTo(midpoint));
@@ -198,7 +202,7 @@ namespace KinergyUtilities
                     firstGearCenter = new Point3d(innerCavity.X.Mid, innerCavity.Y.Mid, innerCavity.Z.Max - maxBullGearRadius + clearance);
             }
             //Then use all these params and existing function to generate all needed params
-            parameters=GenerateGearTrain.GetGearTrainByParameter(gearSetNumber,mainDirection,otherDirection,axisDirection, firstGearCenter, lastGearCenter, innerCavity, gearFaceWidth);
+            parameters=GenerateGearTrain.GetGearTrainByParameter(gearSetNumber,mainDirection,otherDirection,axisDirection, firstGearCenter, lastGearCenter, innerCavity, innerCavityEnlarged,gearFaceWidth);
         }
     }
     public class GearTrainParam : IComparable<GearTrainParam>
@@ -215,7 +219,7 @@ namespace KinergyUtilities
         Point3d fgct,fgct_offset,lgct;
         Box innerCavity;
         public List<GearParameter> parameters;
-        public GearTrainParam(Vector3d _mainDirection, Vector3d _otherDirection, Vector3d _axisDirection, Point3d firstGearCenter, Point3d lastGearCenter, Box InnerCavity, double BullGearRadius, double PinionRadius, int GearSetNumber, double GearFaceWidth, double Clearance = 0.3, double ClearanceDepth = 0.3)
+        public GearTrainParam(Vector3d _mainDirection, Vector3d _otherDirection, Vector3d _axisDirection, Point3d firstGearCenter, Point3d lastGearCenter, Box InnerCavity, Box InnerCavityEnlarged,double BullGearRadius, double PinionRadius, int GearSetNumber, double GearFaceWidth, double Clearance = 0.3, double ClearanceDepth = 0.3)
         {
             mainDirection = _mainDirection;
             otherDirection = _otherDirection;
@@ -238,7 +242,7 @@ namespace KinergyUtilities
             Interval interval1;
             //Calculate the midpoint of axis
             Point3d midpoint;
-            Intersection.LineBox(l1, innerCavity, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval1);
+            Intersection.LineBox(l1,InnerCavityEnlarged ,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval1);
             midpoint = l1.PointAt(interval1.Mid);
             if ((new Vector3d(lastGearCenter)-new Vector3d(midpoint)) * axisDirection >= 0)//if the offset from first to last is along axis direction
                 offset_direction_first_to_last = axisDirection;
@@ -247,7 +251,7 @@ namespace KinergyUtilities
             offset_direction_first_to_last.Unitize();
             double middle_part_thickness = gearSetNumber * (gearFaceWidth + clearance);
             //Move fgct to make sure the gear train is at the middle of box.If fgct_offset is too close to fgct(so it might come across bull gear beside it) then move it away a bit
-            fgct_offset = fgct - offset_direction_first_to_last * Math.Max(middle_part_thickness/2,gearFaceWidth+clearance);
+            fgct_offset = fgct - offset_direction_first_to_last * Math.Max(middle_part_thickness/2,2*gearFaceWidth+clearance);
             fgct_offset -= offset_direction_first_to_last * (gearFaceWidth / 2);//Since gear generation is on one side, not in middle
             parameters = GetParameterList();
         }
@@ -295,17 +299,18 @@ namespace KinergyUtilities
             for (int i = 1; i < gearSetNumber; i++)
             {
                 currPt += start2end * (bullGearRadius + pinionRadius + clearance);
-                currPt += offset_direction_first_to_last * clearance;
+                //currPt += offset_direction_first_to_last * clearance;
                 GearParameter small = new GearParameter();
                 small.center = currPt;
                 small.radius = pinionRadius;
-                small.faceWidth = gearFaceWidth;
+                small.faceWidth = gearFaceWidth+clearance;
                 small.norm = offset_direction_first_to_last;
                 small.xDirection = start2end;
                 small.PinionOrBull = 1;
                 parameters.Add(small);
                 GearParameter big = new GearParameter();
                 currPt += offset_direction_first_to_last * (gearFaceWidth);
+                currPt += offset_direction_first_to_last * clearance;
                 big.center = currPt;
                 big.radius = bullGearRadius;
                 big.faceWidth = gearFaceWidth;
@@ -346,6 +351,6 @@ namespace KinergyUtilities
         public Vector3d xDirection;
         public double radius;
         public double faceWidth;
-        public int PinionOrBull;
+        public int PinionOrBull; // 1: pinion; 2: bull
     }
 }
