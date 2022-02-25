@@ -27,7 +27,7 @@ namespace ConTranslation
         int speedLevel;         // value of the strength slide bar
         int distanceLevel;
         int energyLevel;
-        int distance;   // value of the distance slide bar
+        double displacement;   // value of the distance slide bar
         Vector3d direction;             // kinetic unit direction
         ContinuousTranslation motion;
         List<Arrow> lockDirCandidates;
@@ -94,6 +94,7 @@ namespace ConTranslation
         Guid perpAxisArrowUp = Guid.Empty;
         Guid perpAxisArrowDown = Guid.Empty;
         int eeMovingDirectionSelection = 0;//-1 for error, 0 for unset, 1 for main, 2 for perp up, 3 for perp down
+        GearTrainParam selectedGearTrainParam;
 
         double axelSpace = 0;
         double gearSpace = 0;
@@ -125,7 +126,7 @@ namespace ConTranslation
             min_coil_num = 3;
             energy = 0.5;
             speed = 4;
-            distance = 0;
+            displacement = 0;
             arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;
@@ -771,6 +772,7 @@ namespace ConTranslation
                     {
                         return;
                     }
+                    selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
                     List<GearParameter> gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
 
                     #region generate all the axels and spacers for the gears
@@ -819,6 +821,9 @@ namespace ConTranslation
                 perpAxis = kineticUnitDir;
                 perpAxis.Unitize();
                 mainAxis.Unitize();
+                //reverse main axis if needed based on user selection of ee side.
+                if ((new Vector3d(eeCenPt) - new Vector3d(skeleton.PointAtNormalizedLength(0.5))) * mainAxis < 0)
+                    mainAxis = -mainAxis;
                 Vector3d otherAxis = new Plane(eeCenPt, mainAxis, perpAxis).Normal;
                 otherAxis.Unitize();
                 double offsetDistance = Math.Max(x, y) + 10;
@@ -844,39 +849,169 @@ namespace ConTranslation
 
                 #region Build Rack and Constraining Structure
                 //First calculate ee moving distance based on motion params.
-                //double eeMovingDistance=;
-                //double rackExtraLength = 10;//TODO check this const value.
-                //if(eeMovingDirectionSelection==1)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
-                //{
-                //    //The rack should be linked to last gear
-                //    //TODO find out the parameter of the last gear and the user selected position (eeLineDotPt)
-                //    double lastGearRadius=0;
-                //    Point3d contactPoint = eeLineDotPt + mainAxis * lastGearRadius;
-                //    //Calculate rack length based on eeMovingDistance
+                double eeMovingDistance = displacement * selectedGearTrainParam.gearRatio;
+                double rackExtraLength = 10;//TODO check this const value.
+                if (eeMovingDirectionSelection == 2 || eeMovingDirectionSelection == 3)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
+                {
+                    //The rack should be linked to last gear
+                    //TODO find out the parameter of the last gear and the user selected position (eeLineDotPt)
+                    double lastGearRadius = selectedGearTrainParam.parameters.Last().radius;
+                    Point3d contactPoint = eeLineDotPt + mainAxis * lastGearRadius;
+                    //Calculate rack length based on eeMovingDistance
+                    double rackLength = eeMovingDistance + rackExtraLength;
+                    //Create rack. It's composed with 3 parts: rack, backbone and connecting bone with ee
+                    double rackFaceWidth = 3.6;
+                    double rackThickness = 5;
+                    double teethHeight = 1.25;
+                    double backboneFacewidth = 10,backboneThickness=4;
+                    double connectboneFacewidth = 5, connectboneThickness = 5;
+                    Point3d contactPointRackBackPoint = contactPoint + mainAxis * (rackThickness + teethHeight/2+0.3);
+                    Point3d rackStartPoint , rackEndPoint;
+                    if (eeMovingDirectionSelection == 2)
+                    {
+                        rackStartPoint = contactPointRackBackPoint - perpAxis * eeMovingDistance;
+                        rackEndPoint = contactPointRackBackPoint + perpAxis*rackExtraLength;
+                    }
+                    else
+                    {
+                        rackStartPoint = contactPointRackBackPoint + perpAxis * eeMovingDistance;
+                        rackEndPoint = contactPointRackBackPoint + perpAxis*rackExtraLength;
+                    }
+                    Vector3d rackVector = new Vector3d(rackEndPoint) - new Vector3d(rackStartPoint);
+                    Point3d rackMidPoint = rackStartPoint + rackVector / 2;
+                    Rack rack = new Rack(rackMidPoint, rackVector, -mainAxis, rackLength, 1, rackFaceWidth, otherAxis, rackThickness, 20);
+                    Plane rackPlane = new Plane(rackMidPoint, otherAxis, perpAxis);
+                    Box rackBackboneBox;
+                    if (rackPlane.Normal * mainAxis > 0)
+                        rackBackboneBox = new Box(rackPlane,new Interval(-backboneFacewidth/2,backboneFacewidth/2),new Interval(-rackLength/2,rackLength/2),new Interval(0,backboneThickness));
+                    else
+                        rackBackboneBox = new Box(rackPlane, new Interval(-backboneFacewidth / 2, backboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-backboneThickness, 0));
+                    Brep rackBackbone = rackBackboneBox.ToBrep();
+                    rack.Model = Brep.CreateBooleanUnion(new List<Brep> { rack.Model, rackBackbone },RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];//Potential risk is failed boolean operation
+                    //Create holder and connectBone based on input model scale
+                    //Use a line intersection to get the scale -> 2 intersection points
+                    double maxScale = model.GetBoundingBox(true).Diagonal.Length*2;
+                    Line line = new Line(eeLineDotPt-perpAxis*maxScale,perpAxis*maxScale*2);
+                    Point3d[] intersections;
+                    if(!Rhino.Geometry.Intersect.Intersection.CurveBrep(line.ToNurbsCurve(), model, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,out _, out intersections))
+                    {
+                        //If intersection with model fails, use inner cavity instead
+                        line = new Line(eeLineDotPt - mainAxis, perpAxis);
+                        Interval interval;
+                        //Calculate the midpoint of axis
+                        Point3d edgePoint1,edgePoint2;
+                        Rhino.Geometry.Intersect.Intersection.LineBox(line, innerCavity.GetBoundingBox(true), RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval);
+                        edgePoint1 = line.PointAt(interval.Min)+mainAxis;
+                        edgePoint2 = line.PointAt(interval.Max)+mainAxis;
+                        intersections = new Point3d[2];
+                        intersections[0] = edgePoint1;
+                        intersections[1] = edgePoint2;
+                    }
+                    //Use the 2 intersection points to create holder. holder has 4 parts, 2 from intersection0 to last gear. 2 from las gear to intersection1
+                    #region create 4 parts of holder
+                    //Figure out the ranges
+                    Point3d gearSidePoint1=eeLineDotPt + perpAxis * lastGearRadius;
+                    Point3d gearSidePoint2 = eeLineDotPt - perpAxis * lastGearRadius;
+                    Point3d[] segmentingPoints = new Point3d[4];
+                    segmentingPoints[0] = intersections[0];
+                    segmentingPoints[3] = intersections[1];
+                    if(intersections[0].DistanceTo(gearSidePoint1)<intersections[0].DistanceTo(gearSidePoint2))
+                    {
+                        segmentingPoints[1] = gearSidePoint1;
+                        segmentingPoints[2] = gearSidePoint2;
+                    }
+                    else
+                    {
+                        segmentingPoints[1] = gearSidePoint2;
+                        segmentingPoints[2] = gearSidePoint1;
+                    }
+                    //Each part of holder is formed with 3 boxes.Use a same section line to generate them
+                    //Plane holderPlane = new Plane(segmentingPoints[0], otherAxis, perpAxis);
+                    List<Point3d> sectionLinePts = new List<Point3d>();
+                    sectionLinePts.Add(segmentingPoints[0]);
+                    Point3d pt2 = segmentingPoints[0] + otherAxis * (2 + 0.3 + backboneFacewidth / 2);
+                    sectionLinePts.Add(pt2);
+                    Point3d pt3 = pt2 + mainAxis*(lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + 0.3 + 2);
+                    sectionLinePts.Add(pt3);
+                    Point3d pt4 = segmentingPoints[0] + mainAxis * (lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + 0.3 + 2) + otherAxis * (connectboneFacewidth / 2 + 0.3);
+                    sectionLinePts.Add(pt4);
+                    Point3d pt5 = pt4 - mainAxis * 2;
+                    sectionLinePts.Add(pt5);
+                    Point3d pt6 = pt5 + otherAxis * (backboneFacewidth - connectboneFacewidth) / 2;
+                    Point3d pt8 = segmentingPoints[0] + mainAxis * (lastGearRadius - 0.3);//Here minus 0.3 is to make sure rack dosen't overlap with holder
+                    Point3d pt7 = pt8 + otherAxis * (0.3 + backboneFacewidth / 2);
+                    sectionLinePts.Add(pt6);
+                    sectionLinePts.Add(pt7);
+                    sectionLinePts.Add(pt8);
+                    sectionLinePts.Add(segmentingPoints[0]);
+                    Polyline section = new Polyline(sectionLinePts);
+                    Curve sectionCurve = section.ToNurbsCurve();
+                    
+                    var sweep = new SweepOneRail();
+                    sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+                    sweep.ClosedSweep = false;
+                    sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+                    //The first holder from seg0 to seg1
+                    Curve rail1 = new Line(segmentingPoints[0], segmentingPoints[1]).ToNurbsCurve();
+                    Brep[] holder1list = sweep.PerformSweep(rail1, sectionCurve);
+                    Brep holder1 = holder1list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    //Second is a mirror of first
+                    Brep holder2= holder1list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    holder2.Transform(Transform.Mirror(segmentingPoints[0], otherAxis));
+                    //Third from seg2 to seg3
+                    Curve rail3 = new Line(segmentingPoints[2], segmentingPoints[3]).ToNurbsCurve();
+                    Brep[] holder3list = sweep.PerformSweep(rail3, sectionCurve);
+                    Brep holder3 = holder3list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    //Fourth is mirrored from 3rd
+                    Brep holder4 = holder3list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                    holder4.Transform(Transform.Mirror(segmentingPoints[0], otherAxis));
+                    List<Brep> holders = new List<Brep> { holder1, holder2, holder3, holder4 };
+                    #endregion
 
-                //}
-                //else//The selected moving direction is exactly the main direction, so the rack would get into the model
-                //{
-                //    double lastGearRadius = 0;
-                //    Point3d contactPoint = eeLineDotPt + perpAxis * lastGearRadius;//TODO select up or down based on gear position!
-                //    //Calculate rack length based on eeMovingDistance and inner cavity space
-                //    double innerCavityMainAxisLength = 0;
-                //    Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
-                //    switch (selectedAxis)
-                //    {
-                //        case 1: innerCavityMainAxisLength=innerCavityBox.X.Length; break;
-                //        case 2: innerCavityMainAxisLength = innerCavityBox.Y.Length; ; break;
-                //        case 3: innerCavityMainAxisLength=innerCavityBox.Z.Length; break;
-                //        default: break;
-                //    }
-                //    if(innerCavityMainAxisLength<eeMovingDistance)
-                //    {
-                //        eeMovingDistance = innerCavityMainAxisLength;
-                //        //TODO Check if we need to change other structures to fit this limited distance.
+                    //Use the 2 inersection points to create connector
+                    Vector3d intersectionVector = (new Vector3d(intersections[1]) - new Vector3d(intersections[0]));
+                    Point3d intersectionMidPoint = intersections[0] +intersectionVector/ 2;
+                    Box connectboneBox;
+                    Plane connectbonePlane = new Plane(intersectionMidPoint+mainAxis*(lastGearRadius+ rackThickness + teethHeight / 2 + 0.3+backboneThickness), otherAxis, perpAxis);
+                    if (connectbonePlane.Normal * mainAxis > 0)
+                        connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(0, connectboneThickness));
+                    else
+                        connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-connectboneThickness,0));
+                    Brep connectbone = connectboneBox.ToBrep();
 
-                //    }
+                }
+                else//The selected moving direction is exactly the main direction, so the rack would get into the model
+                {
+                    GearParameter lgp = selectedGearTrainParam.parameters.Last();
+                    double lastGearRadius = lgp.radius;
+                    Point3d contactPoint = eeLineDotPt + perpAxis * lastGearRadius;//TODO select up or down based on gear position!
+                    //Calculate rack length based on eeMovingDistance and inner cavity space
+                    double rackLength = eeMovingDistance + rackExtraLength;
+                    double innerCavityMainAxisLength = 0;
+                    Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
+                    double rackFaceWidth = 3.6;
+                    double rackHolderWidth = 2;
+                    double rackCompoundThickness = rackFaceWidth + 0.3 * 2 + rackHolderWidth * 2;
+                    //First just use the end tip of the last gear for the rack contact
+                    Point3d lgctAtEnd = lgp.center + lgp.norm * lgp.faceWidth;
+                    Point3d rackContactPoint = lgctAtEnd - lgp.radius * perpAxis-lgp.norm*rackCompoundThickness/2;
 
-                //}
+                    #region Deal with the case when rack is longer than inner cavity. Just dig a hole out
+                    switch (selectedAxis)
+                    {
+                        case 1: innerCavityMainAxisLength = innerCavityBox.X.Length; break;
+                        case 2: innerCavityMainAxisLength = innerCavityBox.Y.Length; ; break;
+                        case 3: innerCavityMainAxisLength = innerCavityBox.Z.Length; break;
+                        default: break;
+                    }
+                    if (innerCavityMainAxisLength < eeMovingDistance)
+                    {
+                        //Then we need to use bounding box of rack to boolean main model
+                    }
+                    #endregion
+
+
+                }
                 #endregion
             }
 

@@ -257,6 +257,7 @@ namespace KinergyUtilities
             //Move fgct to make sure the gear train is at the middle of box.If fgct_offset is too close to fgct(so it might come across bull gear beside it) then move it away a bit
             fgct_offset = fgct - offset_direction_first_to_last * Math.Max(middle_part_thickness/2,2*gearFaceWidth+clearance);
             fgct_offset -= offset_direction_first_to_last * (gearFaceWidth / 2);//Since gear generation is on one side, not in middle
+            fgct -= offset_direction_first_to_last * (gearFaceWidth / 2);//Since gear generation is on one side, not in middle
             parameters = GetParameterList();
         }
         public bool IfValid()//See if we could arrange this param into the box
@@ -331,6 +332,9 @@ namespace KinergyUtilities
             lgp.center = currPt;
             lgp.radius = pinionRadius;
             lgp.faceWidth = Math.Max(gearFaceWidth,currPt.DistanceTo(lgct)+gearFaceWidth/2);
+            //If lg might correlate with fg, then make lgp wider to avoid.Need 8.5 at least
+            if (offset_direction_first_to_last * (new Vector3d(lgct) - new Vector3d(parameters[0].center)) < 8.5)
+                lgp.faceWidth += 8.5 - offset_direction_first_to_last * (new Vector3d(lgct) - new Vector3d(parameters[0].center));
             lgp.norm = offset_direction_first_to_last;
             lgp.xDirection = start2end;
             lgp.PinionOrBull = 1;

@@ -61,7 +61,18 @@ namespace Kinergy
             public Vector3d FaceDirection { get => _faceDirection; private set => _faceDirection = value; }
             public Line BackBone { get => _backBone; private set => _backBone = value; }
             public Vector3d RackDirection { get => _rackDirection; private set => _rackDirection = value; }
-
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="CP"></param>
+            /// <param name="RackLineDirection"></param>
+            /// <param name="RackFaceDirection"></param>
+            /// <param name="len"></param>
+            /// <param name="m"></param>
+            /// <param name="Thickness">FaceWidth</param>
+            /// <param name="extrusionDir"></param>
+            /// <param name="rackThickness">Thickness from back face to teeth base</param>
+            /// <param name="pressureAngle"></param>
             public Rack(Point3d CP, Vector3d RackLineDirection, Vector3d RackFaceDirection, double len, double m, double Thickness, Vector3d extrusionDir, double rackThickness, double pressureAngle)
             {
                 _rackDirection = RackLineDirection / RackLineDirection.Length;
