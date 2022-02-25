@@ -1131,37 +1131,37 @@ namespace ConTranslation
 
                 #region rack test
 
-                //bool isGroove = false;
-                //int numTeeth = 9;
-                //double stepAngle = 360.0 / numTeeth;
-                //double boundary = 90.0 / stepAngle;
-                //int floorNum = (int)Math.Floor(boundary);
-                //int ceilingNum = (int)Math.Ceiling(boundary);
-                //double selfRotationAngle = 0;
+                bool isGroove = false;
+                int numTeeth = 9;
+                double stepAngle = 360.0 / numTeeth;
+                double boundary = 90.0 / stepAngle;
+                int floorNum = (int)Math.Floor(boundary);
+                int ceilingNum = (int)Math.Ceiling(boundary);
+                double selfRotationAngle = 0;
 
-                //if (floorNum == ceilingNum)
-                //{
-                //    // the mating tooth is actually symmetric around the X axis
-                //    selfRotationAngle = stepAngle / 2;
-                //}
-                //else
-                //{
-                //    double leftoverAngle = 90 - stepAngle * floorNum;
-                //    selfRotationAngle = stepAngle / 2 - leftoverAngle;
-                //}
-                //isGroove = true;
+                if (floorNum == ceilingNum)
+                {
+                    // the mating tooth is actually symmetric around the X axis
+                    selfRotationAngle = stepAngle / 2;
+                }
+                else
+                {
+                    double leftoverAngle = 90 - stepAngle * floorNum;
+                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                }
+                isGroove = true;
 
-                //Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
-                //myDoc.Objects.AddBrep(temp.Model);
-                //myDoc.Views.Redraw();
+                Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
+                myDoc.Objects.AddBrep(temp.Model);
+                myDoc.Views.Redraw();
 
-                //Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
-                //myDoc.Objects.AddBrep(tempRack.Model);
-                //myDoc.Views.Redraw();
+                Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
+                myDoc.Objects.AddBrep(tempRack.Model);
+                myDoc.Views.Redraw();
 
-                //Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
-                //myDoc.Objects.AddBrep(spacer.Model);
-                //myDoc.Views.Redraw();
+                Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
+                myDoc.Objects.AddBrep(spacer.Model);
+                myDoc.Views.Redraw();
                 #endregion
 
                 #region geneva drive test
