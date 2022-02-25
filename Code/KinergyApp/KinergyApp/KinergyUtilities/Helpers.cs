@@ -72,7 +72,9 @@ namespace KinergyUtilities
         }
 
         /// <summary>
-        /// Return the axel and spacer entities (if the control is press-helix, the last three elements in the return list are the connector bars)
+        /// Return the axel and spacer entities - 
+        ///      if the control is press-helix, the last three elements in the return list are the connector bars
+        ///      if the control is turn-spiral, the last three elements in the return list art the turning shaft (lock handler)
         /// </summary>
         /// <param name="gear_info">the list of gear parameters for the calculated gear train</param>
         /// <param name="body">the model body</param>
@@ -88,6 +90,7 @@ namespace KinergyUtilities
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
+            double rad = 1.5;
 
             if (controlType == 1)
             {
@@ -98,7 +101,6 @@ namespace KinergyUtilities
                     int idx = gear_info.IndexOf(gp);
                     Vector3d axelDir = gp.norm;
                     Point3d gearCen = gp.center;
-                    double rad = 1.5;
 
                     #region generate the axel
 
@@ -130,27 +132,30 @@ namespace KinergyUtilities
 
                     #region generate the spacers
 
-                    double offset = gp.faceWidth + clearance;
+                    double offset1 = gp.faceWidth + clearance;
+                    double offset2 = clearance;
+                    Vector3d initialDir = gear_info.ElementAt(1).center - gear_info.ElementAt(0).center;
+                    initialDir.Unitize();
 
                     if (idx % 2 == 0)
                     {
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - axelDir * offset, 1, rad, 3, axelDir);
+                        Spacer sp1 = new Spacer(gearCen - initialDir * offset2, 1, rad, 3, (-initialDir));
                         models.Add(sp1);
 
                         if(idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset+gp.faceWidth), 1, rad, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset2 + gp.faceWidth), 1, rad, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
                     else
                     {
                         // bull gear
-                        Spacer sp2 = new Spacer(gearCen + axelDir * (offset + gp.faceWidth), 1, rad, 3, axelDir);
+                        Spacer sp2 = new Spacer(gearCen - axelDir * offset2, 1, rad, 3, -axelDir);
                         models.Add(sp2);
                     }
 
@@ -230,12 +235,12 @@ namespace KinergyUtilities
                     
                     Vector3d axelDir = gp.norm;
                     Point3d gearCen = gp.center;
-                    double rad = 1.5;
+                    
 
                     #region generate the axel
 
                     // only genearting the shaft when it is the odd gear order 
-                    if (idx % 2 == 1)
+                    if (idx % 2 == 0 && idx != 0)
                     {
                         Curve crossLineCrv = new Line(gearCen - axelDir * int.MaxValue, gearCen + axelDir * int.MaxValue).ToNurbsCurve();
                         Curve[] crvs;
@@ -269,13 +274,13 @@ namespace KinergyUtilities
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - axelDir * offset, 1, rad, 3, axelDir);
+                        Spacer sp1 = new Spacer(gearCen - axelDir * clearance, 1, rad, 3, -axelDir);
                         models.Add(sp1);
 
                         if (idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset + gp.faceWidth), 1, rad, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
@@ -284,17 +289,78 @@ namespace KinergyUtilities
                         // bull gear
                         if (idx != 1)
                         {
-                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset + gp.faceWidth), 1, rad, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
 
                     #endregion
                 }
+
+                #region add the first shaft as the lock handler
+
+                Point3d firstGearCen = gear_info.ElementAt(0).center;
+                Vector3d firstGearDir = gear_info.ElementAt(0).center - gear_info.ElementAt(1).center;
+                firstGearDir.Unitize();
+                Curve lockLineCrv = new Line(firstGearCen - firstGearDir * int.MaxValue, firstGearCen + firstGearDir * int.MaxValue).ToNurbsCurve();
+                Curve[] lockLineCrvs;
+                Point3d[] lockLinePts;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(lockLineCrv, body, myDoc.ModelAbsoluteTolerance, out lockLineCrvs, out lockLinePts);
+
+                Point3d lockPtEnd = new Point3d();
+                Point3d lockPtStart = new Point3d();
+                if ((lockLinePts[0] - lockLinePts[1]) / (lockLinePts[0].DistanceTo(lockLinePts[1])) == firstGearDir)
+                {
+                    lockPtEnd = lockLinePts[0] + firstGearDir * 7;
+                    lockPtStart = lockLinePts[1] + firstGearDir * 4.5;
+                    Socket lockShaftSocket = new Socket(lockPtStart, firstGearDir);
+                    models.Add(lockShaftSocket);
+
+
+                    Point3d shaftStartPt = lockLinePts[1] + firstGearDir * 2.75;
+                    Point3d shaftEndPt = lockPtEnd;
+                    Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad, firstGearDir);
+                    models.Add(lockAxelShaft);
+
+                    Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
+                    models.Add(lockAxelShaft);
+
+                    Point3d handlerPt = shaftEndPt + firstGearDir * 3;
+                    Plane handlerPln = new Plane(handlerPt, firstGearDir);
+                    Vector3d handlerPlnX = handlerPln.XAxis;
+                    handlerPlnX.Unitize();
+                    Point3d handlerPtNew = handlerPt - handlerPlnX * 1.5;
+                    Shaft handlerDisc = new Shaft(handlerPtNew, 3, 5, handlerPlnX);
+                    models.Add(handlerDisc);
+                }
+                else
+                {
+                    lockPtEnd = lockLinePts[1] + firstGearDir * 7;
+                    lockPtStart = lockLinePts[0] + firstGearDir * 4.5;
+                    Socket lockShaftSocket = new Socket(lockPtStart, firstGearDir);
+                    models.Add(lockShaftSocket);
+
+                    Point3d shaftStartPt = lockLinePts[0] + firstGearDir * 2.75;
+                    Point3d shaftEndPt = lockPtEnd;
+                    Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad, firstGearDir);
+                    models.Add(lockAxelShaft);
+
+                    Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
+                    models.Add(lockAxelShaft);
+
+                    Point3d handlerPt = shaftEndPt + firstGearDir * 3;
+                    Plane handlerPln = new Plane(handlerPt, firstGearDir);
+                    Vector3d handlerPlnX = handlerPln.XAxis;
+                    handlerPlnX.Unitize();
+                    Point3d handlerPtNew = handlerPt - handlerPlnX * 1.5;
+                    Shaft handlerDisc = new Shaft(handlerPtNew, 3, 5, handlerPlnX);
+                    models.Add(handlerDisc);
+                }
+                
+
+
+                #endregion
             }
-
-            
-
 
             return models;
         }
