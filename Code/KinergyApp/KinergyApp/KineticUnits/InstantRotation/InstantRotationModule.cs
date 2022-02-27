@@ -134,6 +134,8 @@ namespace InstRotation
             myDoc = RhinoDoc.ActiveDoc;
             isSpringCW = true;
 
+            #region material and color settings
+
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
             solidMat.DiffuseColor = System.Drawing.Color.White;
@@ -200,6 +202,8 @@ namespace InstRotation
             greenAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
             greenAttribute.ObjectColor = Color.FromArgb(72, 232, 88);
             greenAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            #endregion
 
             testBodySelBtn = false;
             testAxisSelBtn = false;

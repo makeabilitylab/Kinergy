@@ -1,11 +1,9 @@
-﻿using Rhino;
+﻿using Kinergy.Geom;
+using Rhino;
 using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Kinergy.Geom;
-using System.Threading.Tasks;
 
 namespace KinergyUtilities
 {
@@ -323,7 +321,7 @@ namespace KinergyUtilities
                     models.Add(lockAxelShaft);
 
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
-                    models.Add(lockAxelShaft);
+                    models.Add(lockAxelShaftDisc);
 
                     Point3d handlerPt = shaftEndPt + firstGearDir * 3;
                     Plane handlerPln = new Plane(handlerPt, firstGearDir);
@@ -346,7 +344,7 @@ namespace KinergyUtilities
                     models.Add(lockAxelShaft);
 
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
-                    models.Add(lockAxelShaft);
+                    models.Add(lockAxelShaftDisc);
 
                     Point3d handlerPt = shaftEndPt + firstGearDir * 3;
                     Plane handlerPln = new Plane(handlerPt, firstGearDir);
@@ -380,29 +378,128 @@ namespace KinergyUtilities
             if(controlType == 1)
             {
                 // press control with helix springs
-                foreach(GearParameter gp in gear_info)
+                bool isGroove = false;
+                foreach (GearParameter gp in gear_info)
                 {
-                    Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, 0, true);
-                    newGear.Generate(); 
-                    models.Add(newGear);
+                    int numTeeth = (int)(gp.radius * 2);
+                    double stepAngle = 360.0 / numTeeth;
+                    double boundary = 90.0 / stepAngle;
+                    int floorNum = (int)Math.Floor(boundary);
+                    int ceilingNum = (int)Math.Ceiling(boundary);
+                    double selfRotationAngle = 0;
+
+                    if (gear_info.IndexOf(gp) == 0)
+                    {
+                        // the first pinion
+                        if (floorNum == ceilingNum)
+                        {
+                            // the mating tooth is actually symmetric around the X axis
+                            selfRotationAngle = stepAngle / 2;
+                        }
+                        else
+                        {
+                            double leftoverAngle = 90 - stepAngle * floorNum;
+                            selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                        }
+
+                        Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
+                        newGear.Generate();
+                        models.Add(newGear);
+                    }
+                    else if(gear_info.IndexOf(gp) == 1)
+                    {
+                        // the first bull gear
+                        if (floorNum == ceilingNum)
+                        {
+                            // the mating tooth is actually symmetric around the X axis
+                            selfRotationAngle = stepAngle / 2;
+                        }
+                        else
+                        {
+                            double leftoverAngle = 90 - stepAngle * floorNum;
+                            selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                        }
+                        isGroove = true;
+
+                        Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
+                        newGear.Generate();
+                        models.Add(newGear);
+                    }
+                    else
+                    {
+                        if (isGroove)
+                        {
+                            selfRotationAngle = 90;
+                            if (numTeeth % 2 == 1){ isGroove = true; }
+                            else { isGroove = false; }
+                        }
+                        else
+                        {
+                            stepAngle = 360.0 / numTeeth;
+                            selfRotationAngle = 90 - stepAngle / 2;
+
+                            if (numTeeth % 2 == 1) { isGroove = false; }
+                            else { isGroove = true; }
+                        }
+                        Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
+                        newGear.Generate();
+                        models.Add(newGear);
+                    } 
                 }
             }
             else
             {
                 // turn control with spiral springs
+                bool isGroove = false;
                 foreach (GearParameter gp in gear_info)
                 {
-                    if(gear_info.IndexOf(gp) != 0)
+                    int numTeeth = (int)(gp.radius * 2);
+                    double stepAngle = 360.0 / numTeeth;
+                    double boundary = 90.0 / stepAngle;
+                    int floorNum = (int)Math.Floor(boundary);
+                    int ceilingNum = (int)Math.Ceiling(boundary);
+                    double selfRotationAngle = 0;
+
+                    if (gear_info.IndexOf(gp) != 0)
                     {
                         if(gear_info.IndexOf(gp) == 1)
                         {
-                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, 0, false);
+                            // the first bull gear
+
+                            if (floorNum == ceilingNum)
+                            {
+                                // the mating tooth is actually symmetric around the X axis
+                                selfRotationAngle = stepAngle / 2;
+                            }
+                            else
+                            {
+                                double leftoverAngle = 90 - stepAngle * floorNum;
+                                selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                            }
+                            isGroove = true;
+
+                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, selfRotationAngle, false);
                             newGear.Generate();
                             models.Add(newGear);
                         }
                         else
                         {
-                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, 0, true);
+                            if (isGroove)
+                            {
+                                selfRotationAngle = 90;
+                                if (numTeeth % 2 == 1) { isGroove = true; }
+                                else { isGroove = false; }
+                            }
+                            else
+                            {
+                                stepAngle = 360.0 / numTeeth;
+                                selfRotationAngle = 90 - stepAngle / 2;
+
+                                if (numTeeth % 2 == 1) { isGroove = false; }
+                                else { isGroove = true; }
+                            }
+
+                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, selfRotationAngle, true);
                             newGear.Generate();
                             models.Add(newGear);
                         }
@@ -410,6 +507,13 @@ namespace KinergyUtilities
                 }
 
             }
+            return models;
+        }
+
+        public List<Entity> genSprings(List<GearParameter> gear_info, int controlType, double displacement, double energy, int dir)
+        {
+            List<Entity> models = new List<Entity>();
+
             return models;
         }
     }

@@ -99,6 +99,11 @@ namespace ConTranslation
         double axelSpace = 0;
         double gearSpace = 0;
 
+        List<Entity> axel_spacer_entities = new List<Entity>();
+        List<Entity> gear_entities = new List<Entity>();
+        List<Entity> spring_entities = new List<Entity>();
+        //List<GearParameter> gear_info = new List<GearParameter>();
+
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
         /// </summary>
@@ -156,6 +161,8 @@ namespace ConTranslation
             motionCtrlPtID1 = Guid.Empty;
             motionCtrlPtID2 = Guid.Empty;
             motionCtrlPointSelected = new Point3d();
+
+            #region material and color settings
 
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
@@ -223,6 +230,8 @@ namespace ConTranslation
             greenAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
             greenAttribute.ObjectColor = Color.FromArgb(72, 232, 88);
             greenAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            #endregion
         }
 
         /// <summary>
@@ -773,11 +782,12 @@ namespace ConTranslation
                         return;
                     }
                     selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
-                    List<GearParameter> gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
+                    //gear_info.Clear();
+                    //gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
 
                     #region generate all the axels and spacers for the gears
 
-                    List<Entity> axel_spacer_entities = helperFun.genAxelsStoppers(gear_info, model, motionControlMethod, 0.3);
+                    axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
                     foreach(Entity en in axel_spacer_entities)
                     {
                         motion.EntityList.Add(en);
@@ -787,21 +797,15 @@ namespace ConTranslation
 
                     #region generate all the gears
 
-                    List<Entity> gear_entities = helperFun.genGears(gear_info, motionControlMethod, 0.4);
+                    gear_entities = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
                     foreach (Entity en in gear_entities)
                     {
                         motion.EntityList.Add(en);
                     }
 
                     #endregion
-
-                    //motion.GenerateSpringMotor(eeCenPt, speed_input, dis_input, energy_input);
                 }
-
-
-
                 #endregion
-
             }
 
             if (toSetAxisDir)
@@ -1013,6 +1017,23 @@ namespace ConTranslation
 
                 }
                 #endregion
+
+                #region generate the spring
+
+                if (motionControlMethod == 1)
+                {
+                    // helical spring
+
+                }
+                else
+                {
+                    // spiral spring
+
+                }
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, motionControlMethod, displacement, energy, eeMovingDirectionSelection);
+
+
+                #endregion
             }
 
             if (toAddLock)
@@ -1032,6 +1053,34 @@ namespace ConTranslation
 
             if (toBake)
             {
+                if (motion != null)
+                {
+                    //foreach (Guid id in endEffectorCandidates)
+                    //{
+                    //    myDoc.Objects.Hide(id, true);
+                    //}
+
+                    if (motion.EntityList != null)
+                    {
+                        foreach (Entity b in motion.EntityList)
+                        {
+                            Brep tempB = b.GetModelinWorldCoordinate();
+                            myDoc.Objects.AddBrep(tempB);
+                        }
+                        //if (motion.Spring.SpringDimensions != null)
+                        //{
+                        //    foreach (LinearDimension d in motion.Spring.SpringDimensions)
+                        //    {
+                        //        //if(d.Plane.ClosestPoint(d.Arrowhead1End))
+                        //        //{
+                        //        myDoc.Objects.AddLinearDimension(d);
+                        //        //}
+                        //    }
+                        //}
+                        myDoc.Views.Redraw();
+                        this.ExpirePreview(true);
+                    }
+                }
 
                 #region gear test
                 //参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
@@ -1131,37 +1180,37 @@ namespace ConTranslation
 
                 #region rack test
 
-                bool isGroove = false;
-                int numTeeth = 9;
-                double stepAngle = 360.0 / numTeeth;
-                double boundary = 90.0 / stepAngle;
-                int floorNum = (int)Math.Floor(boundary);
-                int ceilingNum = (int)Math.Ceiling(boundary);
-                double selfRotationAngle = 0;
+                //bool isGroove = false;
+                //int numTeeth = 9;
+                //double stepAngle = 360.0 / numTeeth;
+                //double boundary = 90.0 / stepAngle;
+                //int floorNum = (int)Math.Floor(boundary);
+                //int ceilingNum = (int)Math.Ceiling(boundary);
+                //double selfRotationAngle = 0;
 
-                if (floorNum == ceilingNum)
-                {
-                    // the mating tooth is actually symmetric around the X axis
-                    selfRotationAngle = stepAngle / 2;
-                }
-                else
-                {
-                    double leftoverAngle = 90 - stepAngle * floorNum;
-                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
-                }
-                isGroove = true;
+                //if (floorNum == ceilingNum)
+                //{
+                //    // the mating tooth is actually symmetric around the X axis
+                //    selfRotationAngle = stepAngle / 2;
+                //}
+                //else
+                //{
+                //    double leftoverAngle = 90 - stepAngle * floorNum;
+                //    selfRotationAngle = stepAngle / 2 - leftoverAngle;
+                //}
+                //isGroove = true;
 
-                Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
-                myDoc.Objects.AddBrep(temp.Model);
-                myDoc.Views.Redraw();
+                //Gear temp = new Gear(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
+                //myDoc.Objects.AddBrep(temp.Model);
+                //myDoc.Views.Redraw();
 
-                Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
-                myDoc.Objects.AddBrep(tempRack.Model);
-                myDoc.Views.Redraw();
+                //Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
+                //myDoc.Objects.AddBrep(tempRack.Model);
+                //myDoc.Views.Redraw();
 
-                Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
-                myDoc.Objects.AddBrep(spacer.Model);
-                myDoc.Views.Redraw();
+                //Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
+                //myDoc.Objects.AddBrep(spacer.Model);
+                //myDoc.Views.Redraw();
                 #endregion
 
                 #region geneva drive test
