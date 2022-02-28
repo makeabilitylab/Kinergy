@@ -103,6 +103,7 @@ namespace ConTranslation
         List<Entity> gear_entities = new List<Entity>();
         List<Entity> spring_entities = new List<Entity>();
         //List<GearParameter> gear_info = new List<GearParameter>();
+        Point3d lockPos = new Point3d();
 
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
@@ -1078,7 +1079,8 @@ namespace ConTranslation
                     // spiral spring
 
                 }
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, motionControlMethod, displacement, energy, eeMovingDirectionSelection);
+                
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
 
 
                 #endregion

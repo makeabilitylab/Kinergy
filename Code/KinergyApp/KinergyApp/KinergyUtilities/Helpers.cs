@@ -510,9 +510,105 @@ namespace KinergyUtilities
             return models;
         }
 
-        public List<Entity> genSprings(List<GearParameter> gear_info, int controlType, double displacement, double energy, int dir)
+        /// <summary>
+        /// Genearte the springs
+        /// </summary>
+        /// <param name="gear_info">the information of the generated gear sets</param>
+        /// <param name="body">the input selected body</param>
+        /// <param name="controlType">the controlling method: press or turn</param>
+        /// <param name="displacement">displacement with a helical spring and revolution angle with a spiral spring, the input value from the slider</param>
+        /// <param name="energyLevel">the input value from the slider</param>
+        /// <param name="dir">the move direction of the end-effector</param>
+        /// <param name="lockPos"></param>
+        /// <returns></returns>
+        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, int controlType, int displacement, int energyLevel, int dir, out Point3d lockPos)
         {
             List<Entity> models = new List<Entity>();
+            lockPos = new Point3d();
+            RhinoDoc myDoc = RhinoDoc.ActiveDoc;
+
+            if (controlType == 1)
+            {
+                // helical spring control
+
+            }
+            else
+            {
+                // spiral spring control
+
+                #region Step 1: find the spring position and orientation
+
+                Point3d springCen = new Point3d();
+
+                Point3d firstGearCen = gear_info.ElementAt(0).center;
+                Point3d secondGearCen = gear_info.ElementAt(1).center;
+                Vector3d axelDir = firstGearCen - secondGearCen;
+                axelDir.Unitize();
+
+                Curve crossLineCrv = new Line(firstGearCen - axelDir * int.MaxValue, firstGearCen + axelDir * int.MaxValue).ToNurbsCurve();
+                Curve[] crvs;
+                Point3d[] pts;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, body, myDoc.ModelAbsoluteTolerance, out crvs, out pts);
+
+                Point3d ptEnd = new Point3d();
+                Point3d ptStart = new Point3d();
+                if ((pts[0] - pts[1]) / (pts[0].DistanceTo(pts[1])) == axelDir)
+                {
+                    ptEnd = pts[0] - axelDir * 1;
+                    ptStart = pts[1] + axelDir * 1;
+                }
+                else
+                {
+                    ptEnd = pts[1] - axelDir * 1;
+                    ptStart = pts[0] + axelDir * 1;
+                }
+
+                springCen = (ptEnd + firstGearCen) / 2;
+                Point3d axisStart = ptEnd;
+                Vector3d springDir = ptStart - ptEnd;
+                springDir.Unitize();
+
+                bool isCW = true;
+                int predDir = 1;
+
+                // determine the spring rotation direction based on the direction of the end rack
+                if((gear_info.Count - 1)%2 == 1)
+                {
+                    if(dir != 1 && dir != 2)
+                    {
+                        // perpendicular down
+                        isCW = false;
+                    }
+                    else
+                    {
+                        isCW = true;
+                    }
+                }
+                else
+                {
+                    if (dir != 1 && dir != 2)
+                    {
+                        // perpendicular down
+                        isCW = true;
+                    }
+                    else
+                    {
+                        isCW = false;
+                    }
+                }
+
+                Spiral spiralSpring = new Spiral(axisStart, springDir, springCen, gear_info.ElementAt(1).radius + 0.5, isCW, displacement, energyLevel);
+
+                models.Add(spiralSpring);
+
+                #endregion
+
+                #region Step 2: generate the lock position
+
+
+
+                #endregion
+            }
 
             return models;
         }
