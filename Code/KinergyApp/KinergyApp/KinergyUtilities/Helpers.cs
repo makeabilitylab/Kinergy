@@ -612,5 +612,105 @@ namespace KinergyUtilities
 
             return models;
         }
+        public static List<Brep> cutModel(Brep model, Curve skeleton, double t1,double t2,Vector3d v,RhinoDoc myDoc)
+        {
+            Plane pl1, pl2;
+            Plane p1Reverse, p2Reverse;
+            List<Brep> brepCut = new List<Brep>();
+            if (t1 >= t2)
+            {
+                p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), v);
+                p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+
+                pl1 = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
+                pl2 = new Plane(skeleton.PointAtNormalizedLength(t2), v);
+            }
+            else
+            {
+                p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), v);
+                p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
+
+                pl1 = new Plane(skeleton.PointAtNormalizedLength(t2), -v);
+                pl2 = new Plane(skeleton.PointAtNormalizedLength(t1), v);
+            }
+
+            Brep[] Cut_Brep1 = model.Trim(pl1, myDoc.ModelAbsoluteTolerance);
+            Brep Brep1 = Cut_Brep1[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            brepCut.Add(Brep1);
+
+            Brep[] Cut_Brep1rest = model.Trim(p1Reverse, myDoc.ModelAbsoluteTolerance);
+            Brep BrepRest = null;
+            try
+            {
+                BrepRest = Cut_Brep1rest[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            }
+            catch
+            {
+                BrepRest = model;
+            }
+            Brep[] Cut_Brep2 = BrepRest.Trim(pl2, myDoc.ModelAbsoluteTolerance);
+            Brep Brep2 = null;
+            try
+            {
+                Brep2 = Cut_Brep2[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            }
+            catch
+            {
+                Brep2 = BrepRest;
+            }
+
+            Brep[] Cut_Brep3 = BrepRest.Trim(p2Reverse, myDoc.ModelAbsoluteTolerance);
+            Brep Brep3 = Cut_Brep3[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            brepCut.Add(Brep3);
+            brepCut.Add(Brep2);
+            return brepCut;
+        }
+        public static Brep getInnerCavity(List<Brep> brepCut,Vector3d selectedAxisVector)
+        {
+            Brep innerCavity;
+            BoxLike b = new BoxLike(brepCut[1], selectedAxisVector);
+            double volumn = 0;
+            Brep result1 = null;
+            Cylinder result2 = Cylinder.Unset;
+            Brep b2 = null;
+            double v_box = 0.0, v_cylinder = 0.0;
+
+            // Calculate the volume of the inner box
+            for (double i = 0.2; i <= 0.8; i += 0.1)
+            {
+                if (b.GetInnerEmptySpaceBox(i))
+                {
+                    BoundingBox bbox = b.InnerEmptySpaceBbox;
+                    if (volumn < bbox.Volume)
+                    {
+                        volumn = bbox.Volume;
+                        result1 = b.InnerEmptySpaceBoxBrep;
+                        result1.Transform(b.RotateBack);
+                        v_box = result1.GetVolume();
+                    }
+                }
+            }
+
+            // Calculate the volume of the inner cylinder 
+            if (b.GetInnerEmptySpaceCylinder())
+            {
+                Cylinder c = b.InnerEmptyCylinder;
+                //result2 = c.ToBrep(true,true);
+                result2 = c;
+                b2 = result2.ToBrep(true, true);
+                b2.Transform(b.RotateBack);
+                v_cylinder = b2.GetVolume();
+                //DA.SetData(2, b2);
+            }
+
+            if (v_box >= v_cylinder)
+                innerCavity = result1;
+            else
+                innerCavity = b2;
+
+            Transform cavityTranslation = Transform.Translation(brepCut[1].GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
+            innerCavity.Transform(cavityTranslation);
+            return innerCavity;
+        }
     }
 }
