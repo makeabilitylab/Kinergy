@@ -46,14 +46,7 @@ namespace ConTranslation
 
         // Region selection related variables
         Point3d center = Point3d.Unset;
-        Guid ArrowCurve;
-        bool OperatingArrow = false;
-        bool PlaneGenerated = false;
-        bool ArrowGenerated = false;
         bool PlaneSelected = false;
-        double arrowScale;
-        Plane pl1, pl2;
-        PlaneSurface s1, s2;
         Guid selected = Guid.Empty;
         Vector3d skeletonVec = Vector3d.Unset;
         Vector3d selectedAxisVector = Vector3d.Unset;
@@ -70,20 +63,14 @@ namespace ConTranslation
         int motionControlMethod; // 1: press; 2: turn
 
         ObjectAttributes solidAttribute, orangeAttribute, redAttribute, blueAttribute, greenAttribute;
-        Guid xArrowID, yArrowID, zArrowID;
         int selectedAxisIndex;
-        Guid guide1, guide2;
         Guid convertedPortion;
         List<Brep> brepCut;
         Guid reserveBrepID1;
         Guid reserveBrepID2;
-        Guid motionCtrlPtID1;
-        Guid motionCtrlPtID2;
         Point3d motionCtrlPointSelected;
 
-        Guid eeCircleID = Guid.Empty;
         Point3d eeCircleDotPt = new Point3d();
-        Guid eeLineID = Guid.Empty;
         Point3d eeLineDotPt = new Point3d();
         Vector3d kineticUnitDir = new Vector3d();
         Vector3d axelDir = new Vector3d();
@@ -133,7 +120,6 @@ namespace ConTranslation
             energy = 0.5;
             speed = 4;
             displacement = 0;
-            arrowScale = 0;
             isLockSet = false;
             selObjId = Guid.Empty;
             toBeBaked = new List<Guid>();
@@ -150,14 +136,10 @@ namespace ConTranslation
             motionControlMethod = -1;
 
             selectedAxisIndex = -1; // 1 - x axis, 2 - y axis, 3 - z axis 
-            guide1 = Guid.Empty;
-            guide2 = Guid.Empty;
             brepCut = new List<Brep>();
             convertedPortion = Guid.Empty;
             reserveBrepID1 = Guid.Empty;
             reserveBrepID2 = Guid.Empty;
-            motionCtrlPtID1 = Guid.Empty;
-            motionCtrlPtID2 = Guid.Empty;
             motionCtrlPointSelected = new Point3d();
 
             #region material and color settings
@@ -424,7 +406,7 @@ namespace ConTranslation
                     BoundingBox box = model.GetBoundingBox(true);
                     box.Inflate(-2.0);
                     box.Transform(Transform.Scale(box.Center, 2));
-                    arrowScale = box.Diagonal.Length / 100;
+                    //arrowScale = box.Diagonal.Length / 100;
                     center = box.Center;
 
                     #endregion
