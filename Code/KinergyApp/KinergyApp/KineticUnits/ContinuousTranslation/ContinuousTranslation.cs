@@ -26,6 +26,7 @@ namespace Kinergy.KineticUnit
     {
         //The initial inputs
         private Brep _model;
+        private int _selectedAxisIndex=0;
         private int _speed;  // the range on the interface is 0-9
         private int _distance;    // the range on the interface is 0-9
         private int _energy; //  the range on the interface is 0-9
@@ -33,14 +34,21 @@ namespace Kinergy.KineticUnit
         private bool _addLock;
         private RhinoDoc _myDoc;
         private int _inputType;
-        private Cylinder _innerSpce;
+        private Brep _innerCavity;
         private double _skeletonLen;
         private Point3d _motorRefPt;
 
         private Curve _skeleton = null;
         private List<Shape> _modelCut;
         private List<Lock> _locks;
+        private List<Gear> _gears=new List<Gear>();
+        private Gear drivingGear;
+        private Gear lastGear;
+        private List<Entity> _axelsStoppers = new List<Entity>();
         private Helix _spring;
+        private Rack endEffectorRack=null;
+        private List<Entity> endEffectorRackConfiningStructure = new List<Entity>();
+        private Entity endEffectorConnectingStructure=null;
 
         private int _shaftNum;
         private List<List<int>> _r_shaft_num_List;
@@ -58,9 +66,10 @@ namespace Kinergy.KineticUnit
 
         public int ShaftNum { get => _shaftNum; set => _shaftNum = value; }
 
-        public ContinuousTranslation(Brep Model, Vector3d Direction, Brep innerCylinder, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
+        public ContinuousTranslation(Brep Model,int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
         {
             _model = Model;
+            _selectedAxisIndex = selectedAxisIndex;
             _speed = speed;
             _energy = eneryg;
             _distance = dis;
@@ -71,7 +80,7 @@ namespace Kinergy.KineticUnit
             _inputType = InputType;
             _motorRefPt = motionCtrlPt;
 
-            _innerSpce = GetCylinder(innerCylinder, Direction);
+            _innerCavity = innerCavity;
             BoxLike currB = new BoxLike(_model, _direction);
 
             _skeleton = currB.Skeleton;
@@ -80,6 +89,287 @@ namespace Kinergy.KineticUnit
 
             _shaftNum = 0;
             _r_shaft_num_List = new List<List<int>>();
+        }
+        public void AddGears(List<Gear> gears,List<Entity> axelsStoppers)
+        {
+            drivingGear = gears[0];
+            lastGear = gears.Last();
+            //First remove existing gears before adding new
+            foreach(Gear g in _gears)
+            {
+                entityList.Remove(g);
+            }
+            _gears.Clear();
+            foreach(Entity e in _axelsStoppers)
+            {
+                entityList.Remove(e);
+            }
+            _axelsStoppers.Clear();
+            foreach(Gear g in gears)
+            {
+                _gears.Add(g);
+                entityList.Add(g);
+            }
+            foreach (Entity e in axelsStoppers)
+            {
+                _axelsStoppers.Add(e);
+                entityList.Add(e);
+            }
+            //TODO register connecting relations
+        }
+        public void BuildEndEffectorRack(double eeMovingDis,GearTrainParam selectedGearTrainParam,int eeMovingDirectionSelection,Point3d eeLineDotPt,Vector3d mainAxis,Vector3d perpAxis, Vector3d otherAxis)
+        {
+            //First remove existing structure
+            if (endEffectorRack != null)
+                entityList.Remove(endEffectorRack);
+            endEffectorRack = null;
+            foreach(Entity e in endEffectorRackConfiningStructure)
+            {
+                entityList.Remove(e);
+            }
+            endEffectorRackConfiningStructure.Clear();
+            if (endEffectorConnectingStructure != null)
+                entityList.Remove(endEffectorConnectingStructure);
+            endEffectorConnectingStructure = null;
+
+            Rack rack;
+            List<Brep> constrainingStructure = new List<Brep>();
+            Brep connectingStructure = null;//that connects rack and end effector;
+            double gapMiddlePart2EE = 0;
+            #region Build Rack and Constraining Structure
+
+            //First calculate ee moving distance based on motion params.
+            double eeMovingDistance = eeMovingDis;
+            double rackExtraLength = 10;//TODO check this const value.
+            if (eeMovingDirectionSelection == 2 || eeMovingDirectionSelection == 3)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
+            {
+                //The rack should be linked to last gear
+                //TODO find out the parameter of the last gear and the user selected position (eeLineDotPt)
+                double lastGearRadius = selectedGearTrainParam.parameters.Last().radius;
+                Point3d contactPoint = eeLineDotPt + mainAxis * lastGearRadius;
+                //Calculate rack length based on eeMovingDistance
+                double rackLength = eeMovingDistance + rackExtraLength;
+                //Create rack. It's composed with 3 parts: rack, backbone and connecting bone with ee
+                double rackFaceWidth = 3.6;
+                double rackThickness = 5;
+                double teethHeight = 2.25;
+                double backboneFacewidth = 10, backboneThickness = 4;
+                double connectboneFacewidth = 5, connectboneThickness = 5;
+                Point3d contactPointRackBackPoint = contactPoint + mainAxis * (teethHeight / 2 + 0.3);
+                Point3d rackStartPoint, rackEndPoint;
+                if (eeMovingDirectionSelection == 2)
+                {
+                    rackStartPoint = contactPointRackBackPoint - perpAxis * eeMovingDistance;
+                    rackEndPoint = contactPointRackBackPoint + perpAxis * rackExtraLength;
+                }
+                else
+                {
+                    rackStartPoint = contactPointRackBackPoint + perpAxis * eeMovingDistance;
+                    rackEndPoint = contactPointRackBackPoint - perpAxis * rackExtraLength;
+                }
+                Vector3d rackVector = new Vector3d(rackEndPoint) - new Vector3d(rackStartPoint);
+                Point3d rackMidPoint = rackStartPoint + rackVector / 2;
+                //Figure out the rack extrution direction and move half facewidth
+                Vector3d extrutionDirection = new Plane(rackMidPoint, rackVector, -mainAxis).Normal;
+
+                rack = new Rack(rackMidPoint - extrutionDirection * rackFaceWidth / 2, rackVector, -mainAxis, rackLength, 1, rackFaceWidth, otherAxis, rackThickness, 20);
+                
+                Plane rackPlane = new Plane(rackMidPoint, otherAxis, perpAxis);
+                Box rackBackboneBox;
+                if (rackPlane.Normal * mainAxis > 0)
+                    rackBackboneBox = new Box(rackPlane, new Interval(-backboneFacewidth / 2, backboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(0, backboneThickness));
+                else
+                    rackBackboneBox = new Box(rackPlane, new Interval(-backboneFacewidth / 2, backboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-backboneThickness, 0));
+                Brep rackBackbone = rackBackboneBox.ToBrep();
+                rack.Model = Brep.CreateBooleanUnion(new List<Brep> { rack.Model, rackBackbone }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];//Potential risk is failed boolean operation
+                                                                                                                                                //Create holder and connectBone based on input model scale
+                                                                                                                                                //Use a line intersection to get the scale -> 2 intersection points
+                double maxScale =_model.GetBoundingBox(true).Diagonal.Length * 2;
+                Line line = new Line(eeLineDotPt - perpAxis * maxScale, perpAxis * maxScale * 2);
+                Point3d[] intersections;
+                if (!Rhino.Geometry.Intersect.Intersection.CurveBrep(line.ToNurbsCurve(), _model, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out _, out intersections))
+                {
+                    //If intersection with model fails, use inner cavity instead
+                    line = new Line(eeLineDotPt - mainAxis, perpAxis);
+                    Interval interval;
+                    //Calculate the midpoint of axis
+                    Point3d edgePoint1, edgePoint2;
+                    Rhino.Geometry.Intersect.Intersection.LineBox(line, _innerCavity.GetBoundingBox(true), RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval);
+                    edgePoint1 = line.PointAt(interval.Min) + mainAxis;
+                    edgePoint2 = line.PointAt(interval.Max) + mainAxis;
+                    intersections = new Point3d[2];
+                    intersections[0] = edgePoint1;
+                    intersections[1] = edgePoint2;
+                }
+                //Use the 2 intersection points to create holder. holder has 4 parts, 2 from intersection0 to last gear. 2 from las gear to intersection1
+                #region create 4 parts of holder
+                //Figure out the ranges
+                Point3d gearSidePoint1 = eeLineDotPt + perpAxis * (lastGearRadius+teethHeight);
+                Point3d gearSidePoint2 = eeLineDotPt - perpAxis * (lastGearRadius-teethHeight);
+                Point3d[] segmentingPoints = new Point3d[4];
+                segmentingPoints[0] = intersections[0];
+                segmentingPoints[3] = intersections[1];
+                if (intersections[0].DistanceTo(gearSidePoint1) < intersections[0].DistanceTo(gearSidePoint2))
+                {
+                    segmentingPoints[1] = gearSidePoint1;
+                    segmentingPoints[2] = gearSidePoint2;
+                }
+                else
+                {
+                    segmentingPoints[1] = gearSidePoint2;
+                    segmentingPoints[2] = gearSidePoint1;
+                }
+                //Each part of holder is formed with 3 boxes.Use a same section line to generate them
+                //Plane holderPlane = new Plane(segmentingPoints[0], otherAxis, perpAxis);
+                List<Point3d> sectionLinePts = new List<Point3d>();
+                sectionLinePts.Add(segmentingPoints[0]);
+                Point3d pt2 = segmentingPoints[0] + otherAxis * (2 + 0.3 + backboneFacewidth / 2);
+                sectionLinePts.Add(pt2);
+                Point3d pt3 = pt2 + mainAxis * (lastGearRadius + 0.3 + teethHeight / 2   + backboneThickness + 0.3 + 2);
+                sectionLinePts.Add(pt3);
+                Point3d pt4 = segmentingPoints[0] + mainAxis * (lastGearRadius + 0.3 + teethHeight / 2  + backboneThickness + 0.3 + 2) + otherAxis * (connectboneFacewidth / 2 + 0.3);
+                sectionLinePts.Add(pt4);
+                Point3d pt5 = pt4 - mainAxis * 2;
+                sectionLinePts.Add(pt5);
+                Point3d pt6 = pt5 + otherAxis * (backboneFacewidth - connectboneFacewidth) / 2;
+                Point3d pt8 = segmentingPoints[0] + mainAxis * (lastGearRadius - 0.3);//Here minus 0.3 is to make sure rack dosen't overlap with holder
+                Point3d pt7 = pt8 + otherAxis * (0.3 + backboneFacewidth / 2);
+                sectionLinePts.Add(pt6);
+                sectionLinePts.Add(pt7);
+                sectionLinePts.Add(pt8);
+                sectionLinePts.Add(segmentingPoints[0]);
+                Polyline section = new Polyline(sectionLinePts);
+                Curve sectionCurve = section.ToNurbsCurve();
+
+                var sweep = new SweepOneRail();
+                sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+                //The first holder from seg0 to seg1
+                Curve rail1 = new Line(segmentingPoints[0], segmentingPoints[1]).ToNurbsCurve();
+                Brep[] holder1list = sweep.PerformSweep(rail1, sectionCurve);
+                Brep holder1 = holder1list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                //Second is a mirror of first
+                Brep holder2 = holder1list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                holder2.Transform(Transform.Mirror(segmentingPoints[0], otherAxis));
+                //Third from seg2 to seg3
+                sectionCurve.Transform(Transform.Translation(segmentingPoints[2] - segmentingPoints[0]));
+                Curve rail3 = new Line(segmentingPoints[2], segmentingPoints[3]).ToNurbsCurve();
+                Brep[] holder3list = sweep.PerformSweep(rail3, sectionCurve);
+                Brep holder3 = holder3list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                //Fourth is mirrored from 3rd
+                Brep holder4 = holder3list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                holder4.Transform(Transform.Mirror(segmentingPoints[0], otherAxis));
+                constrainingStructure = new List<Brep> { holder1, holder2, holder3,holder4 };
+                #endregion
+
+                //Use the 2 inersection points to create connector
+                Vector3d intersectionVector = (new Vector3d(intersections[1]) - new Vector3d(intersections[0]));
+                Point3d intersectionMidPoint = intersections[0] + intersectionVector / 2;
+                Box connectboneBox;
+                Plane connectbonePlane = new Plane(intersectionMidPoint + mainAxis * (lastGearRadius + rackThickness + teethHeight / 2 + 0.3 + backboneThickness), otherAxis, perpAxis);
+                if (connectbonePlane.Normal * mainAxis > 0)
+                    connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(backboneThickness, backboneThickness+connectboneThickness));
+                else
+                    connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-connectboneThickness-backboneThickness, -backboneThickness));
+                Brep connectbone = connectboneBox.ToBrep();
+                connectingStructure = connectbone;
+                gapMiddlePart2EE = lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + connectboneThickness;
+            }
+            else//The selected moving direction is exactly the main direction, so the rack would get into the model
+            {
+                GearParameter lgp = selectedGearTrainParam.parameters.Last();
+                double lastGearRadius = lgp.radius;
+                Point3d contactPoint = eeLineDotPt + perpAxis * lastGearRadius;//TODO select up or down based on gear position!
+                                                                               //Calculate rack length based on eeMovingDistance and inner cavity space
+                rackExtraLength = Math.Max(rackExtraLength, lgp.radius + 2);//Make sure rack extra length can outgrow last gear
+                double rackLength = eeMovingDistance + rackExtraLength;
+                double innerCavityMainAxisLength = 0;
+                Box innerCavityBox = new Box(_innerCavity.GetBoundingBox(true));
+                switch (_selectedAxisIndex)
+                {
+                    case 1: innerCavityMainAxisLength = innerCavityBox.X.Length; break;
+                    case 2: innerCavityMainAxisLength = innerCavityBox.Y.Length; ; break;
+                    case 3: innerCavityMainAxisLength = innerCavityBox.Z.Length; break;
+                    default: break;
+                }
+                double rackFaceWidth = 3.6;
+                double rackThickness = 5;
+                double teethHeight = 2.25;
+                double rackHolderWidth = 2;
+                double rackCompoundThickness = rackFaceWidth + 0.3 * 2 + rackHolderWidth * 2;
+                //First just use the end tip of the last gear for the rack contact
+                Point3d lgctAtEnd = lgp.center + lgp.norm * lgp.faceWidth;
+                Point3d rackContactPoint = lgctAtEnd - lgp.radius * perpAxis - lgp.norm * rackCompoundThickness / 2;
+                Point3d rackContactPointOnRackBack = rackContactPoint - perpAxis * (0.3 + teethHeight / 2 + rackThickness);
+                Point3d rackStart = rackContactPointOnRackBack + mainAxis * rackExtraLength;
+                Point3d rackEnd = rackContactPointOnRackBack - mainAxis * eeMovingDistance;
+                Vector3d rackVector = new Vector3d(rackEnd) - new Vector3d(rackStart);
+                Point3d rackMidPoint = rackStart + rackVector / 2;
+                //Since rack is extruded to one direction, we need to find it first to know it's actual position
+                Vector3d extrutionDirection = new Plane(rackMidPoint, rackVector, perpAxis).Normal;
+                rackMidPoint -= extrutionDirection * rackFaceWidth / 2;
+                rackMidPoint = rackMidPoint + perpAxis * rackThickness;
+                rack = new Rack(rackMidPoint, rackVector, perpAxis, rackLength, 1, rackFaceWidth, otherAxis, rackThickness, 20);
+                //Then make the confining structure, which are 2 bars beside rack and some caps. bars are higher than rack by 0.3 and capped at rack end and farthest position
+                Plane rackPlane = new Plane(rackContactPointOnRackBack, mainAxis, otherAxis);
+
+                Box bar1Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(rackExtraLength - 2))
+                    , new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, -rackFaceWidth / 2 - 0.3),
+                    //, new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, 0),
+                    new Interval(0, 0.3 + teethHeight  + rackThickness));
+                Box bar2Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(rackExtraLength - 2))
+                    , new Interval(rackFaceWidth / 2 + 0.3, rackFaceWidth / 2 + 0.3 + rackHolderWidth), 
+                    new Interval(0, 0.3 + teethHeight  + rackThickness));
+                //Add cap
+                Box cap1Box = new Box(rackPlane, new Interval(-rackExtraLength, -(rackExtraLength - 2)),
+                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
+                    new Interval(0.3 + teethHeight  + rackThickness, 0.3 + teethHeight  + rackThickness + 2));
+                Box cap2Box = new Box(rackPlane, new Interval(-eeMovingDistance, -(eeMovingDistance - 2)),
+                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
+                    new Interval(0.3 + teethHeight  + rackThickness, 0.3 + teethHeight  + rackThickness + 2));
+                Box cap3Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(innerCavityMainAxisLength - 2)),
+                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
+                    new Interval(0.3 + teethHeight  + rackThickness, 0.3 + teethHeight  + rackThickness + 2));
+                if (rackPlane.Normal * perpAxis < 0)
+                {
+                    bar1Box.Transform(Transform.Mirror(rackPlane));
+                    bar2Box.Transform(Transform.Mirror(rackPlane));
+                    cap1Box.Transform(Transform.Mirror(rackPlane));
+                    cap2Box.Transform(Transform.Mirror(rackPlane));
+                    cap3Box.Transform(Transform.Mirror(rackPlane));
+                }
+                Brep bar1 = bar1Box.ToBrep(), bar2 = bar2Box.ToBrep();
+                Brep cap1 = cap1Box.ToBrep(), cap2 = cap2Box.ToBrep(), cap3 = cap3Box.ToBrep();
+                Brep union = Brep.CreateBooleanUnion(new List<Brep> { bar1, cap1, cap2, cap3, bar2 }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                constrainingStructure.Add(union);
+                gapMiddlePart2EE = rackExtraLength;
+                #region Deal with the case when rack is longer than inner cavity. Just dig a hole out
+                //Just use a box to make space for rack.
+                Brep cuttingBox = new Box(rackPlane, new Interval(-eeMovingDistance, rackExtraLength), new Interval(-0.3 - rackFaceWidth / 2, 0.3 + rackFaceWidth / 2),
+                    new Interval(-0.3, 0.3 + teethHeight / 2 + rackThickness)).ToBrep();
+                //TODO cut model mid part and start part with this box 
+
+                //if (innerCavityMainAxisLength < eeMovingDistance)
+                //{
+                //Then we need to use bounding box of rack to boolean main model
+
+                //}
+                #endregion
+            }
+            #endregion
+            endEffectorRack = rack;
+            if(connectingStructure!=null)
+                endEffectorConnectingStructure = new Entity(connectingStructure, false, "connecting structure");
+            foreach (Brep b in constrainingStructure)
+            {
+                Entity newEntity = new Entity(b, false, "constraining structure");
+                endEffectorRackConfiningStructure.Add(newEntity);
+                entityList.Add(newEntity);
+            }
+            entityList.Add(endEffectorRack);
+            if (endEffectorConnectingStructure != null)
+                entityList.Add(endEffectorConnectingStructure);
         }
 
         private Cylinder GetCylinder(Brep c, Vector3d d)
@@ -262,430 +552,7 @@ namespace Kinergy.KineticUnit
 
         }
 
-        public void GenerateGearTrain(double finalGearPosRatio, Point3d eeCen, int speed_input, Vector3d kineticUnitDir, Vector3d axelDir)
-        {
-            double shaftNum = 0;
-            double gearRadius = 0;
-            CalculateShaftNumAndGearRadius(speed_input, out shaftNum, out gearRadius);
-            Vector3d gearDirection = direction;
-
-            double dis = clearance + 4.5;
-
-            double t = 0;
-            _skeleton.ClosestPoint(eeCen, out t);
-            if (t > 0.5)
-            {
-                dis = -dis;
-            }
-            else
-            {
-                gearDirection = -direction;
-            }
-            Vector3d gearDevDir = new Vector3d();
-            if(finalGearPosRatio > 0.5)
-            {
-                gearDevDir = axelDir;
-            }
-            else
-            {
-                gearDevDir = -axelDir;
-            }
-
-            //Point3d pinionPosPre = eeCen - axelDir * (0.5 - finalGearPosRatio);
-            Point3d pinionPosPre = eeCen;
-            Point3d pinionPos = pinionPosPre + dis * gearDirection - gearDirection * (shaftNum - 1) * (4.5 + clearance + gearRadius);
-
-            #region create the gears and stoppers on the first shaft (far away from the end gear)
-
-            bool isGroove = false;
-            int numTeeth = 0;
-            double stepAngle = 0;
-            double boundary = 0;
-            int floorNum = 0;
-            int ceilingNum = 0;
-            double selfRotationAngle = 0;
-
-
-            if (_inputType == 1)
-            {
-                #region press control
-
-                numTeeth = 9;
-                stepAngle = 360.0 / numTeeth;
-                boundary = 90.0 / stepAngle;
-                floorNum = (int)Math.Floor(boundary);
-                ceilingNum = (int)Math.Ceiling(boundary);
-                selfRotationAngle = 0;
-
-                if (floorNum == ceilingNum)
-                {
-                    // the mating tooth is actually symmetric around the X axis
-                    selfRotationAngle = stepAngle / 2;
-                }
-                else
-                {
-                    double leftoverAngle = 90 - stepAngle * floorNum;
-                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
-                }
-                
-
-                // create the pinion gear
-                Point3d pinionGearPos = pinionPos - gearDevDir * gearFaceWidth / 2;
-                Gear pinionGear = new Gear(pinionGearPos, gearDevDir, gearDirection, numTeeth, gearModule, gearPressureAngle, gearFaceWidth + clearance, selfRotationAngle, true);
-                Spacer sp_middle1 = new Spacer(pinionGearPos - gearDevDir * clearance, 1, shaftRadius, 3, -gearDevDir);
-
-                // create the bull gear
-                int bullGearTeethNum = (int)(2 * gearRadius / gearModule);
-
-                numTeeth = bullGearTeethNum;
-                stepAngle = 360.0 / numTeeth;
-                boundary = 90.0 / stepAngle;
-                floorNum = (int)Math.Floor(boundary);
-                ceilingNum = (int)Math.Ceiling(boundary);
-                selfRotationAngle = 0;
-
-                if (floorNum == ceilingNum)
-                {
-                    // the mating tooth is actually symmetric around the X axis
-                    selfRotationAngle = stepAngle / 2;
-                }
-                else
-                {
-                    double leftoverAngle = 90 - stepAngle * floorNum;
-                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
-                }
-
-                Point3d bullGearPos = pinionGearPos + gearDevDir * (gearFaceWidth + clearance);
-                Gear bullGear = new Gear(bullGearPos, gearDevDir, gearDirection, bullGearTeethNum, gearModule, gearPressureAngle, gearFaceWidth, selfRotationAngle, true);
-                Spacer sp_middle2 = new Spacer(bullGearPos + gearDevDir * (clearance + gearFaceWidth), 1, shaftRadius, 3, gearDevDir);
-
-                // get two intersecting points on the modle to determine the shaft length and the starting point
-                Curve shaftMidCrv = new Line(pinionGearPos - axelDir * 10000, pinionGearPos + axelDir * 10000).ToNurbsCurve();
-                Point3d[] interMidPts;
-                Intersection.CurveBrep(shaftMidCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interMidPts);
-
-                Vector3d shrinkMidVector0 = interMidPts[1] - interMidPts[0];
-                Vector3d shrinkMidVector1 = interMidPts[0] - interMidPts[1];
-                shrinkMidVector0.Unitize();
-                shrinkMidVector1.Unitize();
-
-                Point3d realInterMidPt0 = interMidPts[0] + shrinkMidVector0;
-                Point3d realInterMidPt1 = interMidPts[1] + shrinkMidVector1;
-
-                double shaftMidLen = realInterMidPt0.DistanceTo(realInterMidPt1);
-                Shaft shaftMid = new Shaft(realInterMidPt0, shaftMidLen, shaftRadius, axelDir);
-
-                EntityList.Add(bullGear);
-                EntityList.Add(pinionGear);
-                EntityList.Add(sp_middle1);
-                EntityList.Add(sp_middle2);
-                EntityList.Add(shaftMid);
-
-                #endregion
-
-                pinionPos = bullGearPos;
-            }
-            else
-            {
-                #region turn control
-
-                // create the bull gear
-                int bullGearTeethNum = (int)(2 * gearRadius / gearModule);
-                numTeeth = bullGearTeethNum;
-                stepAngle = 360.0 / numTeeth;
-                boundary = 90.0 / stepAngle;
-                floorNum = (int)Math.Floor(boundary);
-                ceilingNum = (int)Math.Ceiling(boundary);
-                selfRotationAngle = 0;
-
-                if (floorNum == ceilingNum)
-                {
-                    // the mating tooth is actually symmetric around the X axis
-                    selfRotationAngle = stepAngle / 2;
-                }
-                else
-                {
-                    double leftoverAngle = 90 - stepAngle * floorNum;
-                    selfRotationAngle = stepAngle / 2 - leftoverAngle;
-                }
-
-                Point3d bullGearPos = pinionPos - gearDevDir * gearFaceWidth / 2;
-                Gear bullGear = new Gear(bullGearPos, gearDevDir, gearDirection, bullGearTeethNum, gearModule, gearPressureAngle, gearFaceWidth, selfRotationAngle, false);
-
-                // get two intersecting points on the modle to determine the shaft length and the starting point
-                Curve shaftMidCrv = new Line(bullGearPos - axelDir * 10000, bullGearPos + axelDir * 10000).ToNurbsCurve();
-                Point3d[] interMidPts;
-                Intersection.CurveBrep(shaftMidCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interMidPts);
-
-                Vector3d shrinkMidVector0 = interMidPts[1] - interMidPts[0];
-                Vector3d shrinkMidVector1 = interMidPts[0] - interMidPts[1];
-                shrinkMidVector0.Unitize();
-                shrinkMidVector1.Unitize();
-
-                Point3d realInterMidPt0 = interMidPts[0] + shrinkMidVector0;
-                Point3d realInterMidPt1 = interMidPts[1] + shrinkMidVector1;
-
-                double shaftMidLen = realInterMidPt0.DistanceTo(realInterMidPt1);
-                Shaft shaftMid = new Shaft(realInterMidPt0, shaftMidLen, shaftRadius, axelDir);
-
-                EntityList.Add(bullGear);
-                EntityList.Add(shaftMid);
-
-                #endregion
-
-                pinionPos = bullGearPos;
-            }
-
-            isGroove = true;
-
-            #endregion
-
-            #region generate the rest of the gears and shaft except for the last shaft and the gear(s) on it
-
-            for (int i = 1; i < shaftNum-1; i++)
-            {
-                // create the pinion gear
-
-                numTeeth = 9;
-                int bullGearTeethNum = (int)(2 * gearRadius / gearModule);
-
-                if (isGroove)
-                {
-                    selfRotationAngle = 90;
-                    if (bullGearTeethNum % 2 == 1)
-                    {
-                        isGroove = true;
-                    }
-                    else
-                    {
-                        isGroove = false;
-                    }
-                }
-                else
-                {
-                    stepAngle = 360.0 / numTeeth;
-                    selfRotationAngle = 90 - stepAngle / 2;
-
-                    if (bullGearTeethNum % 2 == 1)
-                    {
-                        isGroove = false;
-                    }
-                    else
-                    {
-                        isGroove = true;
-                    }
-                }
-
-                Point3d pinionGearPos = pinionPos + gearDirection * (clearance + gearRadius + 4.5);
-                Gear pinionGear = new Gear(pinionGearPos, gearDevDir, gearDirection, numTeeth, gearModule, gearPressureAngle, gearFaceWidth + clearance, selfRotationAngle, true);
-                Spacer sp_middle1 = new Spacer(pinionGearPos - gearDevDir * clearance, 1, shaftRadius, 3, -gearDevDir);
-
-                // create the bull gear
-                Point3d bullGearPos = pinionGearPos + gearDevDir * (clearance + gearFaceWidth);
-                Gear bullGear = new Gear(bullGearPos, gearDevDir, gearDirection, bullGearTeethNum, gearModule, gearPressureAngle, gearFaceWidth, selfRotationAngle, true);
-                Spacer sp_middle2 = new Spacer(bullGearPos + gearDevDir * (clearance + gearFaceWidth), 1, shaftRadius, 3, gearDevDir);
-
-                // get two intersecting points on the modle to determine the shaft length and the starting point
-                Curve shaftMidCrv = new Line(pinionGearPos - axelDir * 10000, pinionGearPos + axelDir * 10000).ToNurbsCurve();
-                Point3d[] interMidPts;
-                Intersection.CurveBrep(shaftMidCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interMidPts);
-
-                Vector3d shrinkMidVector0 = interMidPts[1] - interMidPts[0];
-                Vector3d shrinkMidVector1 = interMidPts[0] - interMidPts[1];
-                shrinkMidVector0.Unitize();
-                shrinkMidVector1.Unitize();
-
-                Point3d realInterMidPt0 = interMidPts[0] + shrinkMidVector0;
-                Point3d realInterMidPt1 = interMidPts[1] + shrinkMidVector1;
-
-                double shaftMidLen = realInterMidPt0.DistanceTo(realInterMidPt1);
-                Shaft shaftMid = new Shaft(realInterMidPt0, shaftMidLen, shaftRadius, axelDir);
-
-                EntityList.Add(bullGear);
-                EntityList.Add(pinionGear);
-                EntityList.Add(sp_middle1);
-                EntityList.Add(sp_middle2);
-                EntityList.Add(shaftMid);
-
-                pinionPos = bullGearPos;
-            }
-
-            #endregion
-
-            #region generate the last shaft and the gear on it
-
-            numTeeth = 9;
-
-            if (isGroove)
-            {
-                selfRotationAngle = 90;
-                if (numTeeth % 2 == 1)
-                {
-                    isGroove = true;
-                }
-                else
-                {
-                    isGroove = false;
-                }
-            }
-            else
-            {
-                stepAngle = 360.0 / numTeeth;
-                selfRotationAngle = 90 - stepAngle / 2;
-
-                if (numTeeth % 2 == 1)
-                {
-                    isGroove = false;
-                }
-                else
-                {
-                    isGroove = true;
-                }
-            }
-
-            Point3d lastGearPos = pinionPos + gearDirection * (clearance + gearRadius + 4.5);
-            Curve shaftLastCrv = new Line(lastGearPos - axelDir * 10000, lastGearPos + axelDir * 10000).ToNurbsCurve();
-            Point3d[] interLastPts;
-            Intersection.CurveBrep(shaftLastCrv, _model, myDoc.ModelAbsoluteTolerance, out _, out interLastPts);
-
-            Vector3d shrinkLastVector0 = interLastPts[1] - interLastPts[0];
-            Vector3d shrinkLastVector1 = interLastPts[0] - interLastPts[1];
-            shrinkLastVector0.Unitize();
-            shrinkLastVector1.Unitize();
-
-            Point3d realInterLastPt0 = interLastPts[0] + shrinkLastVector0;
-            Point3d realInterLastPt1 = interLastPts[1] + shrinkLastVector1;
-
-            double shaftLastLen = realInterLastPt0.DistanceTo(realInterLastPt1);
-            Shaft shaftLast = new Shaft(realInterLastPt0, shaftLastLen, shaftRadius, axelDir);
-
-            double shaftLenFull = shaftLastLen + 2;
-            Point3d shaftMidPt = eeCen + dis * direction;
-            Point3d shaftTargetPt = shaftMidPt - axelDir * (0.5 - finalGearPosRatio) * shaftLenFull;
-            double lastGearFaceWidth = shaftTargetPt.DistanceTo(lastGearPos) + gearFaceWidth / 2;
-
-            Gear lastPinionGear = new Gear(lastGearPos, gearDevDir, gearDirection, numTeeth, gearModule, gearPressureAngle, lastGearFaceWidth, selfRotationAngle, true);
-            Spacer sp_last1 = new Spacer(lastGearPos - gearDevDir * clearance, 1, shaftRadius, 3, -gearDevDir);
-            Spacer sp_last2 = new Spacer(lastGearPos + gearDevDir * (clearance + lastGearFaceWidth), 1, shaftRadius, 3, gearDevDir);
-
-            EntityList.Add(shaftLast);
-            EntityList.Add(lastPinionGear);
-            EntityList.Add(sp_last1);
-            EntityList.Add(sp_last2);
-
-            #endregion
-
-        }
-        public List<Gear> GenerateGearTrain(Vector3d mainDirection, Vector3d axisDirection, Vector3d otherDirection, Point3d lastGearCenter, double length1,double length2,double length3,int gearRatioUserSelection)
-        {
-            List<Gear> generated_gears = new List<Gear>();
-            #region First list all key parameters
-            // The module, facewidth, clearance, shaftRadius and pressure angle are given as const values. Just use them
-            int numTeethPinion = 9;
-            double clearance = 0.3;//This is the distance between gear teeths.
-            //Unitize all input vectors
-            Vector3d dir1 = mainDirection / mainDirection.Length;
-            Vector3d dir2 = axisDirection / axisDirection.Length;
-            Vector3d dir3 = otherDirection / otherDirection.Length;
-            #endregion
-
-            #region Secondly, list all possible gear parameters,and sort them by gear ratio. Select one by user input
-            List < GearTrainParam > possibleParams= new List<GearTrainParam>();
-            // The minimum bull teeth would be 15, and maximum would be limited by total size.
-            double maxDis = Math.Sqrt(length1 * length1 + length3 * length3);
-            for (int t=15;t<maxDis/Math.PI/2/gearModule;t++)
-            {
-                double bullDaimeter = t * gearModule / Math.PI;
-                for (int n=1;n<Math.Min(maxDis/bullDaimeter,5);n++)//TODO check if there would be a maximum count of gear set
-                {
-                    //GearTrainParam param = new GearTrainParam(t, num_teeth_pinion, n, distance_between_gears);
-                    //if(param.IfValid(length1,length2,length3))
-                    //{
-                        //possibleParams.Add(param);
-                    //}
-                }
-            }
-            possibleParams.Sort();
-            //select one param by 1-10 given by user
-            int selectedIndex = possibleParams.Count / 10 * gearRatioUserSelection;
-            if (selectedIndex >= possibleParams.Count)
-                selectedIndex -= 1;
-            #endregion
-            #region Lastly, use the selected param to generate gears. Just pick center pos one by one?
-            bool success = false;
-            GearTrainParam selectedParam;
-            do
-            {
-                if (selectedIndex >= possibleParams.Count)
-                    selectedIndex -= 1;
-                selectedParam = possibleParams[selectedIndex];
-                //calculate params
-                double bullRadius = selectedParam.bullGearTeeth * gearModule / Math.PI / 2;
-                double pinionRadius = selectedParam.pinionTeeth * gearModule / Math.PI / 2;
-                double gearCenterDis = bullRadius + pinionRadius + ContinuousTranslation.clearance;
-                Point3d firstGearCenter = lastGearCenter - dir1 * (length1 - bullRadius) - dir3 * (length3 - bullRadius);
-                Plane gearPlane = new Plane(lastGearCenter, dir1, dir3);
-                //loop from 1st to last.Everytime try to stretch distance.
-                List<Point3d> gearCenterPoints = new List<Point3d>();
-                gearCenterPoints.Add(firstGearCenter);
-                bool dirIndicator = false;
-                for(int i=1;i<selectedParam.gearSetNumber;i++)
-                {
-                    Circle centerCircleFromStart = new Circle(gearPlane, gearCenterPoints[i - 1], gearCenterDis);
-                    Circle centerCircleFromLast= new Circle(gearPlane, lastGearCenter, gearCenterDis);
-                }
-                //success = selectedParam.CheckCenterPointValidity(gearCenterPoints);
-                if(!success)
-                {
-                    possibleParams.RemoveAt(selectedIndex);
-                }
-            } while (!success);
-            //Generate gears with selected params
-            #endregion
-            return generated_gears;
-        }
-        private class GearTrainParam:IComparable<GearTrainParam>
-        {
-            public int bullGearTeeth;
-            public int gearSetNumber;
-            public int pinionTeeth;
-            public double gearRatio;
-            public double clearance;
-            public GearTrainParam(int BullGearTeeth,int PinionTeeth,int GearSetNumber,double Clearance)
-            {
-                bullGearTeeth = BullGearTeeth;
-                gearSetNumber = GearSetNumber;
-                pinionTeeth = PinionTeeth;
-                clearance = Clearance;
-                gearRatio = Math.Pow(bullGearTeeth / pinionTeeth, gearSetNumber);
-            }
-            public bool IfValid(double l1,double l2,double l3)
-            {
-                //See if we could arrange this param into the space
-                //Threshold 1 is thickness. If l2 is not enough for all gears, then not okay
-                if ((l2 - gearFaceWidth) / 2 + gearFaceWidth / 2 < gearFaceWidth * gearSetNumber + clearance * (gearSetNumber - 1))
-                    return false;
-                //Threshold 2 is distance. All gears need to be able to fit in
-                
-                double bullRadius = bullGearTeeth * gearModule / Math.PI / 2;
-                double pinionRadius = pinionTeeth * gearModule / Math.PI / 2;
-                double maxDis = Math.Sqrt(Math.Pow(l1-bullRadius,2) +Math.Pow( l3-bullRadius,2));
-                double dis =bullRadius+pinionRadius+clearance;
-                if (dis * gearSetNumber < maxDis || dis * gearSetNumber > l1+l3-bullRadius*2)
-                    return false;//gears wouldn't be able to fill the distance or couldn't fit in.
-                //I think it could be filled by reasonably more gear sets since the trail could zigzag.So just set l1+l3 upper limit
-
-                return false;
-            }
-            public int CompareTo(GearTrainParam other)
-            {
-                if (gearRatio > other.gearRatio)
-                    return -1;
-                else if (gearRatio < other.gearRatio)
-                    return 1;
-                else
-                    return 0;
-            }
-        }
+       
+        
     }
 }

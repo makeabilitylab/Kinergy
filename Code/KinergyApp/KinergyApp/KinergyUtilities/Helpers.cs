@@ -89,7 +89,7 @@ namespace KinergyUtilities
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
             double rad = 1.5;
-
+            //TODO register entity relations
             if (controlType == 1)
             {
                 // press control using helical springs
@@ -370,11 +370,11 @@ namespace KinergyUtilities
         /// <param name="controlType">the selected controlling method: helix or spiral</param>
         /// <param name="clearance">the clearance between the shaft and the gear - 0.4mm</param>
         /// <returns></returns>
-        public List<Entity> genGears(List<GearParameter> gear_info, int controlType, double clearance)
+        public List<Gear> genGears(List<GearParameter> gear_info, int controlType, double clearance)
         {
-            List<Entity> models = new List<Entity>();
+            List<Gear> models = new List<Gear>();
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
-
+            //TODO register gear relations
             if(controlType == 1)
             {
                 // press control with helix springs
@@ -521,7 +521,7 @@ namespace KinergyUtilities
         /// <param name="dir">the move direction of the end-effector</param>
         /// <param name="lockPos"></param>
         /// <returns></returns>
-        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, int controlType, int displacement, int energyLevel, int dir, out Point3d lockPos)
+        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, int dir, out Point3d lockPos)
         {
             List<Entity> models = new List<Entity>();
             lockPos = new Point3d();
@@ -530,6 +530,31 @@ namespace KinergyUtilities
             if (controlType == 1)
             {
                 // helical spring control
+                double springPadThickness = 2;
+                #region Step 1: find the spring position and length
+                //TODO find position - Liang's 
+                //Now just use first gear center with some offset as the spring end point
+                Point3d helicalEndPoint = gear_info[0].center - mainAxis * (gear_info[0].radius + 0.3 + springPadThickness);
+                //Find length - 1.5 times the available space
+                double helicalLengthMultiplier = 1.5;//TODO adjust this value;
+                Point3d skeletonStartPoint;
+                if (new Vector3d(skeleton.PointAtNormalizedLength(0)) * mainAxis < new Vector3d(skeleton.PointAtNormalizedLength(1)) * mainAxis)
+                    skeletonStartPoint = skeleton.PointAtNormalizedLength(0);
+                else
+                    skeletonStartPoint = skeleton.PointAtNormalizedLength(1);
+                double availableSpace = (gear_info[0].center - skeletonStartPoint) * mainAxis - gear_info[0].radius-0.3-springPadThickness;
+                double helicalLength = availableSpace * helicalLengthMultiplier;
+                Point3d helicalStartPoint = helicalEndPoint - mainAxis * helicalLength;
+
+                #endregion
+                #region Step 2: construct spring and rack
+                //TODO find spring parameters. Now just using some random fixed value.
+                Helix helical = new Helix(helicalStartPoint, helicalEndPoint, 12, 1.2, 5, displacement/10.0, 0.5);
+                models.Add(helical);
+                #endregion
+                #region Step 3: construct connecting structure
+
+                #endregion
 
             }
             else
