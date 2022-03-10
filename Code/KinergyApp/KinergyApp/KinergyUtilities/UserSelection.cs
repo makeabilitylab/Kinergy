@@ -558,13 +558,13 @@ namespace KinergyUtilities
 
             if (t1 > t2)
             {
-                endPt = skeleton.PointAtNormalizedLength(t1);
-                startPt = skeleton.PointAtNormalizedLength(t2);
+                endPt = skeleton.PointAtNormalizedLength(t1 - 2 / skeleton.GetLength());
+                startPt = skeleton.PointAtNormalizedLength(t2 + 2 / skeleton.GetLength());
             }
             else
             {
-                startPt = skeleton.PointAtNormalizedLength(t1);
-                endPt = skeleton.PointAtNormalizedLength(t2);
+                startPt = skeleton.PointAtNormalizedLength(t1 + 2 / skeleton.GetLength());
+                endPt = skeleton.PointAtNormalizedLength(t2 - 2 / skeleton.GetLength());
             }
 
             if (motionCtrlPointSelected.DistanceTo(startPt) <= motionCtrlPointSelected.DistanceTo(endPt))

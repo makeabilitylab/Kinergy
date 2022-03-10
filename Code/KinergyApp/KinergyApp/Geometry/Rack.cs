@@ -318,7 +318,9 @@ namespace Kinergy
                 Point3d midPoint = (_startPoint + _endPoint) / 2;
                 Transform trans0 = Transform.Translation(new Vector3d(midPoint - baseMidPt));
                 Transform rotat0 = Transform.Rotation(new Vector3d(1, 0, 0), _rackDirection, midPoint);
-                Transform selfRotate = Transform.Rotation(new Vector3d(0, 1, 0), _faceDirection, midPoint);
+                Vector3d rotated = new Vector3d(0, 1, 0);
+                rotated.Transform(rotat0);
+                Transform selfRotate = Transform.Rotation(rotated, _faceDirection, midPoint);
                 base.BaseCurve.Transform(trans0);
                 base.BaseCurve.Transform(rotat0);
                 base.BaseCurve.Transform(selfRotate);

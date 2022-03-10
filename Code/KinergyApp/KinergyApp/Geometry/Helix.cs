@@ -36,6 +36,7 @@ namespace Kinergy
             private int deltaRoundNum = 0;
             private Vector3d direction = Vector3d.Unset;
             private double maxPressDistance = 0;
+            private double compressionDistance = 0;
             private double velocity = 0;
             private double travel = 0;
             private List<LinearDimension> springDimensions;
@@ -49,6 +50,7 @@ namespace Kinergy
             public Vector3d Direction { get => direction;private set => direction = value; }
             public Curve Skeleton { get => skeleton;private set => skeleton = value; }
             public List<LinearDimension> SpringDimensions { get => springDimensions;private set => springDimensions = value; }
+            public double CompressionDistance { get => compressionDistance;private set => compressionDistance = value; }
 
             /// <summary> Constructor with only start point and end point given.</summary>
             /// <returns> Returns instance with brep generated</returns>
@@ -144,7 +146,7 @@ namespace Kinergy
                 // Calculate the range of compression displacement
                 // double compressionCurr = Length * (1 - (roundNumMin * wireRadiusMax + clearance * (roundNumMin - 1)) / Length) * maxPressDistance;
                 double compressionCurr = Length * maxPressDistance;
-
+                compressionDistance = compressionCurr;
                 // Calculate the range of energy
                 //double strengthMin = Math.Pow(wireRadiusMin, 5) / Math.Pow(Length, 3);
                 //double strengthMax = Math.Pow(wireRadiusMax , 2) / Math.Pow(roundNumMin, 3);

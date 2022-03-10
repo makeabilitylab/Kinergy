@@ -211,6 +211,7 @@ namespace KinergyUtilities
         public int gearSetNumber;
         public double pinionRadius;
         public double gearRatio;
+        public double spiralGearRatio;
         public double clearance;
         public double gearFaceWidth;
         Vector3d boxXaxis, boxYaxis, boxZaxis;
@@ -231,6 +232,7 @@ namespace KinergyUtilities
             clearance = Clearance;
             gearFaceWidth = GearFaceWidth;
             gearRatio = Math.Pow(bullGearRadius / pinionRadius, gearSetNumber);
+            spiralGearRatio= Math.Pow(bullGearRadius / pinionRadius, gearSetNumber-1);
             innerCavity = InnerCavity;
             fgct = firstGearCenter;
             lgct = lastGearCenter;
@@ -333,8 +335,8 @@ namespace KinergyUtilities
             lgp.radius = pinionRadius;
             lgp.faceWidth = Math.Max(gearFaceWidth,currPt.DistanceTo(lgct)+gearFaceWidth/2);
             //If lg might correlate with fg, then make lgp wider to avoid.Need 8.5 at least
-            if (offset_direction_first_to_last * (new Vector3d(lgct) - new Vector3d(parameters[0].center)) < 8.5)
-                lgp.faceWidth += 8.5 - offset_direction_first_to_last * (new Vector3d(lgct) - new Vector3d(parameters[0].center));
+            if (offset_direction_first_to_last * (lgct - (parameters[0].center+offset_direction_first_to_last*gearFaceWidth)) < 8.5)
+                lgp.faceWidth += 8.5 - offset_direction_first_to_last * (lgct - (parameters[0].center + offset_direction_first_to_last * gearFaceWidth));
             lgp.norm = offset_direction_first_to_last;
             lgp.xDirection = start2end;
             lgp.PinionOrBull = 1;

@@ -87,7 +87,7 @@ namespace ConTranslation
         double gearSpace = 0;
 
         List<Entity> axel_spacer_entities = new List<Entity>();
-        List<Entity> gear_entities = new List<Entity>();
+        List<Gear> gears = new List<Gear>();
         List<Entity> spring_entities = new List<Entity>();
         //List<GearParameter> gear_info = new List<GearParameter>();
         Point3d lockPos = new Point3d();
@@ -461,7 +461,7 @@ namespace ConTranslation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new ContinuousTranslation(model, direction, innerCavity, motionCtrlPointSelected, speedLevel, distanceLevel, energyLevel, motionControlMethod);
+                    motion = new ContinuousTranslation(model, selectedAxisIndex,direction, innerCavity, motionCtrlPointSelected, speedLevel, distanceLevel, energyLevel, motionControlMethod);
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -480,6 +480,8 @@ namespace ConTranslation
                 kineticUnitDir = directionSelection.kineticUnitDir;
                 axelDir = directionSelection.axelDir;
                 eeCenPt = directionSelection.eeCenPt;
+                //Xia's note: moved eeCenPt by 2mm inward.
+
                 
                 #region select a position along the diameter that crosses the circle center
                 //Construct the cross line 
@@ -526,6 +528,8 @@ namespace ConTranslation
 
                 // convert the inner cavity brep into box
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
+                //Offset inner cavity by 2mm
+                innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
                 List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
 
@@ -575,24 +579,13 @@ namespace ConTranslation
                     //gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
 
                     #region generate all the axels and spacers for the gears
-
                     axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
-                    foreach(Entity en in axel_spacer_entities)
-                    {
-                        motion.EntityList.Add(en);
-                    }
-
                     #endregion
 
                     #region generate all the gears
-
-                    gear_entities = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
-                    foreach (Entity en in gear_entities)
-                    {
-                        motion.EntityList.Add(en);
-                    }
-
+                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
                     #endregion
+                    motion.AddGears(gears,axel_spacer_entities, selectedGearTrainParam);
                 }
                 #endregion
             }
@@ -623,13 +616,13 @@ namespace ConTranslation
                 perpAxisArrowUp = GenerateDoubleArrow(eeCenPt +otherAxis*offsetDistance*0.7+perpAxis*offsetDistance/2, perpAxis,false);
                 perpAxisArrowDown = GenerateDoubleArrow(eeCenPt + otherAxis * offsetDistance*0.7-perpAxis*offsetDistance/2, -perpAxis,false);
                 mainAxisArrow = GenerateDoubleArrow(eeCenPt + perpAxis * offsetDistance*0.7, mainAxis);
-                Rhino.Input.Custom.GetPoint gp6 = new Rhino.Input.Custom.GetPoint();
-                gp6.SetCommandPrompt("Please select the desired direction for the end effector to move along.");
-                gp6.MouseDown += Gp6_MouseDown;
-                gp6.MouseMove += Gp6_MouseMove;
+                Rhino.Input.Custom.GetPoint gp = new Rhino.Input.Custom.GetPoint();
+                gp.SetCommandPrompt("Please select the desired direction for the end effector to move along.");
+                gp.MouseDown += Gp_MouseDown;
+                gp.MouseMove += Gp_MouseMove;
                 //gp5.AcceptNothing(true);
-                Rhino.Input.GetResult r6;
-                r6 = gp6.Get(true);
+                Rhino.Input.GetResult r;
+                r = gp.Get(true);
                 //do
                 //{
                 //    r5 = gp5.Get(true);
@@ -639,239 +632,29 @@ namespace ConTranslation
                 myDoc.Objects.Delete(perpAxisArrowDown, true);
                 RhinoApp.WriteLine("The selected end effector moving direction is "+eeMovingDirectionSelection);
                 #endregion
-                //This is the key structures to be built and the gap need to be cut
-                Rack rack;
-                List<Brep> constrainingStructure = new List<Brep>();
-                Brep connectingStructure;//that connects rack and end effector;
-                double gapMiddlePart2EE = 0;
-                #region Build Rack and Constraining Structure
-                
-                //First calculate ee moving distance based on motion params.
-                double eeMovingDistance = displacement * selectedGearTrainParam.gearRatio;
-                double rackExtraLength = 10;//TODO check this const value.
-                if (eeMovingDirectionSelection == 2 || eeMovingDirectionSelection == 3)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
-                {
-                    //The rack should be linked to last gear
-                    //TODO find out the parameter of the last gear and the user selected position (eeLineDotPt)
-                    double lastGearRadius = selectedGearTrainParam.parameters.Last().radius;
-                    Point3d contactPoint = eeLineDotPt + mainAxis * lastGearRadius;
-                    //Calculate rack length based on eeMovingDistance
-                    double rackLength = eeMovingDistance + rackExtraLength;
-                    //Create rack. It's composed with 3 parts: rack, backbone and connecting bone with ee
-                    double rackFaceWidth = 3.6;
-                    double rackThickness = 5;
-                    double teethHeight = 1.25;
-                    double backboneFacewidth = 10,backboneThickness=4;
-                    double connectboneFacewidth = 5, connectboneThickness = 5;
-                    Point3d contactPointRackBackPoint = contactPoint + mainAxis * (rackThickness + teethHeight/2+0.3);
-                    Point3d rackStartPoint , rackEndPoint;
-                    if (eeMovingDirectionSelection == 2)
-                    {
-                        rackStartPoint = contactPointRackBackPoint - perpAxis * eeMovingDistance;
-                        rackEndPoint = contactPointRackBackPoint + perpAxis*rackExtraLength;
-                    }
-                    else
-                    {
-                        rackStartPoint = contactPointRackBackPoint + perpAxis * eeMovingDistance;
-                        rackEndPoint = contactPointRackBackPoint + perpAxis*rackExtraLength;
-                    }
-                    Vector3d rackVector = new Vector3d(rackEndPoint) - new Vector3d(rackStartPoint);
-                    Point3d rackMidPoint = rackStartPoint + rackVector / 2;
-                    rack = new Rack(rackMidPoint, rackVector, -mainAxis, rackLength, 1, rackFaceWidth, otherAxis, rackThickness, 20);
-                    Plane rackPlane = new Plane(rackMidPoint, otherAxis, perpAxis);
-                    Box rackBackboneBox;
-                    if (rackPlane.Normal * mainAxis > 0)
-                        rackBackboneBox = new Box(rackPlane,new Interval(-backboneFacewidth/2,backboneFacewidth/2),new Interval(-rackLength/2,rackLength/2),new Interval(0,backboneThickness));
-                    else
-                        rackBackboneBox = new Box(rackPlane, new Interval(-backboneFacewidth / 2, backboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-backboneThickness, 0));
-                    Brep rackBackbone = rackBackboneBox.ToBrep();
-                    rack.Model = Brep.CreateBooleanUnion(new List<Brep> { rack.Model, rackBackbone },RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];//Potential risk is failed boolean operation
-                    //Create holder and connectBone based on input model scale
-                    //Use a line intersection to get the scale -> 2 intersection points
-                    double maxScale = model.GetBoundingBox(true).Diagonal.Length*2;
-                    Line line = new Line(eeLineDotPt-perpAxis*maxScale,perpAxis*maxScale*2);
-                    Point3d[] intersections;
-                    if(!Rhino.Geometry.Intersect.Intersection.CurveBrep(line.ToNurbsCurve(), model, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance,out _, out intersections))
-                    {
-                        //If intersection with model fails, use inner cavity instead
-                        line = new Line(eeLineDotPt - mainAxis, perpAxis);
-                        Interval interval;
-                        //Calculate the midpoint of axis
-                        Point3d edgePoint1,edgePoint2;
-                        Rhino.Geometry.Intersect.Intersection.LineBox(line, innerCavity.GetBoundingBox(true), RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out interval);
-                        edgePoint1 = line.PointAt(interval.Min)+mainAxis;
-                        edgePoint2 = line.PointAt(interval.Max)+mainAxis;
-                        intersections = new Point3d[2];
-                        intersections[0] = edgePoint1;
-                        intersections[1] = edgePoint2;
-                    }
-                    //Use the 2 intersection points to create holder. holder has 4 parts, 2 from intersection0 to last gear. 2 from las gear to intersection1
-                    #region create 4 parts of holder
-                    //Figure out the ranges
-                    Point3d gearSidePoint1=eeLineDotPt + perpAxis * lastGearRadius;
-                    Point3d gearSidePoint2 = eeLineDotPt - perpAxis * lastGearRadius;
-                    Point3d[] segmentingPoints = new Point3d[4];
-                    segmentingPoints[0] = intersections[0];
-                    segmentingPoints[3] = intersections[1];
-                    if(intersections[0].DistanceTo(gearSidePoint1)<intersections[0].DistanceTo(gearSidePoint2))
-                    {
-                        segmentingPoints[1] = gearSidePoint1;
-                        segmentingPoints[2] = gearSidePoint2;
-                    }
-                    else
-                    {
-                        segmentingPoints[1] = gearSidePoint2;
-                        segmentingPoints[2] = gearSidePoint1;
-                    }
-                    //Each part of holder is formed with 3 boxes.Use a same section line to generate them
-                    //Plane holderPlane = new Plane(segmentingPoints[0], otherAxis, perpAxis);
-                    List<Point3d> sectionLinePts = new List<Point3d>();
-                    sectionLinePts.Add(segmentingPoints[0]);
-                    Point3d pt2 = segmentingPoints[0] + otherAxis * (2 + 0.3 + backboneFacewidth / 2);
-                    sectionLinePts.Add(pt2);
-                    Point3d pt3 = pt2 + mainAxis*(lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + 0.3 + 2);
-                    sectionLinePts.Add(pt3);
-                    Point3d pt4 = segmentingPoints[0] + mainAxis * (lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + 0.3 + 2) + otherAxis * (connectboneFacewidth / 2 + 0.3);
-                    sectionLinePts.Add(pt4);
-                    Point3d pt5 = pt4 - mainAxis * 2;
-                    sectionLinePts.Add(pt5);
-                    Point3d pt6 = pt5 + otherAxis * (backboneFacewidth - connectboneFacewidth) / 2;
-                    Point3d pt8 = segmentingPoints[0] + mainAxis * (lastGearRadius - 0.3);//Here minus 0.3 is to make sure rack dosen't overlap with holder
-                    Point3d pt7 = pt8 + otherAxis * (0.3 + backboneFacewidth / 2);
-                    sectionLinePts.Add(pt6);
-                    sectionLinePts.Add(pt7);
-                    sectionLinePts.Add(pt8);
-                    sectionLinePts.Add(segmentingPoints[0]);
-                    Polyline section = new Polyline(sectionLinePts);
-                    Curve sectionCurve = section.ToNurbsCurve();
-                    
-                    var sweep = new SweepOneRail();
-                    sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
-                    sweep.ClosedSweep = false;
-                    sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
-                    //The first holder from seg0 to seg1
-                    Curve rail1 = new Line(segmentingPoints[0], segmentingPoints[1]).ToNurbsCurve();
-                    Brep[] holder1list = sweep.PerformSweep(rail1, sectionCurve);
-                    Brep holder1 = holder1list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    //Second is a mirror of first
-                    Brep holder2= holder1list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    holder2.Transform(Transform.Mirror(segmentingPoints[0], otherAxis));
-                    //Third from seg2 to seg3
-                    Curve rail3 = new Line(segmentingPoints[2], segmentingPoints[3]).ToNurbsCurve();
-                    Brep[] holder3list = sweep.PerformSweep(rail3, sectionCurve);
-                    Brep holder3 = holder3list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    //Fourth is mirrored from 3rd
-                    Brep holder4 = holder3list[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    holder4.Transform(Transform.Mirror(segmentingPoints[0], otherAxis));
-                    constrainingStructure = new List<Brep> { holder1, holder2, holder3, holder4 };
-                    #endregion
-
-                    //Use the 2 inersection points to create connector
-                    Vector3d intersectionVector = (new Vector3d(intersections[1]) - new Vector3d(intersections[0]));
-                    Point3d intersectionMidPoint = intersections[0] +intersectionVector/ 2;
-                    Box connectboneBox;
-                    Plane connectbonePlane = new Plane(intersectionMidPoint+mainAxis*(lastGearRadius+ rackThickness + teethHeight / 2 + 0.3+backboneThickness), otherAxis, perpAxis);
-                    if (connectbonePlane.Normal * mainAxis > 0)
-                        connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(0, connectboneThickness));
-                    else
-                        connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-connectboneThickness,0));
-                    Brep connectbone = connectboneBox.ToBrep();
-                    connectingStructure = connectbone;
-                    gapMiddlePart2EE = lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + connectboneThickness;
-                }
-                else//The selected moving direction is exactly the main direction, so the rack would get into the model
-                {
-                    GearParameter lgp = selectedGearTrainParam.parameters.Last();
-                    double lastGearRadius = lgp.radius;
-                    Point3d contactPoint = eeLineDotPt + perpAxis * lastGearRadius;//TODO select up or down based on gear position!
-                    //Calculate rack length based on eeMovingDistance and inner cavity space
-                    rackExtraLength = Math.Max(rackExtraLength, lgp.radius + 2);//Make sure rack extra length can outgrow last gear
-                    double rackLength = eeMovingDistance + rackExtraLength;
-                    double innerCavityMainAxisLength = 0;
-                    Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
-                    switch (selectedAxisIndex)
-                    {
-                        case 1: innerCavityMainAxisLength = innerCavityBox.X.Length; break;
-                        case 2: innerCavityMainAxisLength = innerCavityBox.Y.Length; ; break;
-                        case 3: innerCavityMainAxisLength = innerCavityBox.Z.Length; break;
-                        default: break;
-                    }
-                    double rackFaceWidth = 3.6;
-                    double rackThickness = 5;
-                    double teethHeight = 1.25;
-                    double rackHolderWidth = 2;
-                    double rackCompoundThickness = rackFaceWidth + 0.3 * 2 + rackHolderWidth * 2;
-                    //First just use the end tip of the last gear for the rack contact
-                    Point3d lgctAtEnd = lgp.center + lgp.norm * lgp.faceWidth;
-                    Point3d rackContactPoint = lgctAtEnd - lgp.radius * perpAxis-lgp.norm*rackCompoundThickness/2;
-                    Point3d rackContactPointOnRackBack = rackContactPoint - perpAxis * (0.3 + teethHeight / 2 + rackThickness);
-                    Point3d rackStart = rackContactPointOnRackBack + mainAxis * rackExtraLength;
-                    Point3d rackEnd = rackContactPointOnRackBack - mainAxis * eeMovingDistance;
-                    Vector3d rackVector = new Vector3d(rackEnd) - new Vector3d(rackStart);
-                    Point3d rackMidPoint = rackStart + rackVector / 2;
-                    rack = new Rack(rackMidPoint, rackVector, -perpAxis, rackLength, 1, rackFaceWidth, otherAxis, rackThickness, 20);
-                    //Then make the confining structure, which are 2 bars beside rack and some caps. bars are higher than rack by 0.3 and capped at rack end and farthest position
-                    Plane rackPlane = new Plane(rackContactPointOnRackBack, mainAxis, otherAxis);
-                    
-                    Box bar1Box=new Box(rackPlane,new Interval(-innerCavityMainAxisLength,-(rackExtraLength-2))
-                        ,new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, -rackFaceWidth/2-0.3),new Interval(0, 0.3 + teethHeight / 2 + rackThickness));
-                    Box bar2Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(rackExtraLength - 2))
-                        , new Interval(rackFaceWidth / 2 + 0.3 , rackFaceWidth / 2 + 0.3+ rackHolderWidth), new Interval(0, 0.3 + teethHeight / 2 + rackThickness));
-                    //Add cap
-                    Box cap1Box = new Box(rackPlane, new Interval(-rackExtraLength, -(rackExtraLength - 2)),
-                        new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                        new Interval(0.3 + teethHeight / 2 + rackThickness, 0.3 + teethHeight / 2 + rackThickness + 2));
-                    Box cap2Box = new Box(rackPlane, new Interval(-eeMovingDistance, -(eeMovingDistance - 2)),
-                        new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                        new Interval(0.3 + teethHeight / 2 + rackThickness, 0.3 + teethHeight / 2 + rackThickness + 2));
-                    Box cap3Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(innerCavityMainAxisLength - 2)),
-                        new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                        new Interval(0.3 + teethHeight / 2 + rackThickness, 0.3 + teethHeight / 2 + rackThickness + 2));
-                    if (rackPlane.Normal*perpAxis<0)
-                    {
-                        bar1Box.Transform(Transform.Mirror(rackPlane));
-                        bar2Box.Transform(Transform.Mirror(rackPlane));
-                        cap1Box.Transform(Transform.Mirror(rackPlane));
-                        cap2Box.Transform(Transform.Mirror(rackPlane));
-                        cap3Box.Transform(Transform.Mirror(rackPlane));
-                    }
-                    Brep bar1 = bar1Box.ToBrep(), bar2 = bar2Box.ToBrep();
-                    Brep cap1 = cap1Box.ToBrep(), cap2 = cap2Box.ToBrep(), cap3 = cap3Box.ToBrep();
-                    Brep union = Brep.CreateBooleanUnion(new List<Brep> { bar1, cap1, cap2, cap3, bar2 }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-                    constrainingStructure.Add(union);
-                    gapMiddlePart2EE = rackExtraLength;
-                    #region Deal with the case when rack is longer than inner cavity. Just dig a hole out
-                    //Just use a box to make space for rack.
-                    Brep cuttingBox = new Box(rackPlane, new Interval(-eeMovingDistance, rackExtraLength), new Interval(-0.3 - rackFaceWidth / 2, 0.3 + rackFaceWidth / 2),
-                        new Interval(-0.3, 0.3 + teethHeight / 2 + rackThickness)).ToBrep();
-                    //TODO cut model mid part and start part with this box 
-
-                    //if (innerCavityMainAxisLength < eeMovingDistance)
-                    //{
-                        //Then we need to use bounding box of rack to boolean main model
-
-                    //}
-                    #endregion
-                }
-                #endregion
 
                 #region generate the spring
-
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
+                #endregion
+                //Calculate output displacement!
+                double eeMovingDistance = 0;
                 if (motionControlMethod == 1)
                 {
                     // helical spring
-
+                    Helix h=(Helix)spring_entities[0];
+                    eeMovingDistance= h.CompressionDistance*selectedGearTrainParam.gearRatio;
                 }
                 else
                 {
                     // spiral spring
-
+                    Spiral s = (Spiral)spring_entities[0];
+                    eeMovingDistance = s.MaxRevolution * selectedGearTrainParam.spiralGearRatio * selectedGearTrainParam.pinionRadius;
                 }
+
+                //This is the key structures to be built and the gap need to be cut
                 
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
-
-
-                #endregion
+                motion.BuildEndEffectorRack(eeMovingDistance, selectedGearTrainParam, eeMovingDirectionSelection, eeLineDotPt, mainAxis, perpAxis, otherAxis);
+                
             }
 
             if (toAddLock)
@@ -891,6 +674,7 @@ namespace ConTranslation
 
             if (toBake)
             {
+                motion.CreateShell();
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)
@@ -1146,7 +930,7 @@ namespace ConTranslation
         }
 
         
-        private void Gp6_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        private void Gp_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             Point3d currPos = e.Point;
             Brep perpBrepUp = (Brep)myDoc.Objects.Find(perpAxisArrowUp).Geometry;
@@ -1177,7 +961,7 @@ namespace ConTranslation
             }
         }
 
-        private void Gp6_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        private void Gp_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             Point3d currPos = e.Point;
             Brep perpBrepUp = (Brep)myDoc.Objects.Find(perpAxisArrowUp).Geometry;

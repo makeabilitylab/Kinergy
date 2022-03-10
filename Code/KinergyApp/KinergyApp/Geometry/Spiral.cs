@@ -31,6 +31,7 @@ namespace Kinergy
             private double velocity = 0;
             private int FrameCounter = 0;
             private Point3d startPos;
+            private double maxRevolution;
 
             #region spiral spring constants
             private double min_strip_thickness = 0.8;
@@ -47,6 +48,7 @@ namespace Kinergy
             public double ThicknessX { get => thicknessX;private  set => thicknessX = value; }
             public double ThicknessY { get => thicknessY;private  set => thicknessY = value; }
             public Point3d StartPos { get => startPos; set => startPos = value; }
+            public double MaxRevolution { get => maxRevolution;private set => maxRevolution = value; }
 
             /// <summary> Default constructor without any input parameter </summary>
             /// <returns> Returns empty instance</returns>
@@ -107,6 +109,7 @@ namespace Kinergy
                 //thicknessX *= energy033;
 
                 double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
+                maxRevolution = revolutions;
                 thicknessX = Math.Pow(revolutions, 1.0/3.0);
                 double energyLevel = energy / 10.0;
                 double pitch = energyLevel * (outerRadius - innerRadius) / 2;
