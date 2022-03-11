@@ -635,7 +635,10 @@ namespace ConTranslation
 
                 #region generate the spring
                 spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
+                motion.AddSprings(spring_entities.ElementAt(0));
                 #endregion
+
+
                 //Calculate output displacement!
                 double eeMovingDistance = 0;
                 if (motionControlMethod == 1)

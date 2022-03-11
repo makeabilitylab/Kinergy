@@ -46,6 +46,7 @@ namespace Kinergy.KineticUnit
         private GearTrainParam _gearParam;
         private Gear drivingGear;
         private Gear lastGear;
+        private Entity spring;
         private List<Entity> _axelsStoppers = new List<Entity>();
         private Helix _spring;
         private Rack endEffectorRack=null;
@@ -93,6 +94,12 @@ namespace Kinergy.KineticUnit
 
             _shaftNum = 0;
             _r_shaft_num_List = new List<List<int>>();
+        }
+        public void AddSprings(Entity springControl)
+        {
+            entityList.Remove(spring);
+            spring = springControl;
+            entityList.Add(spring);
         }
         public void AddGears(List<Gear> gears,List<Entity> axelsStoppers,GearTrainParam gearParam)
         {
