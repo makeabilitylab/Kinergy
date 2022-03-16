@@ -57,7 +57,8 @@ namespace Kinergy.KineticUnit
         private List<List<int>> _r_shaft_num_List;
         private List<List<double>> _shaft_radius_pool;
 
-        public const double clearance = 0.3;
+        public const double clearance1 = 0.3;
+        public const double clearance2 = 0.6;
         public const double gearFaceWidth = 3.6;
         public const double gearModule = 1;
         public const double gearPressureAngle = 20;
@@ -153,8 +154,8 @@ namespace Kinergy.KineticUnit
             #region Build Rack and Constraining Structure
 
             //First calculate ee moving distance based on motion params.
-            double eeMovingDistance = eeMovingDis;
-            double rackExtraLength = 10;//TODO check this const value.
+            double eeMovingDistance = Math.Max(eeMovingDis, selectedGearTrainParam.pinionRadius + 3);
+            double rackExtraLength =Math.Max(selectedGearTrainParam.pinionRadius + 3 , 10);//TODO check this const value.
             if (eeMovingDirectionSelection == 2 || eeMovingDirectionSelection == 3)//The selected moving direction is perpendicular to main direction. i.e. same as user selected orientation
             {
                 //The rack should be linked to last gear
@@ -169,7 +170,7 @@ namespace Kinergy.KineticUnit
                 double teethHeight = 2.25;
                 double backboneFacewidth = 10, backboneThickness = 4;
                 double connectboneFacewidth = 5, connectboneThickness = 5;
-                Point3d contactPointRackBackPoint = contactPoint + mainAxis * (teethHeight / 2 + 0.3);
+                Point3d contactPointRackBackPoint = contactPoint + mainAxis * (teethHeight / 2 + clearance1);
                 Point3d rackStartPoint, rackEndPoint;
                 if (eeMovingDirectionSelection == 2)
                 {
@@ -237,17 +238,17 @@ namespace Kinergy.KineticUnit
                 //Plane holderPlane = new Plane(segmentingPoints[0], otherAxis, perpAxis);
                 List<Point3d> sectionLinePts = new List<Point3d>();
                 sectionLinePts.Add(segmentingPoints[0]);
-                Point3d pt2 = segmentingPoints[0] + otherAxis * (2 + 0.3 + backboneFacewidth / 2);
+                Point3d pt2 = segmentingPoints[0] + otherAxis * (2 + clearance2 + backboneFacewidth / 2);
                 sectionLinePts.Add(pt2);
-                Point3d pt3 = pt2 + mainAxis * (lastGearRadius + 0.3 + teethHeight / 2   + backboneThickness + 0.3 + 2);
+                Point3d pt3 = pt2 + mainAxis * (lastGearRadius + clearance2 + teethHeight / 2   + backboneThickness + clearance2 + 2);
                 sectionLinePts.Add(pt3);
-                Point3d pt4 = segmentingPoints[0] + mainAxis * (lastGearRadius + 0.3 + teethHeight / 2  + backboneThickness + 0.3 + 2) + otherAxis * (connectboneFacewidth / 2 + 0.3);
+                Point3d pt4 = segmentingPoints[0] + mainAxis * (lastGearRadius + clearance2 + teethHeight / 2  + backboneThickness + clearance2 + 2) + otherAxis * (connectboneFacewidth / 2 + clearance2);
                 sectionLinePts.Add(pt4);
                 Point3d pt5 = pt4 - mainAxis * 2;
                 sectionLinePts.Add(pt5);
                 Point3d pt6 = pt5 + otherAxis * (backboneFacewidth - connectboneFacewidth) / 2;
-                Point3d pt8 = segmentingPoints[0] + mainAxis * (lastGearRadius - 0.3);//Here minus 0.3 is to make sure rack dosen't overlap with holder
-                Point3d pt7 = pt8 + otherAxis * (0.3 + backboneFacewidth / 2);
+                Point3d pt8 = segmentingPoints[0] + mainAxis * (lastGearRadius - clearance2);//Here minus 0.3 is to make sure rack dosen't overlap with holder
+                Point3d pt7 = pt8 + otherAxis * (clearance2 + backboneFacewidth / 2);
                 sectionLinePts.Add(pt6);
                 sectionLinePts.Add(pt7);
                 sectionLinePts.Add(pt8);
@@ -281,18 +282,18 @@ namespace Kinergy.KineticUnit
                 Vector3d intersectionVector = (new Vector3d(intersections[1]) - new Vector3d(intersections[0]));
                 Point3d intersectionMidPoint = intersections[0] + intersectionVector / 2;
                 Box connectboneBox;
-                Plane connectbonePlane = new Plane(intersectionMidPoint + mainAxis * (lastGearRadius + rackThickness + teethHeight / 2 + 0.3 + backboneThickness), otherAxis, perpAxis);
+                Plane connectbonePlane = new Plane(intersectionMidPoint + mainAxis * (lastGearRadius + rackThickness + teethHeight / 2 + clearance2 + backboneThickness), otherAxis, perpAxis);
                 if (connectbonePlane.Normal * mainAxis > 0)
                     connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(backboneThickness, backboneThickness+connectboneThickness));
                 else
                     connectboneBox = new Box(rackPlane, new Interval(-connectboneFacewidth / 2, connectboneFacewidth / 2), new Interval(-rackLength / 2, rackLength / 2), new Interval(-connectboneThickness-backboneThickness, -backboneThickness));
                 Brep connectbone = connectboneBox.ToBrep();
                 connectingStructure = connectbone;
-                gapMiddlePart2EE = lastGearRadius + 0.3 + teethHeight / 2 + rackThickness + backboneThickness + connectboneThickness;
+                gapMiddlePart2EE = lastGearRadius + clearance2 + teethHeight / 2 + rackThickness + backboneThickness + connectboneThickness;
 
                 Plane constrainPlane = new Plane(eeLineDotPt,mainAxis,otherAxis);
-                Box constrainSpaceBox = new Box(constrainPlane, new Interval(0, lastGearRadius + 0.3 + teethHeight / 2 + backboneThickness + 0.3 + 2),
-                    new Interval(-2 - 0.3 - backboneFacewidth / 2 - 0.3, 2 + 0.3 + backboneFacewidth / 2 + 0.3),
+                Box constrainSpaceBox = new Box(constrainPlane, new Interval(0, lastGearRadius + clearance2 + teethHeight / 2 + backboneThickness + clearance2 + 2+clearance2),
+                    new Interval(-2 - clearance2 - backboneFacewidth / 2 - clearance2, 2 + clearance2 + backboneFacewidth / 2 + clearance2),
                     new Interval(-intersections[0].DistanceTo(intersections[1]), intersections[0].DistanceTo(intersections[1])));
                 constrainingStructureSpaceTaken = constrainSpaceBox.ToBrep();
             }
@@ -317,7 +318,7 @@ namespace Kinergy.KineticUnit
                 double rackThickness = 5;
                 double teethHeight = 2.25;
                 double rackHolderWidth = 2;
-                double rackCompoundThickness = rackFaceWidth + 0.3 * 2 + rackHolderWidth * 2;
+                double rackCompoundThickness = rackFaceWidth +clearance2 * 2 + rackHolderWidth * 2;
                 //First just use the end tip of the last gear for the rack contact
                 Point3d lgctAtEnd = lgp.center + lgp.norm * lgp.faceWidth;
                 Point3d rackContactPoint = lgctAtEnd - lgp.radius * perpAxis - lgp.norm * rackCompoundThickness / 2;
@@ -335,32 +336,32 @@ namespace Kinergy.KineticUnit
                 Plane rackPlane = new Plane(rackContactPointOnRackBack, mainAxis, otherAxis);
 
                 Box bar1Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(rackExtraLength - 2))
-                    , new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, -rackFaceWidth / 2 - 0.3),
+                    , new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, -rackFaceWidth / 2 - clearance2),
                     //, new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, 0),
-                    new Interval(-0.3, 0.3 + teethHeight  + rackThickness));
+                    new Interval(-clearance2, clearance2 + teethHeight  + rackThickness));
                 Box bar2Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(rackExtraLength - 2))
-                    , new Interval(rackFaceWidth / 2 + 0.3, rackFaceWidth / 2 + 0.3 + rackHolderWidth), 
-                    new Interval(-0.3, 0.3 + teethHeight  + rackThickness));
+                    , new Interval(rackFaceWidth / 2 + clearance2, rackFaceWidth / 2 + clearance2 + rackHolderWidth), 
+                    new Interval(-clearance2, clearance2 + teethHeight  + rackThickness));
                 
                 //Add cap
                 Box cap1Box = new Box(rackPlane, new Interval(-rackExtraLength, -(rackExtraLength - 2)),
-                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                    new Interval(0.3 + teethHeight  + rackThickness, 0.3 + teethHeight  + rackThickness + 2));
+                    new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, rackFaceWidth / 2 + clearance2 + rackHolderWidth),
+                    new Interval(clearance2 + teethHeight  + rackThickness, clearance2 + teethHeight  + rackThickness + 2));
                 Box cap2Box = new Box(rackPlane, new Interval(-eeMovingDistance, -(eeMovingDistance - 2)),
-                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                    new Interval(0.3 + teethHeight  + rackThickness, 0.3 + teethHeight  + rackThickness + 2));
+                    new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, rackFaceWidth / 2 + clearance2 + rackHolderWidth),
+                    new Interval(clearance2 + teethHeight  + rackThickness, clearance2 + teethHeight  + rackThickness + 2));
                 Box cap3Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(innerCavityMainAxisLength - 2)),
-                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                    new Interval(0.3 + teethHeight  + rackThickness, 0.3 + teethHeight  + rackThickness + 2));
+                    new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, rackFaceWidth / 2 + clearance2 + rackHolderWidth),
+                    new Interval(clearance2 + teethHeight  + rackThickness, clearance2 + teethHeight  + rackThickness + 2));
                 Box cap4Box = new Box(rackPlane, new Interval(-rackExtraLength, -(rackExtraLength - 2)),
-                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                    new Interval(-2.3,-0.3));
+                    new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, rackFaceWidth / 2 + clearance2 + rackHolderWidth),
+                    new Interval(-2-clearance2,-clearance2));
                 Box cap5Box = new Box(rackPlane, new Interval(-eeMovingDistance, -(eeMovingDistance - 2)),
-                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                    new Interval(-2.3, -0.3));
+                    new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, rackFaceWidth / 2 + clearance2 + rackHolderWidth),
+                    new Interval(-2-clearance2, -clearance2));
                 Box cap6Box = new Box(rackPlane, new Interval(-innerCavityMainAxisLength, -(innerCavityMainAxisLength - 2)),
-                    new Interval(-rackFaceWidth / 2 - 0.3 - rackHolderWidth, rackFaceWidth / 2 + 0.3 + rackHolderWidth),
-                    new Interval(-2.3, -0.3));
+                    new Interval(-rackFaceWidth / 2 - clearance2 - rackHolderWidth, rackFaceWidth / 2 + clearance2 + rackHolderWidth),
+                    new Interval(-2-clearance2, -clearance2));
                 if (rackPlane.Normal * perpAxis < 0)
                 {
                     bar1Box.Transform(Transform.Mirror(rackPlane));
@@ -379,8 +380,8 @@ namespace Kinergy.KineticUnit
                 gapMiddlePart2EE = rackExtraLength;
                 #region Deal with the case when rack is longer than inner cavity. Just dig a hole out
                 //Just use a box to make space for rack.
-                Brep cuttingBox = new Box(rackPlane, new Interval(-eeMovingDistance, rackExtraLength), new Interval(-0.3 - rackFaceWidth / 2, 0.3 + rackFaceWidth / 2),
-                    new Interval(-0.3, 0.3 + teethHeight / 2 + rackThickness)).ToBrep();
+                Brep cuttingBox = new Box(rackPlane, new Interval(-eeMovingDistance, rackExtraLength), new Interval(-clearance2 - rackFaceWidth / 2, clearance2 + rackFaceWidth / 2),
+                    new Interval(-clearance2, clearance2 + teethHeight / 2 + rackThickness)).ToBrep();
                 constrainingStructureSpaceTaken = cuttingBox;
                 //TODO cut model mid part and start part with this box 
 
@@ -449,8 +450,8 @@ namespace Kinergy.KineticUnit
             double shellThickness = 2;
             Brep part2;
             GearParameter lgp = _gearParam.parameters.Last();
-            Brep lgCylinder = new Cylinder(new Circle(new Plane(lgp.center, lgp.norm), lgp.radius + 2), lgp.faceWidth+0.6).ToBrep(true,true);
-            lgCylinder.Transform(Transform.Translation(-lgp.norm * 0.3));
+            Brep lgCylinder = new Cylinder(new Circle(new Plane(lgp.center, lgp.norm), lgp.radius + 2), lgp.faceWidth+0.6+1.3*2).ToBrep(true,true);
+            lgCylinder.Transform(Transform.Translation(-lgp.norm * 1.6));
             part2=Brep.CreateBooleanDifference(b2, lgCylinder,myDoc.ModelAbsoluteTolerance)[0];
             Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
             Brep innerShell = shells[0];
@@ -458,30 +459,30 @@ namespace Kinergy.KineticUnit
             //Cut b3 with gear cylinder
             Brep part3 = Brep.CreateBooleanDifference(b3, lgCylinder, myDoc.ModelAbsoluteTolerance)[0];
             //Cut part 3 with plane to greate a gap
-            Plane cutter;
-            try
-            {
-                cutter = new Plane(_skeleton.PointAtNormalizedLength(t1), _mainAxis);
-                cutter.Transform(Transform.Translation(_mainAxis * 0.3));
-                Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
-                part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-            }
-            catch
-            {
-                cutter = new Plane(_skeleton.PointAtNormalizedLength(t2), _mainAxis);
-                cutter.Transform(Transform.Translation(_mainAxis * 0.3));
-                Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
-                part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-            }
-            
+            //Plane cutter;
+            //try
+            //{
+            //    cutter = new Plane(_skeleton.PointAtNormalizedLength(t1), _mainAxis);
+            //    cutter.Transform(Transform.Translation(_mainAxis * 0.3));
+            //    Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
+            //    part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            //}
+            //catch
+            //{
+            //    cutter = new Plane(_skeleton.PointAtNormalizedLength(t2), _mainAxis);
+            //    cutter.Transform(Transform.Translation(_mainAxis * 0.3));
+            //    Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
+            //    part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            //}
+            part3.Transform(Transform.Translation(_mainAxis * clearance2));
             //Cut part3 with constraining structure
             try
             {
-                part3= Brep.CreateBooleanDifference(part3,constrainingStructureSpaceTaken , myDoc.ModelAbsoluteTolerance)[0];
+                part3 = Brep.CreateBooleanDifference(part3, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
             }
             catch
             {
-                
+
             }
             entityList.Remove(p1);
             entityList.Remove(p2);
@@ -520,7 +521,7 @@ namespace Kinergy.KineticUnit
                 _r_shaft_num_List.Clear();
             }
 
-            double r_ceiling = Math.Min(unitLen - 4.5, gearSpace / 2 - clearance - 2);
+            double r_ceiling = Math.Min(unitLen - 4.5, gearSpace / 2 - clearance1 - 2);
             if (r_ceiling < 4.5)
                 return;
             
