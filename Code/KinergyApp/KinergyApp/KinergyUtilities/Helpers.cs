@@ -341,6 +341,7 @@ namespace KinergyUtilities
                     Point3d shaftStartPt = lockLinePts[0] + firstGearDir * 2.75;
                     Point3d shaftEndPt = lockPtEnd;
                     Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad, firstGearDir);
+                    lockAxelShaft.SetName("MiddleShellBreakerShaft");
                     models.Add(lockAxelShaft);
 
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);

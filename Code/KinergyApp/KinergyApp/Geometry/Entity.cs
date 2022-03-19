@@ -190,5 +190,9 @@ namespace Kinergy.Geom
         {
             model = m;
         }
+        public virtual void SetName(String n)
+        {
+            name = n;
+        }
     }
 }
