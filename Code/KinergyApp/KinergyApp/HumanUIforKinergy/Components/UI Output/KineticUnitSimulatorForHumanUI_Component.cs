@@ -17,7 +17,7 @@ namespace HumanUIforKinergy.Components.UI_Output
         /// Initializes a new instance of the KinergyMotionSimulatorForHumanUI class.
         /// </summary>
         public KineticUnitSimulatorForHumanUI()
-          : base("KinergyMotionSimulatorForHumanUI", "KMS",
+          : base("KinergyKineticUnitSimulatorForHumanUI", "KUS",
               "Allows you to simulate a motion and show it in an existing 3D view",
               "Human UI", "UI Output")
         {

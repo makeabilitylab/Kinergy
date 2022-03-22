@@ -84,6 +84,13 @@ namespace Kinergy.Geom
             }
             return false;
         }
+        public void ClearConstraints()
+        {
+            while(constraints.Count!=0)
+            {
+                constraints[0].Release();
+            }
+        }
         /// <summary>
         /// Method to apply movement on certain entity. Whether the movement is conductable is recursively checked. 
         /// </summary>
