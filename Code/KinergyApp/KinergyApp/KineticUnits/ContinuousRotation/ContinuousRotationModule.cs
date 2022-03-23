@@ -29,16 +29,12 @@ namespace ConRotation
         Vector3d direction;             // kinetic unit direction
         ContinuousRotation motion;
         List<Arrow> lockDirCandidates;
-        Arrow p;
         int energyChargingMethod;       // pressing: 1; turning: 2
         Vector3d orientationDir;
         int outputAxle;
         bool OperatingOutputAxleMethod;
         bool multipleSelections;
 
-        //Transform dirToXTranlationBack;
-        //Transform dirToXRotationBack;
-        //Transform yToPoseTrans;
         Vector3d axisToSkeleton = new Vector3d(0, 0, 0);
         Vector3d skeletonToAxis = new Vector3d(0, 0, 0);
         Transform rotateAxisToOrientation = Transform.Identity;
@@ -74,9 +70,7 @@ namespace ConRotation
         Guid guid1, guid2, ArrowCurve;
         bool OperatingArrow = false;
         bool OperatingEnergyChargingMethod = false;
-        bool PlaneGenerated = false;
-        bool ArrowGenerated = false;
-        bool PlaneSelected = false;
+        
         double arrowScale;
         Plane pl1, pl2;
         PlaneSurface s1, s2;
@@ -94,7 +88,32 @@ namespace ConRotation
         bool testBakeBtn;
         int motionControlMethod; // 1: press; 2: turn
 
+        ObjectAttributes solidAttribute, orangeAttribute, redAttribute, blueAttribute, greenAttribute;
+        int selectedAxisIndex;
+        Guid convertedPortion;//middle
+        List<Brep> brepCut;
+        Guid reserveBrepID1;//1st part
+        Guid reserveBrepID2;//3rd part
 
+        Guid ee1,ee2;
+        Brep ee1Model,ee2Model;
+        int endEffectorState=0;//0 for unset, 1 for one ee, 2 for 2 ee;
+        Point3d motionCtrlPointSelected;
+
+        Point3d eeCircleDotPt = new Point3d();
+        Point3d eeLineDotPt = new Point3d();
+        Vector3d kineticUnitDir = new Vector3d();
+        Vector3d axelDir = new Vector3d();
+        Point3d eeCenPt = new Point3d();
+        double finalGearPositionRatio;
+
+        
+        int eeMovingDirectionSelection = 0;//-1 for error, 0 for unset, 1 for main, 2 for perp up, 3 for perp down
+        GearTrainParam selectedGearTrainParam;
+
+        bool PlaneSelected = false;
+        Vector3d selectedAxisVector = Vector3d.Unset;
+        WarningWin warningwin = new WarningWin();
         /// <summary>
         /// Initializes a new instance of the ContinuousRotationModule class.
         /// </summary>
@@ -115,7 +134,6 @@ namespace ConRotation
             direction = new Vector3d();
             motion = null;
             lockDirCandidates = new List<Arrow>();
-            p = null;
             energyChargingMethod = 1;
             myDoc = RhinoDoc.ActiveDoc;
             orientationDir = new Vector3d();
@@ -145,6 +163,13 @@ namespace ConRotation
             testPreBtn = false;
             testBakeBtn = false;
             motionControlMethod = -1;
+
+            selectedAxisIndex = -1; // 1 - x axis, 2 - y axis, 3 - z axis 
+            brepCut = new List<Brep>();
+            convertedPortion = Guid.Empty;
+            reserveBrepID1 = Guid.Empty;
+            reserveBrepID2 = Guid.Empty;
+            motionCtrlPointSelected = new Point3d();
         }
 
         /// <summary>
@@ -325,12 +350,10 @@ namespace ConRotation
 
             if (toSelectRegion)
             {
-                // select the target model and the region to be converted
-
                 if (selObjId != Guid.Empty)
                 {
-                    RhinoDoc.ActiveDoc.Objects.Show(selObjId, true);
-                    RhinoDoc.ActiveDoc.Views.Redraw();
+                    myDoc.Objects.Show(selObjId, true);
+                    myDoc.Views.Redraw();
                     toBeBaked.Clear();
                     selObjId = Guid.Empty;
                 }
@@ -343,241 +366,198 @@ namespace ConRotation
 
                     selObjId = objSel_ref.ObjectId;
                     ObjRef currObj = new ObjRef(selObjId);
+                    myDoc.Objects.Select(currObj);
 
                     model = currObj.Brep();
 
                     #endregion
 
-                    #region Pre-process #2: ask the user to specify the axis the object is aligned with
+                    #region Pre-process #2: get the ininital inner cavity of the selected brep
 
-                    GenerateCoordinateIndicators(myDoc, model);
-                    Rhino.Input.Custom.GetPoint indicatorSelectPt = new Rhino.Input.Custom.GetPoint();
-                    indicatorSelectPt.SetCommandPrompt(@"Please select the axis the object is aligned with.");
-                    indicatorSelectPt.MouseMove += IndicatorSelectPt_MouseMove;
-                    indicatorSelectPt.MouseDown += IndicatorSelectPt_MouseDown;
-                    indicatorSelectPt.Get(true);
-
-                    myDoc.Objects.Hide(xIndicatorID, true);
-                    myDoc.Objects.Hide(yIndicatorID, true);
-                    myDoc.Objects.Hide(zIndicatorID, true);
-                    myDoc.Views.Redraw();
-
-                    switch (alignment)
-                    {
-                        case 1: v = Vector3d.XAxis; break;
-                        case 2: v = Vector3d.YAxis; break;
-                        case 3: v = Vector3d.ZAxis; break;
-                        default: break;
-                    }
+                    BoundingBox box = model.GetBoundingBox(true);
+                    box.Inflate(-2.0);
+                    box.Transform(Transform.Scale(box.Center, 2));
+                    //arrowScale = box.Diagonal.Length / 100;
+                    center = box.Center;
 
                     #endregion
+                }
 
-                    #region Step 1: drag the two planes to decide the portion
+            }
 
-                    Rhino.Input.Custom.GetPoint gp2 = new Rhino.Input.Custom.GetPoint();
-                    gp2.SetCommandPrompt("Click and drag the partition plane to adjust their position. Press enter to confirm and move on");
-                    gp2.MouseDown += Gp2_MouseDown; 
-                    gp2.MouseMove += Gp2_MouseMove; 
-                    gp2.AcceptNothing(true);
+            if (toSetMotionControl)
+            {
+                if (model != null)
+                {
+                    //Step 1: select the axis (X, Y, or Z axis)
+                    selectedAxisIndex = new XYZselection(center, myDoc, redAttribute, greenAttribute, blueAttribute, 30).selectedAxis;
 
-                    Rhino.Input.GetResult r2;
-                    do
-                    {
-                        if (!PlaneGenerated)
-                            GeneratePlanes();
-                        r2 = gp2.Get(true);
-
-                    } while (r2 != Rhino.Input.GetResult.Nothing);
+                    //region Step 2: drag the two planes to decide the portion
+                    PortionSelection pselect = new PortionSelection(model, selectedAxisIndex, myDoc);
+                    t1 = pselect.t1;
+                    t2 = pselect.t2;
+                    selectedAxisVector = pselect.axis;
+                    direction = selectedAxisVector;
+                    skeleton = pselect.skeleton;
                     PlaneSelected = true;
 
-                    #endregion
 
-                    #region Step 2: find the biggest inner cavity 
+                    #region Step 3: cut model and calculate the inner cavity
 
-                    RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
-                    RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
-                    PlaneGenerated = false;
 
                     if (PlaneSelected)
                     {
-                        Plane p1Reverse = new Plane(skeleton.PointAtNormalizedLength(t1), -v);
-                        Plane p2Reverse = new Plane(skeleton.PointAtNormalizedLength(t2), v);
+                        brepCut.Clear();
+                        // Call out the waiting window
+                        processingwin.Show();
 
-                        Brep[] Cut_Brep1rest = model.Trim(p1Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                        brepCut = Helpers.cutModel(model, skeleton, t1, t2, selectedAxisVector, myDoc);
+                        innerCavity = Helpers.getInnerCavity(brepCut, selectedAxisVector);
 
-                        Brep BrepRest = null;
-                        try
-                        {
-                            BrepRest = Cut_Brep1rest[0];
-                        }
-                        catch
-                        {
-                            BrepRest = model;
-                        }
 
-                        Brep[] Cut_Brep2 = BrepRest.Trim(p2Reverse, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                        Brep BrepTarget = null;
-                        try
-                        {
-                            BrepTarget = Cut_Brep2[0];
-                        }
-                        catch
-                        {
-                            BrepTarget = BrepRest;
-                        }
+                        processingwin.Hide();
 
-                        try
-                        {
-                            BrepTarget = Cut_Brep2[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                        }
-                        catch
-                        { }
+                        myDoc.Objects.Hide(selObjId, true);
 
-                        switch (alignment)
-                        {
-                            case 1:
-                                {
-                                    // aligned with the X axis
-                                    // height is along Z axis
-                                    // depth is along Y axis
+                        reserveBrepID1 = myDoc.Objects.AddBrep(brepCut[0]);
+                        reserveBrepID2 = myDoc.Objects.AddBrep(brepCut[2]);
 
-                                    BoundingBox tarBox = BrepTarget.GetBoundingBox(true);
-                                    tarBox.Inflate(-0.2);
-                                    Brep boxBrep = tarBox.ToBrep();
-                                    double ori_z = tarBox.Max.Z - tarBox.Min.Z;
-                                    double ori_x = tarBox.Max.X - tarBox.Min.X;
-                                    double ori_y = tarBox.Max.Y - tarBox.Min.Y;
-
-                                    int i = 0;
-                                    while(Brep.CreateBooleanIntersection(BrepTarget, boxBrep, myDoc.ModelAbsoluteTolerance).Count() > 0)
-                                    {
-                                        if(i%2 == 0)
-                                        {
-                                            // decrease height
-                                            Transform hScale = Transform.Scale(Plane.WorldXY, 1, 1, (1 - 0.1 / ori_z));
-                                            boxBrep.Transform(hScale);
-                                        }
-                                        else
-                                        {
-                                            // decrease depth
-                                            Transform dScale = Transform.Scale(Plane.WorldXY, 1, (1 - 0.1/ori_y), 1);
-                                            boxBrep.Transform(dScale);
-                                        }
-                                        i += 1;
-                                    }
-
-                                    innerCavity = boxBrep;
-
-                                    BoundingBox innerCavityBox = innerCavity.GetBoundingBox(true);
-                                    innerDepth = innerCavityBox.Max.Y - innerCavityBox.Min.Y;
-                                    innerHeight = innerCavityBox.Max.Z - innerCavityBox.Min.Z;
-
-                                }
-                                break;
-                            case 2:
-                                {
-                                    // aligned with the Y axis
-                                    // height is along Z axis
-                                    // depth is along X axis
-
-                                    BoundingBox tarBox = BrepTarget.GetBoundingBox(true);
-                                    tarBox.Inflate(-0.2);
-                                    Brep boxBrep = tarBox.ToBrep();
-                                    double ori_z = tarBox.Max.Z - tarBox.Min.Z;
-                                    double ori_x = tarBox.Max.X - tarBox.Min.X;
-                                    double ori_y = tarBox.Max.Y - tarBox.Min.Y;
-
-                                    int i = 0;
-                                    while (Brep.CreateBooleanIntersection(BrepTarget, boxBrep, myDoc.ModelAbsoluteTolerance).Count() > 0)
-                                    {
-                                        if (i % 2 == 0)
-                                        {
-                                            // decrease height
-                                            Transform hScale = Transform.Scale(Plane.WorldXY, 1, 1, (1 - 0.1 / ori_z));
-                                            boxBrep.Transform(hScale);
-                                        }
-                                        else
-                                        {
-                                            // decrease depth
-                                            Transform dScale = Transform.Scale(Plane.WorldXY, (1 - 0.1/ori_x), 1, 1);
-                                            boxBrep.Transform(dScale);
-                                        }
-                                        i += 1;
-                                    }
-
-                                    innerCavity = boxBrep;
-
-                                    BoundingBox innerCavityBox = innerCavity.GetBoundingBox(true);
-                                    innerDepth = innerCavityBox.Max.X - innerCavityBox.Min.X;
-                                    innerHeight = innerCavityBox.Max.Z - innerCavityBox.Min.Z;
-
-                                }
-                                break;
-                            case 3:
-                                {
-                                    // aligned with the Z axis
-                                    // height is along y axis
-                                    // depth is along x axis
-
-                                    BoundingBox tarBox = BrepTarget.GetBoundingBox(true);
-                                    tarBox.Inflate(-0.2);
-                                    Brep boxBrep = tarBox.ToBrep();
-                                    double ori_z = tarBox.Max.Z - tarBox.Min.Z;
-                                    double ori_x = tarBox.Max.X - tarBox.Min.X;
-                                    double ori_y = tarBox.Max.Y - tarBox.Min.Y;
-
-                                    int i = 0;
-                                    while (Brep.CreateBooleanIntersection(BrepTarget, boxBrep, myDoc.ModelAbsoluteTolerance).Count() > 0)
-                                    {
-                                        if (i % 2 == 0)
-                                        {
-                                            // decrease height
-                                            Transform hScale = Transform.Scale(Plane.WorldXY, 1, (1 - 0.1/ori_y), 1);
-                                            boxBrep.Transform(hScale);
-                                        }
-                                        else
-                                        {
-                                            // decrease depth
-                                            Transform dScale = Transform.Scale(Plane.WorldXY, 1, (1 - 0.1 / ori_y), 1);
-                                            boxBrep.Transform(dScale);
-                                        }
-                                        i += 1;
-                                    }
-
-                                    innerCavity = boxBrep;
-
-                                    BoundingBox innerCavityBox = innerCavity.GetBoundingBox(true);
-                                    innerDepth = innerCavityBox.Max.X - innerCavityBox.Min.X;
-                                    innerHeight = innerCavityBox.Max.Y - innerCavityBox.Min.Y;
-                                }
-                                break;
-                            default: break;
-                        }
-                        
+                        convertedPortion = myDoc.Objects.AddBrep(brepCut[1]);
+                        myDoc.Objects.Select(convertedPortion);
                     }
 
                     #endregion
 
-                    #region Step 3: Input the energy-charging method
+                    //Step 4: ask the user to select which side to add the motion control
+                    motionCtrlPointSelected = new SideSelection(skeleton, myDoc, blueAttribute).motionCtrlPointSelected;
 
-                    RhinoApp.KeyboardEvent += RhinoApp_KeyboardEvent1;
-                    Rhino.Input.Custom.GetPoint gp3 = new Rhino.Input.Custom.GetPoint();
-                    gp3.SetCommandPrompt(@"Press '1' to select 'Pressing' or '2' to select 'Turning' as the energy-charging method. Press 'Enter' to continue.");
-                    gp3.AcceptNothing(true);
-                    Rhino.Input.GetResult r3;
+                    #region Step 5: create an instance of Continuous Translation class
 
-                    OperatingEnergyChargingMethod = true;
-                    do
-                    {
-                        r3 = gp3.Get(true);
+                    motion = new ContinuousRotation(model, selectedAxisIndex, direction, innerCavity, motionCtrlPointSelected, speedLevel, roundLevel, energyLevel, motionControlMethod);
 
-                    } while (r3 != Rhino.Input.GetResult.Nothing);
-                    OperatingEnergyChargingMethod = false;
+                    motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
+                    //toBeBaked.Add(reserveBrepID1);
+                    //toBeBaked.Add(reserveBrepID2);
+                    //myDoc.Views.Redraw();
                     #endregion
+                }
+            }
 
+            if(toSetEEPos)
+            {
+                //The new process to implement. Let user select one or 2 models. When 1 model is selected, use the direction as shaft direction and generate gears.
+                //If 2 models are selected, tell is they are on 2 sides, if not, throw exception; if so, use the direction as shaft direction.
+                //When 1 ee is selected, use revolute joint. when 2, use a cut through axis.
+
+                #region Step 1 First let user choose the ee models.Remind them not to accidentally click on 3 parts
+                ObjRef objSel_ref1;
+                var rc1 = RhinoGet.GetOneObject("Select the end effector model. ", false, ObjectType.AnyObject, out objSel_ref1);
+                if (rc1 == Rhino.Commands.Result.Success)
+                {
+                    //set up first ee
+                    ee1 = objSel_ref1.ObjectId;
+                    ObjRef currObj = new ObjRef(selObjId);
+                    myDoc.Objects.Select(currObj);
+                    ee1Model = currObj.Brep();
+                }
+                else
+                {
+                    endEffectorState = 0;
+                    warningwin.Text = "No end effector model is selected.";
+                    warningwin.Show();
+                }
+                if(rc1 == Rhino.Commands.Result.Success)
+                {
+                    ObjRef objSel_ref2;
+                    var rc2 = RhinoGet.GetOneObject("Select the second end effector model if neeed. Or press Enter to skip this selection and go with one model ", true, ObjectType.AnyObject, out objSel_ref2);
+                    if (rc2 == Rhino.Commands.Result.Success)
+                    {
+                        //set up second ee 
+                        ee2 = objSel_ref2.ObjectId;
+                        ObjRef currObj = new ObjRef(selObjId);
+                        myDoc.Objects.Select(currObj);
+                        ee2Model = currObj.Brep();
+                        endEffectorState = 2;
+                    }
+                    else if (rc2 == Rhino.Commands.Result.Nothing)
+                    {
+                        //Go with one ee
+                        endEffectorState = 1;
+                    }
                 }
 
+
+                #endregion
+                #region Step 2 Then use the given ee to calculate direction, generate gear and shaft
+                //Clacluate direction
+                #region find the end effector center point
+                Point3d startPt, endPt;
+                if (t1 > t2)
+                {
+                    endPt = skeleton.PointAtNormalizedLength(t1 - 2 / skeleton.GetLength());
+                    startPt = skeleton.PointAtNormalizedLength(t2 + 2 / skeleton.GetLength());
+                }
+                else
+                {
+                    startPt = skeleton.PointAtNormalizedLength(t1 + 2 / skeleton.GetLength());
+                    endPt = skeleton.PointAtNormalizedLength(t2 - 2 / skeleton.GetLength());
+                }
+
+                if (motionCtrlPointSelected.DistanceTo(startPt) <= motionCtrlPointSelected.DistanceTo(endPt))
+                {
+                    eeCenPt = endPt;
+                }
+                else
+                {
+                    eeCenPt = startPt;
+                }
+                #endregion
+
+                Vector3d mainAxis = Vector3d.Unset, perpAxis = Vector3d.Unset,shaftAxis= Vector3d.Unset;
+                BoundingBox Bbox = model.GetBoundingBox(false);
+                double x = 0, y = 0;
+                switch (selectedAxisIndex)
+                {
+                    case 1: mainAxis = Vector3d.XAxis; x = Bbox.Max.Y - Bbox.Min.Y; y = Bbox.Max.Z - Bbox.Min.Z; break;
+                    case 2: mainAxis = Vector3d.YAxis; x = Bbox.Max.X - Bbox.Min.X; y = Bbox.Max.Z - Bbox.Min.Z; break;
+                    case 3: mainAxis = Vector3d.ZAxis; x = Bbox.Max.X - Bbox.Min.X; y = Bbox.Max.Y - Bbox.Min.Y; break;
+                    default: break;
+                }
+                mainAxis.Unitize();
+                //reverse main axis if needed based on user selection of ee side.
+                if ((new Vector3d(eeCenPt) - new Vector3d(skeleton.PointAtNormalizedLength(0.5))) * mainAxis < 0)
+                    mainAxis = -mainAxis;
+                
+
+                if (endEffectorState==1)
+                {
+                    //find the direction from eeCenpt to ee center
+                    BoundingBox eeBbox = ee1Model.GetBoundingBox(true);
+                    Vector3d eeVectorPrimitive = eeBbox.Center - eeCenPt;
+                    Vector3d eeVector = eeVectorPrimitive - eeVectorPrimitive * (eeVectorPrimitive * mainAxis);
+                    eeVector.Unitize();
+                    shaftAxis = eeVector;
+                }
+                else
+                {
+
+                }
+                perpAxis = new Plane(eeCenPt, mainAxis, shaftAxis).Normal;
+                shaftAxis.Unitize();
+                //generate gear param
+
+                //select gear param based on input param
+
+                //generate gear and shaft
+
+                //register gear and shaft
+
+                #endregion
+                //Move ee based on axis
+
+                //Register EE in motion
+                //motion.SetEndEffectors();
             }
 
             #region old code
@@ -1274,25 +1254,8 @@ namespace ConRotation
             {
                 if (motion != null)
                     // Reconstruct spiral and the gear train
-                    motion.AdjustParameter(speedLevel, roundLevel);
+                    motion.AdjustParameter(energyLevel,speedLevel, roundLevel);
             }
-
-
-            if (toSetMotionControl)
-            {
-
-            }
-
-            if (toSetEEPos)
-            {
-
-            }
-
-            if (toSetAxisDir)
-            {
-
-            }
-
 
             if (toRemoveLock)
             {
@@ -1573,54 +1536,7 @@ namespace ConRotation
             myDoc.Views.Redraw();
         }
    
-        private void GeneratePlanes()
-        {
-            PlaneGenerated = true;
-            //Delete these before generating new ones
-            RhinoDoc.ActiveDoc.Objects.Delete(guid1, true);
-            RhinoDoc.ActiveDoc.Objects.Delete(guid2, true);
-
-            BoxLike b = new BoxLike(model, v);
-            BoundingBox box = b.Bbox;
-
-            Interval xInterval = new Interval(-(box.Max.X - box.Min.X) * 0.6, (box.Max.X - box.Min.X) * 0.6);
-            Interval yInterval = new Interval(-(box.Max.Y - box.Min.Y) * 0.6, (box.Max.Y - box.Min.Y) * 0.6);
-            Interval zInterval = new Interval(-(box.Max.Z - box.Min.Z) * 0.6, (box.Max.Z - box.Min.Z) * 0.6);
-            //box.Transform(b.RotateBack);
-            /*Point3d start = box.PointAt(0, 0.5, 0.5);
-            Point3d end = box.PointAt(1, 0.5, 0.5);*/ //this doesn't work!
-
-            skeleton = b.Skeleton;
-            //skeleton.Transform(b.RotateBack);
-            skeletonVec = new Vector3d(skeleton.PointAtEnd) - new Vector3d(skeleton.PointAtStart);
-            pl1 = new Plane(skeleton.PointAtNormalizedLength(t1), v);
-            pl2 = new Plane(skeleton.PointAtNormalizedLength(t2), v);
-            if(alignment == 1)
-            {
-                s1 = new PlaneSurface(pl1, yInterval, zInterval);
-                s2 = new PlaneSurface(pl2, yInterval, zInterval);
-            }
-            else if(alignment == 2)
-            {
-                s1 = new PlaneSurface(pl1, zInterval, xInterval);
-                s2 = new PlaneSurface(pl2, zInterval, xInterval);
-            }
-            else if(alignment == 3)
-            {
-                s1 = new PlaneSurface(pl1, xInterval, yInterval);
-                s2 = new PlaneSurface(pl2, xInterval, yInterval);
-            }
-            else
-            {
-                s1 = new PlaneSurface(pl1, yInterval, zInterval);
-                s2 = new PlaneSurface(pl2, yInterval, zInterval);
-            }
-            
-            guid1 = RhinoDoc.ActiveDoc.Objects.Add(s1);
-            guid2 = RhinoDoc.ActiveDoc.Objects.Add(s2);
-            RhinoDoc.ActiveDoc.Views.ActiveView.Redraw();
-        }
-
+        
 
         /// <summary>
         /// Provides an Icon for the component.

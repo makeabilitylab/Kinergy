@@ -88,7 +88,8 @@ namespace KinergyUtilities
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-            double rad = 1.5;
+            double rad1 = 1.5;
+            double rad2 = 2.2;
             //TODO register entity relations
             if (controlType == 1)
             {
@@ -123,7 +124,7 @@ namespace KinergyUtilities
                             ptStart = pts[0] + axelDir * 1;
                         }
                         Curve lineCrv = new Line(ptStart, ptEnd).ToNurbsCurve();
-                        Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad, axelDir);
+                        Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad1, axelDir);
                         models.Add(axelShaft);
                     }
                     #endregion
@@ -140,20 +141,20 @@ namespace KinergyUtilities
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - initialDir * offset2, 1, rad, 3, (-initialDir));
+                        Spacer sp1 = new Spacer(gearCen - initialDir * offset2, 1, rad2, 3, (-initialDir));
                         models.Add(sp1);
 
                         if(idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset2 + gp.faceWidth), 1, rad, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset2 + gp.faceWidth), 1, rad2, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
                     else
                     {
                         // bull gear
-                        Spacer sp2 = new Spacer(gearCen - axelDir * offset2, 1, rad, 3, -axelDir);
+                        Spacer sp2 = new Spacer(gearCen - axelDir * offset2, 1, rad2, 3, -axelDir);
                         models.Add(sp2);
                     }
 
@@ -258,7 +259,7 @@ namespace KinergyUtilities
                             ptStart = pts[0] + axelDir * 1;
                         }
                         Curve lineCrv = new Line(ptStart, ptEnd).ToNurbsCurve();
-                        Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad, axelDir);
+                        Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad1, axelDir);
                         models.Add(axelShaft);
                     }
                     #endregion
@@ -272,13 +273,13 @@ namespace KinergyUtilities
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - axelDir * clearance, 1, rad, 3, -axelDir);
+                        Spacer sp1 = new Spacer(gearCen - axelDir * clearance, 1, rad2, 3, -axelDir);
                         models.Add(sp1);
 
                         if (idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad2, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
@@ -287,7 +288,7 @@ namespace KinergyUtilities
                         // bull gear
                         if (idx != 1)
                         {
-                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad2, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
@@ -317,7 +318,7 @@ namespace KinergyUtilities
 
                     Point3d shaftStartPt = lockLinePts[1] + firstGearDir * 2.75;
                     Point3d shaftEndPt = lockPtEnd;
-                    Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad, firstGearDir);
+                    Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad1, firstGearDir);
                     models.Add(lockAxelShaft);
 
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
@@ -340,7 +341,7 @@ namespace KinergyUtilities
 
                     Point3d shaftStartPt = lockLinePts[0] + firstGearDir * 2.75;
                     Point3d shaftEndPt = lockPtEnd;
-                    Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad, firstGearDir);
+                    Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad1, firstGearDir);
                     lockAxelShaft.SetName("MiddleShellBreakerShaft");
                     models.Add(lockAxelShaft);
 
