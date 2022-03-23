@@ -38,6 +38,8 @@ namespace Kinergy
             private Vector3d _rackDirection = Vector3d.Unset;
             private Vector3d _extrudeDirection = Vector3d.Unset;
             private Line _backBone = Line.Unset;
+            private List<Point3d> TeethTips = new List<Point3d>();
+            private List<Point3d> TeethBtms = new List<Point3d>();
 
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
@@ -158,6 +160,8 @@ namespace Kinergy
                 double L1 = Math.Sqrt(Math.Pow(Rf, 2) - Math.Pow(Rf - c, 2));
                 double toothWidth = _pitch - 2 * L1 - 4 * _module * Math.Tan(_pressureAngle);
 
+                Point3d vallyPoint = new Point3d(0, 0, 0);
+                Point3d tipPoint;
                 // generate the half valley before the tooth
 
                 Arc firstValley = new Arc(new Point3d(0,0,0), new Vector3d(1,0,0),new Point3d(L1, c,0));
@@ -167,7 +171,7 @@ namespace Kinergy
 
                 Curve toothFlank = new Line(new Point3d(L1, c, 0), new Point3d(L1 + Math.Tan(_pressureAngle) * 2 * _module, c + 2 * _module, 0)).ToNurbsCurve();
                 Curve toothTipHalf = new Line(new Point3d(L1 + Math.Tan(_pressureAngle) * 2 * _module, c + 2 * _module, 0), new Point3d(L1 + Math.Tan(_pressureAngle) * 2 * _module + toothWidth / 2, c + 2 * _module, 0)).ToNurbsCurve();
-
+                tipPoint = toothTipHalf.PointAtNormalizedLength(1);
                 // generate the valley after the tooth
                 Curve toothHalfCrv = Curve.JoinCurves(new List<Curve> { firstValleyCrv, toothFlank, toothTipHalf }, myDoc.ModelAbsoluteTolerance, false)[0];
 
@@ -189,6 +193,14 @@ namespace Kinergy
                     Curve tempCrv = toothProfileCrv.DuplicateCurve();
                     tempCrv.Transform(move);
                     rackTeeth.Add(tempCrv);
+
+                    Point3d tip = new Point3d(tipPoint);
+                    tip.Transform(Transform.Translation(new Vector3d(_pitch * i, 0, 0)));
+                    TeethTips.Add(tip) ;
+                    Point3d vally = new Point3d(vallyPoint);
+                    vally.Transform(Transform.Translation(new Vector3d(_pitch * i, 0, 0)));
+                    TeethBtms.Add(vally);
+
                 }
                 rackTeeth.Add(new Line(new Point3d(_z * _pitch, 0, 0), new Point3d(_length, 0, 0)).ToNurbsCurve());
                 rackTeeth.Add(new Line(new Point3d(_length, 0, 0), new Point3d(_length, -_thickness, 0)).ToNurbsCurve());
@@ -327,6 +339,22 @@ namespace Kinergy
                 base.Model.Transform(trans0);
                 base.Model.Transform(rotat0);
                 base.Model.Transform(selfRotate);
+                for(int i=0;i<TeethTips.Count();i++)
+                {
+                    Point3d p = TeethTips[i];
+                    p.Transform(trans0);
+                    p.Transform(rotat0);
+                    p.Transform(selfRotate);
+                    TeethTips[i] = p;
+                }
+                for (int i = 0; i < TeethBtms.Count(); i++)
+                {
+                    Point3d p = TeethBtms[i];
+                    p.Transform(trans0);
+                    p.Transform(rotat0);
+                    p.Transform(selfRotate);
+                    TeethBtms[i] = p;
+                }
             }
 
 
@@ -359,6 +387,57 @@ namespace Kinergy
                 }
                 else { return false; }
                 return true;
+            }
+            /// <summary>
+            /// Use this function to move rack model to fit a gear. 
+            /// Input a contact point of gear and this function would automatically move rack model to fit it. 
+            /// Note that the movement is only along rack direction. Return true for success, false for fail. 
+            /// Note that moving will fail if moving distance is greater than one teeth width.
+            /// </summary>
+            /// <param name="contactPoint">Position of closest point</param>
+            /// <param name="isTip">True for a tip, false for a vally</param>
+            public bool MoveAndEngage(Gear gear,Vector3d dir)
+            {
+                //First tell the closest teeth to the dir
+                double maxProduct = 0;
+                int maxIndex = -1;
+                foreach(Vector3d v in gear.TeethDirections)
+                {
+                    if (dir * v > maxProduct)
+                    { 
+                        maxIndex = gear.TeethDirections.IndexOf(v);
+                        maxProduct = dir * v;
+                    }
+                }
+                //Then tell the offset value
+                double gearOffsetRad=Math.Acos(maxProduct);
+                double gearOffsetDistance = gearOffsetRad * (gear.RootRadius + gear.TipRadius) / 2;
+                //tell offset distance is positive or negative
+                Point3d contactPoint = gear.CenterPoint + dir * (gear.RootRadius + gear.TipRadius) / 2;
+                Point3d tipPoint = gear.TeethTips[maxIndex];
+                if ((tipPoint - contactPoint) * _rackDirection < 0)
+                    gearOffsetDistance = -gearOffsetDistance;
+
+                double targetPosition = new Vector3d(contactPoint) * _rackDirection;
+                double minProduct = _pitch;
+                Vector3d offset = Vector3d.Unset;
+                foreach (Point3d p in TeethBtms)
+                {
+                    double pos = new Vector3d(p) * _rackDirection;
+                    double difference = targetPosition - pos;
+                    if (Math.Abs(difference+gearOffsetDistance) < minProduct)
+                    {
+                        minProduct = Math.Abs(difference+gearOffsetDistance);
+                        offset = _rackDirection * (difference + gearOffsetDistance);
+                    }
+                }
+
+                if (offset != Vector3d.Unset)
+                {
+                    model.Transform(Transform.Translation(offset));
+                    return true;
+                }
+                return false;
             }
         }
     }

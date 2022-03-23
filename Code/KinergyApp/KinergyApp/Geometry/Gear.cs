@@ -40,6 +40,8 @@ namespace Kinergy
             private Point3d _centerPoint = Point3d.Unset;
             private Vector3d _direction = Vector3d.Unset;
             private Boolean _twoLayer = false;
+            private List<Vector3d> teethDirections=new List<Vector3d>();
+            private List<Point3d> teethTips = new List<Point3d>();
 
             public int NumTeeth { get => _numTeeth; protected set => _numTeeth = value; }
             public double Pitch { get => _pitch; protected set => _pitch = value; }
@@ -52,6 +54,8 @@ namespace Kinergy
             public Vector3d Direction { get => _direction; protected set => _direction = value; }
             public bool IsMovable { get => _isMovable; set => _isMovable = value; }
             public Vector3d X_direction { get => _x_direction; set => _x_direction = value; }
+            public List<Vector3d> TeethDirections { get => teethDirections; }
+            public List<Point3d> TeethTips { get => teethTips; }
 
             //private Brep surface = null;
 
@@ -243,13 +247,20 @@ namespace Kinergy
 
                 List<Curve> gearTooth = new List<Curve>();
                 //gearTooth.Add(tooth);
-
+                Vector3d firstDir = new Vector3d(0, 1, 0);
+                Point3d firstTip = new Point3d(0, _tipRadius, 0);
                 for (int i = 0; i < _numTeeth; i++)
                 {
                     Transform rotat = Transform.Rotation(-i * angle, new Vector3d(0, 0, 1), new Point3d(0, 0, 0));
                     Curve nextTooth = tooth.DuplicateCurve();
                     nextTooth.Transform(rotat);
                     gearTooth.Add(nextTooth);
+                    Vector3d dir = new Vector3d(firstDir);
+                    dir.Transform(rotat);
+                    teethDirections.Add(dir);
+                    Point3d pt = new Point3d(firstTip);
+                    pt.Transform(rotat);
+                    teethTips.Add(pt);
                 }
 
                 //RhinoApp.WriteLine("geartooth got crvs" + gearTooth.Count());
@@ -287,7 +298,7 @@ namespace Kinergy
                 if (_isMovable)
                 {
                     // drill a central hole so that the gear will be movable on the shaft
-                    double clearance = 0.4;
+                    double clearance = 0.4+0.1;//Xia's note: added 0.1 to this based on experiment result
                     double shaftRadius = 1.5;
                     double holdRadius = clearance + shaftRadius;
                     Brep holeBrep = Brep.CreatePipe(gearPathCrv, holdRadius, false, PipeCapMode.Round, true, mydoc.ModelAbsoluteTolerance, mydoc.ModelAngleToleranceRadians)[0];
@@ -308,6 +319,14 @@ namespace Kinergy
                     base.Model.Transform(centerTrans);
                     base.BaseCurve.Transform(centerTrans);
                     _x_original_direction.Transform(centerTrans);
+
+                    for (int i = 0; i <teethTips.Count(); i++)
+                    {
+                        Point3d p = teethTips[i];
+                        p.Transform(centerTrans);
+                        teethTips[i] = p;
+                    }
+
                 }
 
                 if (_direction != Vector3d.Unset)
@@ -316,7 +335,18 @@ namespace Kinergy
                     base.Model.Transform(centerRotate);
                     base.BaseCurve.Transform(centerRotate);
                     _x_original_direction.Transform(centerRotate);
-
+                    for (int i = 0; i < teethTips.Count(); i++)
+                    {
+                        Point3d p = teethTips[i];
+                        p.Transform(centerRotate);
+                        teethTips[i] = p;
+                    }
+                    for (int i = 0; i < teethDirections.Count(); i++)
+                    {
+                        Vector3d p =teethDirections[i];
+                        p.Transform(centerRotate);
+                        teethDirections[i] = p;
+                    }
                     //if (base.BaseCurve.ClosedCurveOrientation() == CurveOrientation.Clockwise)
                     //{
                     //    Transform centerRotate = Transform.Rotation(new Vector3d(0, 0, 1), _direction, _centerPoint);
@@ -331,12 +361,37 @@ namespace Kinergy
                     Transform centerRotate1 = Transform.Rotation(_x_original_direction, _x_direction, _centerPoint);
                     base.Model.Transform(centerRotate1);
                     base.BaseCurve.Transform(centerRotate1);
+                    for (int i = 0; i < teethTips.Count(); i++)
+                    {
+                        Point3d p = teethTips[i];
+                        p.Transform(centerRotate1);
+                        teethTips[i] = p;
+                    }
+                    for (int i = 0; i < teethDirections.Count(); i++)
+                    {
+                        Vector3d p = teethDirections[i];
+                        p.Transform(centerRotate1);
+                        teethDirections[i] = p;
+                    }
+
                 }
 
                 double selfRotRad = Math.PI / 180 * _selfRotAngle;
                 Transform selfRotation = Transform.Rotation(selfRotRad, _direction, _centerPoint);
                 base.Model.Transform(selfRotation);
 
+                for (int i = 0; i < teethTips.Count(); i++)
+                {
+                    Point3d p = teethTips[i];
+                    p.Transform(selfRotation);
+                    teethTips[i] = p;
+                }
+                for (int i = 0; i < teethDirections.Count(); i++)
+                {
+                    Vector3d p = teethDirections[i];
+                    p.Transform(selfRotation);
+                    teethDirections[i] = p;
+                }
                 //generate standard gears first and then do tranlation and rotation from the upper level;
                 //Vector3d v = direction / direction.Length * faceWidth;
                 //Point3d startPoint = center - v*0.5;

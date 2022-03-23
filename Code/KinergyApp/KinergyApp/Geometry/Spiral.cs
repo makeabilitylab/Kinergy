@@ -438,8 +438,8 @@ namespace Kinergy
             }
             public override int GetContactPosition(Entity other)
             {
-                Point3d inner = spiralCurve.PointAtStart;
-                Point3d outer = spiralCurve.PointAtEnd;
+                Point3d inner = spiralCurve.PointAtEnd;
+                Point3d outer = spiralCurve.PointAtStart;
                 double d1 = other.Model.ClosestPoint(inner).DistanceTo(inner);
                 double d2 = other.Model.ClosestPoint(outer).DistanceTo(outer);
                 if (d1 < d2)

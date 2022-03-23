@@ -126,6 +126,10 @@ namespace KinergyUtilities
                         }
                         Curve lineCrv = new Line(ptStart, ptEnd).ToNurbsCurve();
                         Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad1, axelDir);
+
+                        //TODO If it is the last gear shaft, give it a name for later use
+
+
                         models.Add(axelShaft);
                     }
                     #endregion
@@ -261,6 +265,9 @@ namespace KinergyUtilities
                         }
                         Curve lineCrv = new Line(ptStart, ptEnd).ToNurbsCurve();
                         Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad1, axelDir);
+
+                        //TODO If it is the last gear shaft, give it a name for later use
+
                         models.Add(axelShaft);
                     }
                     #endregion
@@ -313,6 +320,7 @@ namespace KinergyUtilities
                 {
                     lockPtEnd = lockLinePts[0] + firstGearDir * 7;
                     lockPtStart = lockLinePts[1] + firstGearDir * 4.5;
+
                     Socket lockShaftSocket = new Socket(lockPtStart, firstGearDir);
                     models.Add(lockShaftSocket);
 
@@ -343,6 +351,9 @@ namespace KinergyUtilities
                     Point3d shaftStartPt = lockLinePts[0] + firstGearDir * 2.75;
                     Point3d shaftEndPt = lockPtEnd;
                     Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad1, firstGearDir);
+
+                    lockAxelShaft.SetName("MiddleShellBreakerShaft");
+
                     models.Add(lockAxelShaft);
 
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
@@ -372,7 +383,7 @@ namespace KinergyUtilities
         /// <param name="controlType">the selected controlling method: helix or spiral</param>
         /// <param name="clearance">the clearance between the shaft and the gear - 0.4mm</param>
         /// <returns></returns>
-        public List<Gear> genGears(List<GearParameter> gear_info, int controlType, double clearance)
+        public List<Gear> genGears(List<GearParameter> gear_info, int controlType, double clearance,bool lastGearMovable=true)
         {
             List<Gear> models = new List<Gear>();
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
@@ -443,7 +454,11 @@ namespace KinergyUtilities
                             if (numTeeth % 2 == 1) { isGroove = false; }
                             else { isGroove = true; }
                         }
-                        Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
+                        Gear newGear;
+                        if (gear_info.IndexOf(gp) == gear_info.Count-1 && lastGearMovable==false)
+                            newGear= new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, false);
+                        else
+                            newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
                         newGear.Generate();
                         models.Add(newGear);
                     } 
@@ -500,8 +515,12 @@ namespace KinergyUtilities
                                 if (numTeeth % 2 == 1) { isGroove = false; }
                                 else { isGroove = true; }
                             }
-
-                            Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, selfRotationAngle, true);
+                            Gear newGear;
+                            if (gear_info.IndexOf(gp) == gear_info.Count - 1 && lastGearMovable == false)
+                                newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, false);
+                            else
+                                newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
+                           
                             newGear.Generate();
                             models.Add(newGear);
                         }

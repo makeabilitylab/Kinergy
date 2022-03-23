@@ -677,7 +677,12 @@ namespace ConTranslation
 
             if (toBake)
             {
-                motion.CreateShell();
+                //Remove all 3 cut parts to ake space for actual shells
+                myDoc.Objects.Delete(reserveBrepID1,true);
+                myDoc.Objects.Delete(reserveBrepID2, true);
+                myDoc.Objects.Delete(convertedPortion, true);
+                if(motion!=null)
+                    motion.CreateShell();
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)
@@ -796,6 +801,9 @@ namespace ConTranslation
 
                 //myDoc.Objects.AddBrep(temp.Model);
                 //myDoc.Views.Redraw();
+                //myDoc.Objects.AddPoints(temp.TeethTips);
+                //myDoc.Objects.AddPoints(temp1.TeethTips);
+                //myDoc.Objects.AddPoints(temp2.TeethTips);
                 //myDoc.Objects.AddBrep(temp1.Model);
                 //myDoc.Views.Redraw();
                 //myDoc.Objects.AddBrep(temp2.Model);
@@ -831,6 +839,9 @@ namespace ConTranslation
 
                 //Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
                 //myDoc.Objects.AddBrep(tempRack.Model);
+                //myDoc.Views.Redraw();
+                //List<Point3d> pts = tempRack.GetTipsBtms();
+                //myDoc.Objects.AddPoints(pts);
                 //myDoc.Views.Redraw();
 
                 //Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
@@ -884,6 +895,7 @@ namespace ConTranslation
 
             if (toAdjustParam)
             {
+                //TODO adjust param
 
             }
 
