@@ -518,7 +518,7 @@ namespace Kinergy.KineticUnit
             }
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
             Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension*0.3,bboxMainDimension*0.3), new Interval(-10, 10)
-                , new Interval(-bboxMainDimension*5, bboxMainDimension*5)).ToBrep();
+                , new Interval(0, bboxMainDimension*5)).ToBrep();
             cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
                 cutBox.Flip();

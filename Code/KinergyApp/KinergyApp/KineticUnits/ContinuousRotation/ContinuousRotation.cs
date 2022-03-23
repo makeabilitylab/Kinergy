@@ -58,7 +58,8 @@ namespace Kinergy.KineticUnit
         private int _shaftNum;
         private List<List<int>> _r_shaft_num_List;
         private List<List<double>> _shaft_radius_pool;
-
+        private List<Entity> endEffectors = new List<Entity>();
+        private int endEffectorState;
         public const double clearance1 = 0.3;
         public const double clearance2 = 0.6;
         public const double gearFaceWidth = 3.6;
@@ -1864,6 +1865,24 @@ namespace Kinergy.KineticUnit
             entityList.Remove(p1);
             entityList.Remove(p2);
             entityList.Remove(p3);
+        }
+        public void SetEndEffectors(int eeState,List<Brep> ees)
+        {
+            endEffectorState = eeState;
+            if(endEffectors.Count>0)
+            {
+                foreach(Entity e in endEffectors)
+                {
+                    entityList.Remove(e);
+                }
+            }
+            endEffectors.Clear();
+            foreach(Brep b in ees)
+            {
+                Entity ee = new Entity(b, false, "endEffector");
+                entityList.Add(ee);
+                endEffectors.Add(ee);
+            }
         }
         public override bool LoadKineticUnit()
         {

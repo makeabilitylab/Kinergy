@@ -106,10 +106,15 @@ namespace ConRotation
         Vector3d axelDir = new Vector3d();
         Point3d eeCenPt = new Point3d();
         double finalGearPositionRatio;
+        Helpers helperFun;
 
-        
         int eeMovingDirectionSelection = 0;//-1 for error, 0 for unset, 1 for main, 2 for perp up, 3 for perp down
         GearTrainParam selectedGearTrainParam;
+        List<Entity> axel_spacer_entities = new List<Entity>();
+        List<Gear> gears = new List<Gear>();
+        List<Entity> spring_entities = new List<Entity>();
+        //List<GearParameter> gear_info = new List<GearParameter>();
+        Point3d lockPos = new Point3d();
 
         bool PlaneSelected = false;
         Vector3d selectedAxisVector = Vector3d.Unset;
@@ -170,6 +175,7 @@ namespace ConRotation
             reserveBrepID1 = Guid.Empty;
             reserveBrepID2 = Guid.Empty;
             motionCtrlPointSelected = new Point3d();
+            helperFun = new Helpers();
         }
 
         /// <summary>
@@ -536,28 +542,129 @@ namespace ConRotation
                     BoundingBox eeBbox = ee1Model.GetBoundingBox(true);
                     Vector3d eeVectorPrimitive = eeBbox.Center - eeCenPt;
                     Vector3d eeVector = eeVectorPrimitive - eeVectorPrimitive * (eeVectorPrimitive * mainAxis);
-                    eeVector.Unitize();
-                    shaftAxis = eeVector;
+                    shaftAxis =new Vector3d( eeVector);
+                    shaftAxis.Unitize();
+                    //move ee model to match eeVector
+                    ee1=myDoc.Objects.Transform(ee1, Transform.Translation(eeVector-eeVectorPrimitive), true);
+                    myDoc.Objects.Hide(ee1, true);
+                    ee1Model.Transform(Transform.Translation(eeVector - eeVectorPrimitive));
                 }
                 else
                 {
-
+                    //find the direction from one ee to the other
+                    BoundingBox ee1Bbox = ee1Model.GetBoundingBox(true);
+                    BoundingBox ee2Bbox = ee2Model.GetBoundingBox(true);
+                    Vector3d eeVectorPrimitive = ee1Bbox.Center - ee2Bbox.Center;
+                    Vector3d eeVector = eeVectorPrimitive - eeVectorPrimitive * (eeVectorPrimitive * mainAxis);
+                    shaftAxis = new Vector3d(eeVector);
+                    shaftAxis.Unitize();
+                    //move ee model to match ee vector. first move middle point to eeCenpt, then move 2 ee to same perp plane
+                    Point3d eeMidPt = new Line(ee1Bbox.Center, ee2Bbox.Center).ToNurbsCurve().PointAtNormalizedLength(0.5);
+                    Vector3d translation1 = eeCenPt - eeMidPt;
+                    Vector3d translation2 = eeVector - eeVectorPrimitive;
+                    ee1=myDoc.Objects.Transform(ee1, Transform.Translation(translation1-translation2/2), true);
+                    ee2=myDoc.Objects.Transform(ee2, Transform.Translation(translation1 + translation2 / 2), true);
+                    myDoc.Objects.Hide(ee1, true);
+                    myDoc.Objects.Hide(ee2, true);
+                    ee1Model.Transform(Transform.Translation(translation1 - translation2 / 2));
+                    ee2Model.Transform(Transform.Translation(translation1 + translation2 / 2));
                 }
                 perpAxis = new Plane(eeCenPt, mainAxis, shaftAxis).Normal;
-                shaftAxis.Unitize();
+                perpAxis.Unitize();
                 //generate gear param
-
+                Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
+                //Offset inner cavity by 2mm
+                innerCavityBox.Inflate(-2);
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt, innerCavityBox, 3.6);
                 //select gear param based on input param
+                if (gear_schemes.Count == 0)
+                {
+                    // the selected body is too small to embed the kinetic unit
+                    warningwin.Text = "The selected body is too small to add the kinetic unit!";
+                    warningwin.Show();
+                }
+                else
+                {
+                    #region for testing
+                    //List<GearParameter> parameters = gear_schemes[0].parameters[0].parameters;
+                    //for (int i = 0; i < parameters.Count; i++)
+                    //{
+                    //    GearParameter p = parameters[i];
+                    //    Gear newGear = new Gear(p.center, p.norm, p.xDirection, (int)Math.Floor(p.radius * 2), 1, 20, p.faceWidth, 0, false);
+                    //    newGear.Generate();
 
-                //generate gear and shaft
+                    //    myDoc.Objects.AddBrep(newGear.Model);
+                    //    myDoc.Views.Redraw();
+                    //}
+                    #endregion
 
-                //register gear and shaft
+                    List<double> gr_list = new List<double>();
+                    foreach (GearTrainScheme gts in gear_schemes)
+                    {
+                        foreach (GearTrainParam gtp in gts.parameters)
+                        {
+                            gr_list.Add(gtp.gearRatio);
+                        }
+                    }
+
+                    gr_list.Sort();
+
+                    int schemeNum = -1;
+                    int paramNum = -1;
+
+                    helperFun.mapSpeedToGears(speed_input, gr_list, gear_schemes, out schemeNum, out paramNum);
+
+                    if (paramNum == -1 || schemeNum == -1)
+                    {
+                        return;
+                    }
+                    selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
+                    //gear_info.Clear();
+                    //gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
+
+                    
+                }
 
                 #endregion
-                //Move ee based on axis
-
                 //Register EE in motion
-                //motion.SetEndEffectors();
+                List<Brep> ees = new List<Brep>();
+                if(endEffectorState==1)
+                {
+                    ees.Add(ee1Model);
+                }
+                else if (endEffectorState==2)
+                {
+                    ees.Add(ee1Model);
+                    ees.Add(ee2Model);
+                }
+                motion.SetEndEffectors(endEffectorState,ees);
+                //Generate gear, shaft and spring
+                #region generate all the axels and spacers for the gears
+                axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
+                #endregion
+
+                #region generate all the gears
+                gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4,false);
+                #endregion
+                
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
+                //delete last shaft and replace with needed structure
+                if (endEffectorState==1)
+                {
+                    //Replace the last shaft with a longer one with a revolute joint at end
+                    //The last shaft has a special name. Find it
+                }
+                else if (endEffectorState==2)
+                {
+                    //Replace the last shaft with a longer one with 2 holes and spacers
+                    //The last shaft has a special name. Find it
+                }
+                else
+                {
+                    throw new Exception("Unexpected situation! Invalid end effector state");
+                }
+                motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                motion.AddSprings(spring_entities.ElementAt(0));
             }
 
             #region old code
