@@ -128,7 +128,8 @@ namespace KinergyUtilities
                         Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad1, axelDir);
 
                         //TODO If it is the last gear shaft, give it a name for later use
-
+                        if (idx == gear_info.Count() - 1)
+                            axelShaft.SetName("lastShaft");
 
                         models.Add(axelShaft);
                     }
@@ -267,7 +268,8 @@ namespace KinergyUtilities
                         Shaft axelShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), rad1, axelDir);
 
                         //TODO If it is the last gear shaft, give it a name for later use
-
+                        if (idx == gear_info.Count() - 1)
+                            axelShaft.SetName("lastShaft");
                         models.Add(axelShaft);
                     }
                     #endregion
@@ -753,9 +755,9 @@ namespace KinergyUtilities
                 innerCavity = result1;
             else
                 innerCavity = b2;
-
-            Transform cavityTranslation = Transform.Translation(brepCut[1].GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
-            innerCavity.Transform(cavityTranslation);
+            //TODO check if this translation matters
+            //Transform cavityTranslation = Transform.Translation(brepCut[1].GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
+            //innerCavity.Transform(cavityTranslation);
             return innerCavity;
         }
     }

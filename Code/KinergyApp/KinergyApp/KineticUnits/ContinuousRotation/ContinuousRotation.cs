@@ -1884,6 +1884,131 @@ namespace Kinergy.KineticUnit
                 endEffectors.Add(ee);
             }
         }
+        public void CreateShell()
+        {
+            double shellThickness = 2;
+            Brep part2;
+            GearParameter lgp = _gearParam.parameters.Last();
+            Brep lgCylinder = new Cylinder(new Circle(new Plane(lgp.center, lgp.norm), lgp.radius + 2), lgp.faceWidth + 0.6 + 1.3 * 2).ToBrep(true, true);
+            lgCylinder.Transform(Transform.Translation(-lgp.norm * 1.6));
+            part2 = Brep.CreateBooleanDifference(b2, lgCylinder, myDoc.ModelAbsoluteTolerance)[0];
+            Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
+            Brep innerShell = shells[0];
+            innerShell.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == innerShell.SolidOrientation)
+                innerShell.Flip();
+            part2 = Brep.CreateBooleanDifference(part2, innerShell, myDoc.ModelAbsoluteTolerance)[0];
+            //Cut b2 with shaft if needed
+            foreach (Entity e in entityList)
+            {
+                if (e.Name == "MiddleShellBreakerShaft")
+                {
+                    Shaft s = (Shaft)e;
+                    Plane p = new Plane(s.StartPt, s.AxisDir);
+                    Circle c = new Circle(p, 2.1);
+                    Cylinder cy = new Cylinder(c, s.Len);
+                    part2 = Brep.CreateBooleanDifference(part2, cy.ToBrep(true, true), myDoc.ModelAbsoluteTolerance)[0];
+                }
+            }
+            //Cut part 2 open
+            #region Cut part 2 open with box
+            BoundingBox inncerCavityBbox = _innerCavity.GetBoundingBox(true);
+            double bboxMainDimension = 0, bboxPerpDimension = 0, bboxOtherDimension = 0;
+
+            if ((Vector3d.XAxis * _mainAxis) == 1 || (Vector3d.XAxis * _mainAxis) == -1)
+            {
+                bboxMainDimension = inncerCavityBbox.Max.X - inncerCavityBbox.Min.X;
+
+            }
+            else if ((Vector3d.YAxis * _mainAxis) == 1 || (Vector3d.YAxis * _mainAxis) == -1)
+            {
+                bboxMainDimension = inncerCavityBbox.Max.Y - inncerCavityBbox.Min.Y;
+
+            }
+            else
+            {
+                bboxMainDimension = inncerCavityBbox.Max.Z - inncerCavityBbox.Min.Z;
+
+            }
+            Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
+            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.3, bboxMainDimension * 0.3), new Interval(-10, 10)
+                , new Interval(0, bboxMainDimension * 5)).ToBrep();
+            cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
+                cutBox.Flip();
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+
+            //myDoc.Objects.AddBrep(part2);
+            //myDoc.Views.Redraw();
+
+            Brep[] cutResult = Brep.CreateBooleanDifference(part2, cutBox, myDoc.ModelAbsoluteTolerance);
+            part2 = cutResult[0];
+
+            #endregion
+
+            //Cut b3 with gear cylinder
+            Brep part3 = Brep.CreateBooleanDifference(b3, lgCylinder, myDoc.ModelAbsoluteTolerance)[0];
+            //Cut b3 with a horizontal rod to let water in
+            //BoundingBox part3bbox = part3.GetBoundingBox(true);
+            //Brep cuttingRod = new Cylinder(new Circle(new Plane(part3bbox.Center, _otherAxis), 5), bboxMainDimension * 10).ToBrep(true, true);
+            //cuttingRod.Transform(Transform.Translation(_otherAxis * (-bboxMainDimension * 5)));
+            //cuttingRod.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == cuttingRod.SolidOrientation)
+            //    cuttingRod.Flip();
+            //try
+            //{
+            //    part3 = Brep.CreateBooleanDifference(part3, cuttingRod, myDoc.ModelAbsoluteTolerance)[0];
+            //}
+            //catch { }
+            //Cut part 3 with plane to greate a gap
+            //Plane cutter;
+            //try
+            //{
+            //    cutter = new Plane(_skeleton.PointAtNormalizedLength(t1), _mainAxis);
+            //    cutter.Transform(Transform.Translation(_mainAxis * 0.3));
+            //    Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
+            //    part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            //}
+            //catch
+            //{
+            //    cutter = new Plane(_skeleton.PointAtNormalizedLength(t2), _mainAxis);
+            //    cutter.Transform(Transform.Translation(_mainAxis * 0.3));
+            //    Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
+            //    part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            //}
+            //part3.Transform(Transform.Translation(_mainAxis * clearance2));
+            //Cut part123 with constraining structure
+            Brep part1 = b1;
+            //constrainingStructureSpaceTaken.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == constrainingStructureSpaceTaken.SolidOrientation)
+            //    constrainingStructureSpaceTaken.Flip();
+            //try
+            //{
+            //    part1 = Brep.CreateBooleanDifference(part1, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
+            //}
+            //catch { }
+            //try
+            //{
+            //    part2 = Brep.CreateBooleanDifference(part2, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
+            //}
+            //catch { }
+            //try
+            //{
+            //    part3 = Brep.CreateBooleanDifference(part3, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
+            //}
+            //catch { }
+            entityList.Remove(p1);
+            entityList.Remove(p2);
+            entityList.Remove(p3);
+            p1 = new Entity(part1);
+            entityList.Add(p1);
+            p2 = new Entity(part2);
+            entityList.Add(p2);
+            p3 = new Entity(part3);
+            entityList.Add(p3);
+        }
         public override bool LoadKineticUnit()
         {
             if(InputType == 1)
