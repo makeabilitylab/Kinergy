@@ -90,7 +90,10 @@ namespace ConTranslation
         List<Gear> gears = new List<Gear>();
         List<Entity> spring_entities = new List<Entity>();
         //List<GearParameter> gear_info = new List<GearParameter>();
-        Point3d lockPos = new Point3d();
+        List<Point3d> lockPos = new List<Point3d>();
+        bool spiralLockNorm = false;
+        Vector3d spiralLockDir = new Vector3d();
+
 
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
@@ -634,10 +637,16 @@ namespace ConTranslation
                 #endregion
 
                 #region generate the spring
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
-                motion.AddSprings(spring_entities.ElementAt(0));
-                #endregion
+                GearParameter lgp = selectedGearTrainParam.parameters.Last();
+                Point3d rackPos = lgp.center + lgp.norm * lgp.faceWidth;
 
+                if(eeMovingDirectionSelection == 1)
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, rackPos);
+                else
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                motion.AddSprings(spring_entities.ElementAt(0));
+
+                #endregion
 
                 //Calculate output displacement!
                 double eeMovingDistance = 0;
@@ -657,12 +666,13 @@ namespace ConTranslation
                 //This is the key structures to be built and the gap need to be cut
                 
                 motion.BuildEndEffectorRack(eeMovingDistance, selectedGearTrainParam, eeMovingDirectionSelection, eeLineDotPt, mainAxis, perpAxis, otherAxis);
-                
+
             }
 
             if (toAddLock)
             {
-
+                if (motion != null)
+                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
             }
 
             if (toRemoveLock)

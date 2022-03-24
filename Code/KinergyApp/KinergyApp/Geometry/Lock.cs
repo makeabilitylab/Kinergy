@@ -143,6 +143,9 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == centralAxis.SolidOrientation)
                 centralAxis.Flip();
 
+            myDoc.Objects.AddBrep(centralAxis);
+            myDoc.Views.Redraw();
+
             #endregion
 
             #region create the beams
@@ -332,7 +335,6 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == barrelTunnel.SolidOrientation)
                 barrelTunnel.Flip();
 
-
             Point3d barrelHollowPt0 = barrelHollowStart + tipDir * (beamOffset + clearance) + direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
             Point3d barrelHollowPt1 = barrelHollowStart + tipDir * (beamOffset + clearance) - direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
             Point3d barrelHollowPt2 = barrelHollowStart - tipDir * (beamOffset + clearance) - direction / direction.Length * 2 * (beamWidthOffset + clearance + barrelThickness);
@@ -390,6 +392,7 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == barrel.SolidOrientation)
                 barrel.Flip();
             addBarrel = barrel;
+
             #endregion
 
             #region combine the beam, the axis, and the handler
@@ -408,6 +411,7 @@ namespace Kinergy.Geom
             lockBasedBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == lockBasedBrep.SolidOrientation)
                 lockBasedBrep.Flip();
+
             if (isLocked)
                 lockBasedBrep.Transform(Transform.Translation(_lockMoveVector));
             return lockBasedBrep;

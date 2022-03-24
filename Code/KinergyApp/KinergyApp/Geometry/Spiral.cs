@@ -36,7 +36,7 @@ namespace Kinergy
             #region spiral spring constants
             private double min_strip_thickness = 0.8;
             private double inerRadius_constant = 1.5;
-            private double coilBandwidth = 7;
+            private double coilBandwidth = 6;
 
             private bool isSpringDirCW;
 
@@ -118,6 +118,103 @@ namespace Kinergy
 
                 LoadSpiral(initialAngle);
             }
+
+            public Spiral(Brep selectedBody, Point3d startPt, Vector3d Direction, Point3d Center, double R, bool isSpringCW, int maxD, bool non_instant, int energy = 5, double initialAngle = 0)
+            {
+                // maxD: 1 - 10
+                // energy: 1 - 10
+
+                startPos = startPt;
+                angleLoaded = initialAngle;
+                center = new Point3d(Center);
+                centerPoint = new Point3d(Center);
+                direction = Direction;
+                outerRadius = R;
+                innerRadius = inerRadius_constant;
+
+                //First calculate n with dis
+                double revLevel = maxD / 10.0;
+                thicknessX = min_strip_thickness;
+                thicknessY = coilBandwidth;
+
+                //roundNum = 2 + maxDegree / (Math.PI) ;
+                //double energy033 = Math.Pow((energy + 2)/2, 0.33);
+                //thicknessX *= energy033;
+
+                double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
+                maxRevolution = revolutions;
+                thicknessX = Math.Pow(revolutions, 1.0 / 3.0);
+                double energyLevel = energy / 10.0;
+                double pitch = energyLevel * (outerRadius - innerRadius) / 2;
+                roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+                isSpringDirCW = isSpringCW;
+
+                angleLoaded += initialAngle;
+                Point3d startCoilPos = GenerateSpiralCurve();
+
+
+                #region generate the spiral and the supporting column for non-instant kinetic units
+
+                Plane basePlane = new Plane(centerPoint, direction);
+                Vector3d X = basePlane.XAxis;
+                Plane recPlane = new Plane(centerPoint + X * outerRadius, X, direction);
+                Rectangle3d outline = new Rectangle3d(recPlane, new Interval(-thicknessX, 0), new Interval(0, thicknessY));
+                outline.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+                Brep b = Brep.CreateFromSweep(base.BaseCurve, outline.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                b = b.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+
+                b.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == b.SolidOrientation)
+                    b.Flip();
+
+                double suppColSideLen = 3.2;
+                //Point3d conStart = startCoilPos + thicknessY * direction / direction.Length;
+                //Point3d conStart = startCoilPos/* + (suppColSideLen / 2) * direction / direction.Length*/;
+                //Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction + conStart;
+
+                //conStart.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+                
+                Point3d conStartFinal = centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction;
+                Plane supPlane = new Plane(conStartFinal, direction);
+                Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen / 2, suppColSideLen / 2), new Interval(-suppColSideLen, 0));
+                outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+                conStartFinal.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+
+                Curve crossLineCrv = new Line(conStartFinal - direction * int.MaxValue, conStartFinal + direction * int.MaxValue).ToNurbsCurve();
+                Curve[] crvs;
+                Point3d[] pts;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, selectedBody, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out crvs, out pts);
+                Point3d conEndFinal = new Point3d();
+
+                if ((pts[0] - conStartFinal) / pts[0].DistanceTo(conStartFinal) == direction)
+                {
+                    conEndFinal = pts[1] + direction * 0.5;
+                }
+                else
+                {
+                    conEndFinal = pts[0] + direction * 0.5;
+                }
+
+                Curve conPath = new Line(conStartFinal, conEndFinal).ToNurbsCurve();
+
+                Brep connectorBrep = Brep.CreateFromSweep(conPath, outlineSupport.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                connectorBrep = connectorBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                //Brep connectorBrep = Brep.CreatePipe(conPath, thicknessX, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+
+                connectorBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == connectorBrep.SolidOrientation)
+                    connectorBrep.Flip();
+
+                Brep entireSpringModel = Brep.CreateBooleanUnion(new List<Brep> { b, connectorBrep }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                entireSpringModel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == entireSpringModel.SolidOrientation)
+                    entireSpringModel.Flip();
+
+                base.Model = entireSpringModel;
+
+                #endregion
+            }
+
 
             public Spiral(Point3d startPt, Vector3d Direction, Point3d Center, double R, bool isSpringCW, int maxD, bool non_instant, int energy = 5, double initialAngle = 0)
             {
@@ -256,18 +353,19 @@ namespace Kinergy
                 Vector3d X = basePlane.XAxis;
                 Vector3d Y = basePlane.YAxis;
                 List<Point3d> pts = new List<Point3d>();
-                double initialAngle = -angleLoaded;
-                double totalAngle = 2 * PI*roundNum + angleLoaded;
+                //double initialAngle = -angleLoaded;
+                //double initialAngle = -2*angleLoaded;
+                double totalAngle = 2 * PI*roundNum + 2 * angleLoaded;
 
                 
                 Point3d spiralStartPt = centerPoint + X * outerRadius;
                 Curve s = null;
                 if (isSpringDirCW)
                     // the generated spiral spring is CW, which means the turnNum is negative
-                    s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, -roundNum, outerRadius, innerRadius);
+                    s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, -roundNum, outerRadius, 0.5);
                 else
                     // the generated spiral spring is CCW, which means the turnNum is positive
-                    s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, roundNum, outerRadius, innerRadius);
+                    s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, roundNum, outerRadius, 0.5);
 
                 #region old spiral generation
                 ////Did some calculus here to use a quadratic polynomial to compute the loaded spiral curve.
