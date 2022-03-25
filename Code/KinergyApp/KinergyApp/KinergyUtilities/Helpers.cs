@@ -114,7 +114,9 @@ namespace KinergyUtilities
 
                         Point3d ptEnd = new Point3d();
                         Point3d ptStart = new Point3d();
-                        if ((pts[0] - pts[1]) / (pts[0].DistanceTo(pts[1])) == axelDir)
+                        Vector3d intersectVec = (pts[0] - pts[1]);
+                        intersectVec.Unitize();
+                        if (intersectVec*axelDir>0.99)
                         {
                             ptEnd = pts[0] - axelDir * 1;
                             ptStart = pts[1] + axelDir * 1;
@@ -254,7 +256,9 @@ namespace KinergyUtilities
 
                         Point3d ptEnd = new Point3d();
                         Point3d ptStart = new Point3d();
-                        if ((pts[0] - pts[1]) / (pts[0].DistanceTo(pts[1])) == axelDir)
+                        Vector3d intersectVec = (pts[0] - pts[1]);
+                        intersectVec.Unitize();
+                        if (intersectVec* axelDir>0.99)
                         {
                             ptEnd = pts[0] - axelDir * 1;
                             ptStart = pts[1] + axelDir * 1;
@@ -318,7 +322,9 @@ namespace KinergyUtilities
 
                 Point3d lockPtEnd = new Point3d();
                 Point3d lockPtStart = new Point3d();
-                if ((lockLinePts[0] - lockLinePts[1]) / (lockLinePts[0].DistanceTo(lockLinePts[1])) == firstGearDir)
+                Vector3d lockLineVec = lockLinePts[0] - lockLinePts[1];
+                lockLineVec.Unitize();
+                if (lockLineVec*firstGearDir>0.99)
                 {
                     lockPtEnd = lockLinePts[0] + firstGearDir * 7;
                     lockPtStart = lockLinePts[1] + firstGearDir * 4.5;
@@ -334,6 +340,8 @@ namespace KinergyUtilities
 
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 1.5, 3.8, firstGearDir);
                     models.Add(lockAxelShaftDisc);
+
+                    lockAxelShaft.SetName("MiddleShellBreakerShaft");
 
                     Point3d handlerPt = shaftEndPt + firstGearDir * 3;
                     Plane handlerPln = new Plane(handlerPt, firstGearDir);
