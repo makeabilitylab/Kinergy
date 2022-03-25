@@ -12,6 +12,7 @@ using Rhino.Input;
 using HumanUIforKinergy.KinergyUtilities;
 using Kinergy.Geom;
 using System.Linq;
+using System.Drawing;
 
 namespace InterReciprocation
 {
@@ -135,6 +136,77 @@ namespace InterReciprocation
             testPreBtn = false;
             testBakeBtn = false;
             motionControlMethod = -1;
+
+            #region material and color settings
+
+            int solidIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
+            solidMat.DiffuseColor = System.Drawing.Color.White;
+            solidMat.SpecularColor = System.Drawing.Color.White;
+            solidMat.Transparency = 0;
+            solidMat.CommitChanges();
+            solidAttribute = new ObjectAttributes();
+            //solidAttribute.LayerIndex = 2;
+            solidAttribute.MaterialIndex = solidIndex;
+            solidAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            solidAttribute.ObjectColor = Color.White;
+            solidAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            int orangeIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material orangeMat = myDoc.Materials[orangeIndex];
+            orangeMat.DiffuseColor = System.Drawing.Color.Orange;
+            orangeMat.Transparency = 0.3;
+            orangeMat.SpecularColor = System.Drawing.Color.Orange;
+            orangeMat.CommitChanges();
+            orangeAttribute = new ObjectAttributes();
+            //orangeAttribute.LayerIndex = 3;
+            orangeAttribute.MaterialIndex = orangeIndex;
+            orangeAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            orangeAttribute.ObjectColor = Color.Orange;
+            orangeAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            int redIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material redMat = myDoc.Materials[redIndex];
+            redMat.DiffuseColor = System.Drawing.Color.Red;
+            redMat.Transparency = 0.3;
+            redMat.SpecularColor = System.Drawing.Color.Red;
+            redMat.CommitChanges();
+            redAttribute = new ObjectAttributes();
+            //redAttribute.LayerIndex = 4;
+            redAttribute.MaterialIndex = redIndex;
+            redAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            redAttribute.ObjectColor = Color.Red;
+            redAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            int blueIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material blueMat = myDoc.Materials[blueIndex];
+            blueMat.DiffuseColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.SpecularColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.Transparency = 0.7f;
+            blueMat.TransparentColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.CommitChanges();
+            blueAttribute = new ObjectAttributes();
+            //blueAttribute.LayerIndex = 5;
+            blueAttribute.MaterialIndex = blueIndex;
+            blueAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            blueAttribute.ObjectColor = Color.FromArgb(16, 150, 206);
+            blueAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            int greenIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material greenMat = myDoc.Materials[greenIndex];
+            greenMat.DiffuseColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            greenMat.SpecularColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            greenMat.Transparency = 0.7f;
+            greenMat.TransparentColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            greenMat.CommitChanges();
+            greenAttribute = new ObjectAttributes();
+            //greenAttribute.LayerIndex = 6;
+            greenAttribute.MaterialIndex = greenIndex;
+            greenAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            greenAttribute.ObjectColor = Color.FromArgb(72, 232, 88);
+            greenAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            #endregion
         }
 
         /// <summary>

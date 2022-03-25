@@ -882,10 +882,9 @@ namespace ConRotation
 
                 #region ask the user to select rotation direction and generate spring
 
-
-
-
+                eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
                 spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                showDirIndicator(false);
 
                 #endregion
 
@@ -1642,8 +1641,8 @@ namespace ConRotation
 
             if (toAddLock)
             {
-                if (motion != null)
-                    motion.ConstructLocks(transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
+                //if (motion != null)
+                    //motion.ConstructLocks(transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
             }
 
             if (toPreview)
