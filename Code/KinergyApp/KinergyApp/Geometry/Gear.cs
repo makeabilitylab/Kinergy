@@ -285,7 +285,6 @@ namespace Kinergy
                 sweep.AngleToleranceRadians = mydoc.ModelAngleToleranceRadians;
                 sweep.ClosedSweep = false;
                 sweep.SweepTolerance = mydoc.ModelAbsoluteTolerance;
-
                 Curve gearPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _faceWidth)).ToNurbsCurve();
                 Brep[] gearBreps = sweep.PerformSweep(gearPathCrv, base.BaseCurve);
                 Brep gearBrep = gearBreps[0];
