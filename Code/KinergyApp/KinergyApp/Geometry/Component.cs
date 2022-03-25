@@ -24,6 +24,7 @@ namespace Kinergy
         {
             private bool isKinetic = false;//Currently only spring and spiral are kinetic.
             private Curve baseCurve;
+
             public bool IsKinetic { get => isKinetic; protected set => isKinetic = value; }
             public Curve BaseCurve { get => baseCurve; protected set => baseCurve = value; }
 

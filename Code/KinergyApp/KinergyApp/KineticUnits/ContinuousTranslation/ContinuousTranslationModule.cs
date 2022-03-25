@@ -94,6 +94,9 @@ namespace ConTranslation
         bool spiralLockNorm = false;
         Vector3d spiralLockDir = new Vector3d();
 
+        List<double> gr_list = new List<double>();
+        List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
+
 
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
@@ -464,7 +467,7 @@ namespace ConTranslation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new ContinuousTranslation(model, selectedAxisIndex,direction, innerCavity, motionCtrlPointSelected, speedLevel, distanceLevel, energyLevel, motionControlMethod);
+                    motion = new ContinuousTranslation(model, selectedAxisIndex,direction, innerCavity, motionCtrlPointSelected, speedLevel, distanceLevel, energyLevel, motionControlMethod, helperFun);
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -534,7 +537,7 @@ namespace ConTranslation
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
+                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
 
                 if(gear_schemes.Count == 0)
                 {
@@ -557,7 +560,7 @@ namespace ConTranslation
                     //}
                     #endregion
 
-                    List<double> gr_list = new List<double>();
+                    
                     foreach (GearTrainScheme gts in gear_schemes)
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
@@ -677,7 +680,8 @@ namespace ConTranslation
 
             if (toRemoveLock)
             {
-
+                if (motion != null)
+                    motion.RemoveLocks(motionControlMethod);
             }
 
             if (toPreview)
@@ -905,9 +909,11 @@ namespace ConTranslation
 
             if (toAdjustParam)
             {
-                //TODO adjust param
+                if (motion != null)
+                    motion.AdjustParameter(speedLevel, distanceLevel, energyLevel, gr_list, gear_schemes, spiralLockNorm, spring_entities.ElementAt(0), motionControlMethod);
 
             }
+
 
             DA.SetData(0, motion);
             //DA.SetData(1, model);

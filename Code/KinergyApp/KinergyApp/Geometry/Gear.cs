@@ -274,7 +274,6 @@ namespace Kinergy
                 //}
 
                 base.BaseCurve = gear_tooth_crv;
-
             }
 
             private void GenerateGear()
@@ -287,9 +286,24 @@ namespace Kinergy
                 sweep.SweepTolerance = mydoc.ModelAbsoluteTolerance;
 
                 Curve gearPathCrv = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, _faceWidth)).ToNurbsCurve();
-                Brep[] gearBreps = sweep.PerformSweep(gearPathCrv, base.BaseCurve);
-                Brep gearBrep = gearBreps[0];
-                Brep gearSolid = gearBrep.CapPlanarHoles(mydoc.ModelAbsoluteTolerance);
+                //Brep[] gearBreps = sweep.PerformSweep(gearPathCrv, base.BaseCurve);
+                //Brep gearBrep = gearBreps[0];
+                //Brep gearSolid = gearBrep.CapPlanarHoles(mydoc.ModelAbsoluteTolerance);
+
+                Plane tempPln = new Plane();
+                base.BaseCurve.TryGetPlane(out tempPln);
+                Brep gearSolid = new Brep();
+
+                if (tempPln.Normal == new Vector3d(0, 0, 1))
+                {
+                    gearSolid = Extrusion.Create(base.BaseCurve, _faceWidth, true).ToBrep();
+                }
+                else
+                {
+                    gearSolid = Extrusion.Create(base.BaseCurve, -_faceWidth, true).ToBrep();
+                }
+                //base.BaseCurve.ClosedCurveOrientation = CurveOrientation.Clockwise
+               
 
                 gearSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == gearSolid.SolidOrientation)

@@ -84,12 +84,17 @@ namespace Kinergy.KineticUnit
         Shaft firstGearShaft;
         Brep cutBarrel;
         Brep addBarrel;
+        Helpers _helperFun;
+
+        int old_speedValue = -1;
+        int old_energyValue = -1;
+        int old_distanceValue = -1;
 
 
         public int ShaftNum { get => _shaftNum; set => _shaftNum = value; }
         public Rack EndEffectorRack { get => endEffectorRack; set => endEffectorRack = value; }
 
-        public ContinuousTranslation(Brep Model,int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
+        public ContinuousTranslation(Brep Model,int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType, Helpers helper)
         {
             int blueIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material blueMat = myDoc.Materials[blueIndex];
@@ -126,12 +131,123 @@ namespace Kinergy.KineticUnit
 
             _shaftNum = 0;
             _r_shaft_num_List = new List<List<int>>();
+
+            _helperFun = helper;
         }
         public void AddSprings(Entity springControl)
         {
             entityList.Remove(spring);
             spring = springControl;
             entityList.Add(spring);
+        }
+
+        /// <summary>
+        /// Adjust the geartrain and spring parameters based on user input
+        /// </summary>
+        /// <param name="speedLevel">the level of the speed on the slider: 1-10</param>
+        /// <param name="distanceLevel">the level of the distance on the slider: 1-10</param>
+        /// <param name="energyLevel">the level of energy on the slider: 1-10</param>
+        /// <param name="motionControlMethod"></param>
+        public void AdjustParameter(int speedLevel, int distanceLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod)
+        {
+
+            bool isSpeedChange = false;
+            bool isEnergyChange = false;
+            bool isDistanceChange = false;
+
+            if(speedLevel != old_speedValue)
+            {
+                isSpeedChange = true;
+                old_speedValue = speedLevel;
+            }
+            
+            if(distanceLevel != old_distanceValue)
+            {
+                isDistanceChange = true;
+                old_distanceValue = distanceLevel;
+            }
+
+            if(energyLevel != old_energyValue)
+            {
+                isEnergyChange = true;
+                old_energyValue = energyLevel;
+            }
+
+            if(motionControlMethod == 1)
+            {
+                // Adjust the parameters for the helical spring control
+
+            }
+            else
+            {
+                // Adjust the parameters for the spiral spring control
+                int schemeNum = -1;
+                int paramNum = -1;
+
+                _helperFun.mapSpeedToGears(speedLevel, gr_list, gear_schemes, out schemeNum, out paramNum);
+
+                GearTrainParam selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
+
+                #region re-generate all the shafts, spacers, and gears
+
+                if (isSpeedChange)
+                {
+                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod, 0.3);
+                    List<Gear> gears = _helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
+                    AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                }
+
+                #endregion
+
+                #region re-generate the spring
+
+                if(isEnergyChange || isDistanceChange)
+                {
+                    Spiral spiralSpring = (Spiral)spring;
+                    spiralSpring.AdjustParam(energyLevel, distanceLevel, isSpringCW);
+                }
+
+                #endregion
+            }
+        }
+
+        public void RemoveLocks(int controlMethod)
+        {
+            if(controlMethod == 1)
+            {
+                // remove the lock for the helical spring
+
+            }
+            else
+            {
+                // remove the lock for the spiral spring
+                if (lockPartIdx.Count > 0)
+                {
+                    // delete all the entities that have already been registered
+                    List<int> toRemoveEntityIndexes = new List<int>();
+
+                    foreach (Entity en in entityList)
+                    {
+                        if (en.Name.Equals("lockBarrel") || en.Name.Equals("lockBase") || en.Name.Equals("lockHead"))
+                        {
+                            int idx = entityList.IndexOf(en);
+                            toRemoveEntityIndexes.Add(idx);
+                        }
+                    }
+
+                    toRemoveEntityIndexes.Sort((a, b) => b.CompareTo(a)); //sorting by descending
+                    foreach (int idx in toRemoveEntityIndexes)
+                    {
+                        entityList.RemoveAt(idx);
+                    }
+
+                    lockPartIdx.Clear();
+                    locks.Clear();
+                    lockDisToAxis = 0;
+                }
+
+            }
+
         }
 
         public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
@@ -172,6 +288,8 @@ namespace Kinergy.KineticUnit
                 else
                     LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
 
+                LockHead.SetName("lockHead");
+
                 Vector3d centerLinkDirection = new Vector3d(spiralLockCen) - new Vector3d(lockSelection.lockCtrlPointSelected);
                 double centerLinkLen = centerLinkDirection.Length;
                 centerLinkDirection.Unitize();
@@ -182,7 +300,9 @@ namespace Kinergy.KineticUnit
                 cutBarrel = null;
                 addBarrel = null;
                 Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
-                Entity tempAddBarrel = new Entity(addBarrel, false, "");
+                lockBase.SetName("lockBase");
+
+                Entity tempAddBarrel = new Entity(addBarrel, false, "lockBarrel");
                 entityList.Add(tempAddBarrel);
 
                 lockPartIdx.Add(entityList.Count - 1);
@@ -224,11 +344,13 @@ namespace Kinergy.KineticUnit
             _axelsStoppers.Clear();
             foreach(Gear g in gears)
             {
+                g.SetName("gears");
                 _gears.Add(g);
                 entityList.Add(g);
             }
             foreach (Entity e in axelsStoppers)
             {
+                e.SetName("spacers");
                 _axelsStoppers.Add(e);
                 entityList.Add(e);
             }

@@ -73,7 +73,9 @@ namespace Kinergy.KineticUnit
         bool reversed = false;
         double t1 = 0, t2 = 0;
 
-        public ContinuousRotation(Brep Model, int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
+        Helpers _helperFun;
+
+        public ContinuousRotation(Brep Model, int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType, Helpers helper)
         {
             _model = Model;
             _selectedAxisIndex = selectedAxisIndex;
@@ -96,6 +98,8 @@ namespace Kinergy.KineticUnit
 
             _shaftNum = 0;
             _r_shaft_num_List = new List<List<int>>();
+
+            _helperFun = helper;
         }
         //public ContinuousRotation(Brep Model, Vector3d Direction, double Energy, double Speed, int InputType, Brep inCavity)
         //{

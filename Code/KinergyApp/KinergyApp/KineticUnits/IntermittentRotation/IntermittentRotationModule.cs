@@ -66,6 +66,10 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         bool testBakeBtn;
         int motionControlMethod; // 1: press; 2: turn
 
+        bool dirReverseState = false;
+        Guid rotationDirID = Guid.Empty;
+        bool isSpringCW = true;
+
         /// <summary>
         /// Initializes a new instance of the IntermittentRotationModule class.
         /// </summary>
@@ -133,6 +137,8 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
 
             pManager.AddIntegerParameter("Stroke", "Str", "number of strokes", GH_ParamAccess.item);
             pManager.AddIntegerParameter("Energy", "E", "Energy of the output motion", GH_ParamAccess.item);
+
+            pManager.AddBooleanParameter("DirectionReverse", "DirR", "reverse the rotation direction", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -144,6 +150,156 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
             //pManager.AddBrepParameter("Original brep", "Brep", "The target model to move", GH_ParamAccess.item);
             pManager.AddBrepParameter("Models", "M", "", GH_ParamAccess.list);
             pManager.AddBooleanParameter("Preview launcher", "Pre", "enable the preview", GH_ParamAccess.item);
+        }
+
+        void hideDirIndicator()
+        {
+            if (!rotationDirID.Equals(Guid.Empty))
+            {
+                myDoc.Objects.Hide(rotationDirID, true);
+                myDoc.Views.Redraw();
+            }
+        }
+        void showDirIndicator(bool isCCW)
+        {
+            if (!rotationDirID.Equals(Guid.Empty))
+            {
+                myDoc.Objects.Delete(rotationDirID, true);
+                myDoc.Views.Redraw();
+            }
+
+            Vector3d canvasNormal = new Vector3d();
+            Vector3d canvasStart = new Vector3d();
+            Vector3d canvasEnd = new Vector3d();
+            Point3d canvasOrigin = new Point3d();
+            Point3d extrudeEnd = new Point3d();
+
+            var sweep = new SweepOneRail();
+            sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+            sweep.ClosedSweep = false;
+            sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+            switch (selectedAxisIndex)
+            {
+                case 1:
+                    canvasNormal = Vector3d.XAxis;
+                    canvasStart = Vector3d.YAxis;
+                    canvasEnd = Vector3d.ZAxis;
+                    canvasOrigin = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 10) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+                    extrudeEnd = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 13) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+                    break;
+                case 2:
+                    canvasNormal = Vector3d.YAxis;
+                    canvasStart = Vector3d.ZAxis;
+                    canvasEnd = Vector3d.XAxis;
+                    canvasOrigin = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 10) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+                    extrudeEnd = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 13) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+                    break;
+                case 3:
+                    canvasNormal = Vector3d.ZAxis;
+                    canvasStart = Vector3d.XAxis;
+                    canvasEnd = Vector3d.YAxis;
+                    canvasOrigin = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 10) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+                    extrudeEnd = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 13) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+                    break;
+            }
+
+            Curve rail = new Line(canvasOrigin, extrudeEnd).ToNurbsCurve();
+
+            // By default, the indicator is for clockwise
+            #region create the ring
+
+            Brep outerRing = Brep.CreatePipe(rail, 15, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Brep innerRing = Brep.CreatePipe(rail, 10, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            outerRing.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == outerRing.SolidOrientation)
+                outerRing.Flip();
+
+            innerRing.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == innerRing.SolidOrientation)
+                innerRing.Flip();
+
+            Brep ring = Brep.CreateBooleanDifference(outerRing, innerRing, myDoc.ModelAbsoluteTolerance)[0];
+
+            ring.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == ring.SolidOrientation)
+                ring.Flip();
+
+            #endregion
+
+            #region subtract a corner
+
+            Point3d sb0 = canvasOrigin;
+            Point3d sb1 = canvasOrigin + canvasStart * 16;
+            Point3d sb2 = canvasOrigin + canvasStart * 16 + canvasEnd * 16;
+            Point3d sb3 = canvasOrigin + canvasEnd * 16;
+            Point3d sb4 = sb0;
+
+            List<Point3d> subBoxCorners = new List<Point3d>();
+            subBoxCorners.Add(sb0);
+            subBoxCorners.Add(sb1);
+            subBoxCorners.Add(sb2);
+            subBoxCorners.Add(sb3);
+            subBoxCorners.Add(sb4);
+
+            Polyline subBoxRect = new Polyline(subBoxCorners);
+            Curve subBoxRectCrv = subBoxRect.ToNurbsCurve();
+
+            Brep[] subBoxBreps = sweep.PerformSweep(rail, subBoxRectCrv);
+            Brep subBoxBrep = subBoxBreps[0];
+            Brep subBox = subBoxBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            subBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == subBox.SolidOrientation)
+                subBox.Flip();
+
+            Brep arc = Brep.CreateBooleanDifference(ring, subBox, myDoc.ModelAbsoluteTolerance)[0];
+
+            arc.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == arc.SolidOrientation)
+                arc.Flip();
+
+            #endregion
+
+            #region create the arrow
+
+            Point3d tri0 = canvasOrigin + canvasEnd * 7.5;
+            Point3d tri1 = canvasOrigin + canvasEnd * 12.5 + canvasStart * 5;
+            Point3d tri2 = canvasOrigin + canvasEnd * 17.5;
+            Point3d tri3 = tri0;
+
+            List<Point3d> arrowCorners = new List<Point3d>();
+            arrowCorners.Add(tri0);
+            arrowCorners.Add(tri1);
+            arrowCorners.Add(tri2);
+            arrowCorners.Add(tri3);
+
+            Polyline arrowRect = new Polyline(arrowCorners);
+            Curve arrowRectCrv = arrowRect.ToNurbsCurve();
+
+            Brep[] arrowBreps = sweep.PerformSweep(rail, arrowRectCrv);
+            Brep arrowBrep = arrowBreps[0];
+            Brep arrow = arrowBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            arrow.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == arrow.SolidOrientation)
+                arrow.Flip();
+
+            #endregion
+
+            Brep dirIndicator = Brep.CreateBooleanUnion(new List<Brep> { arc, arrow }, myDoc.ModelAbsoluteTolerance)[0];
+
+            if (isCCW)
+            {
+                // flip the indicator
+                Transform tran = Transform.Mirror(canvasOrigin, canvasStart);
+                dirIndicator.Transform(tran);
+            }
+
+            isSpringCW = !isCCW;
+            rotationDirID = myDoc.Objects.AddBrep(dirIndicator, redAttribute);
+            myDoc.Views.Redraw();
         }
 
 
@@ -167,7 +323,7 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            bool reg_input = false, control_pos = false, ee_pos = false, motion_axis = false, addlock_input = false, pre_input = false, bake_input = false;
+            bool reg_input = false, control_pos = false, ee_pos = false, motion_axis = false, addlock_input = false, pre_input = false, bake_input = false, revdir_input = false;
             int motion_control_method = -1;
             int speed_input = 5;
             int step_angle_input = 5;
@@ -199,10 +355,12 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
                 return;
             if (!DA.GetData(11, ref energy_input))
                 return;
+            if (!DA.GetData(12, ref revdir_input))
+                return;
             #endregion
 
             // variables to control states
-            bool toSelectRegion = false, toAdjustParam = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
+            bool toSelectRegion = false, toAdjustParam = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false, toRevDir = false;
 
             #region Input check. This determines how the cell respond to changed params
             if (!reg_input && testBodySelBtn)
@@ -284,6 +442,14 @@ namespace HumanUIforKinergy.KineticUnits.IntermittentRotation
                 stepAngleLevel = step_angle_input;
                 strokeLevel = stroke_input;
                 toAdjustParam = true;
+            }
+
+            if (dirReverseState != revdir_input)
+            {
+                dirReverseState = revdir_input;
+                showDirIndicator(dirReverseState);
+                //motion.AdjustParameter(energyLevel, displacement, isSpringCW);
+                //motion.updateLock(dirReverseState);
             }
 
             #endregion

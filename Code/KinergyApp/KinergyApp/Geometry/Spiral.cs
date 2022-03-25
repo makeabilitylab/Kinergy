@@ -304,10 +304,14 @@ namespace Kinergy
                 //thicknessX *= energy033;
 
                 double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
-                thicknessX = Math.Pow(revolutions, 1.0 / 3.0);
                 double energyLevel = e / 10.0;
-                double pitch = energyLevel * (outerRadius - innerRadius) / 2;
+                //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
+
+                thicknessX = (2 - revLevel) * min_strip_thickness;
+
+                double pitch = energyLevel * (outerRadius - innerRadius) / 3;
                 roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+
                 isSpringDirCW = isSpringCW;
 
                 LoadSpiral(0);
@@ -410,13 +414,13 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == b.SolidOrientation)
                     b.Flip();
 
-                double suppColSideLen = 6;
-                Point3d conStart = springStartPos + thicknessY  * direction / direction.Length;
+                double suppColSideLen = 3.2;
+                Point3d conStart = springStartPos + (suppColSideLen / 2) * direction / direction.Length;
                 Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction / direction.Length + conStart;
                 Curve conPath = new Line(conStart, conEnd).ToNurbsCurve();
 
                 Plane supPlane = new Plane(centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction / direction.Length, direction);
-                Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen/2, suppColSideLen/2), new Interval(-suppColSideLen, 0));
+                Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen / 2, suppColSideLen / 2), new Interval(-suppColSideLen, 0));
                 outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
                 Brep connectorBrep = Brep.CreateFromSweep(conPath, outlineSupport.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
                 connectorBrep = connectorBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
