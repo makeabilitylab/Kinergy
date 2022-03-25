@@ -552,10 +552,12 @@ namespace KinergyUtilities
         /// <param name="dir">the move direction of the end-effector</param>
         /// <param name="lockPos"></param>
         /// <returns></returns>
-        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, int dir, out Point3d lockPos)
+        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, int dir, out List<Point3d> lockPos, out bool lockNorm, out Vector3d lockDir, Point3d eePos = new Point3d())
         {
             List<Entity> models = new List<Entity>();
-            lockPos = new Point3d();
+            lockPos = new List<Point3d>();
+            lockNorm = false;
+            lockDir = new Vector3d();
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
             if (controlType == 1)
@@ -619,7 +621,40 @@ namespace KinergyUtilities
                     ptStart = pts[0] + axelDir * 1;
                 }
 
-                springCen = (ptEnd + firstGearCen) / 2;
+                // Project the end-effector's position to the first shaft 
+                Vector3d sDir = new Vector3d();
+                if (eePos != new Point3d())
+                {
+                    double t = -1;
+                    crossLineCrv.ClosestPoint(eePos, out t);
+                    Point3d eePos_proj = crossLineCrv.PointAt(t);
+                    sDir = secondGearCen - eePos_proj;
+                    sDir.Unitize();
+                    eePos_proj = eePos_proj + sDir * 7;
+
+                    //myDoc.Objects.AddPoint(eePos_proj);
+                    //myDoc.Views.Redraw();
+
+                    //myDoc.Objects.AddPoint(secondGearCen);
+                    //myDoc.Views.Redraw();
+
+                    if (secondGearCen.DistanceTo(eePos_proj) > 13)
+                    {
+                        springCen = eePos_proj + sDir * 0.6;
+                    }
+                    else
+                    {
+                        return new List<Entity>();
+                    }
+                }
+                else
+                {
+                    springCen = (ptEnd + firstGearCen) / 2;
+                    sDir = firstGearCen - ptEnd;
+                    sDir.Unitize();
+                    springCen = springCen - sDir * 3;
+                }
+                
                 Point3d axisStart = ptEnd;
                 Vector3d springDir = ptStart - ptEnd;
                 springDir.Unitize();
@@ -653,7 +688,7 @@ namespace KinergyUtilities
                     }
                 }
 
-                Spiral spiralSpring = new Spiral(axisStart, springDir, springCen, gear_info.ElementAt(1).radius + 0.5, isCW, displacement, true, energyLevel);
+                Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.8, isCW, displacement, true, energyLevel, -Math.PI/4);
 
                 models.Add(spiralSpring);
 
@@ -661,7 +696,21 @@ namespace KinergyUtilities
 
                 #region Step 2: generate the lock position
 
+                lockNorm = isCW;
+                lockDir = sDir;
 
+                Point3d lockCen = springCen + sDir * (0.8 + 6 + 1.8);
+
+                // find the vector that is orthogonal to both sDir and mainAxis
+                Vector3d lockV = Vector3d.CrossProduct(sDir, mainAxis);
+                lockV.Unitize();
+                Curve lockCrossLineCrv = new Line(lockCen - lockV * int.MaxValue, lockCen + lockV * int.MaxValue).ToNurbsCurve();
+                Curve[] lockCrvs;
+                Point3d[] lockPts;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(lockCrossLineCrv, body, myDoc.ModelAbsoluteTolerance, out lockCrvs, out lockPts);
+
+                lockPos.Add(lockPts[0]);
+                lockPos.Add(lockPts[1]);
 
                 #endregion
             }

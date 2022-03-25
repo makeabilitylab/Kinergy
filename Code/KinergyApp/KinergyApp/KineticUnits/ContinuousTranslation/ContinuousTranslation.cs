@@ -19,6 +19,7 @@ using Kinergy.KineticUnit;
 using Kinergy;
 using System.Diagnostics;
 using Rhino.Geometry.Intersect;
+using System.Drawing;
 
 namespace Kinergy.KineticUnit
 {
@@ -72,10 +73,38 @@ namespace Kinergy.KineticUnit
         bool reversed = false;
         double t1 = 0, t2 = 0;
 
+        // lock related variables
+        List<int> lockPartIdx = new List<int>();
+        int midPartIdx = -1;
+        List<Lock> locks = new List<Lock>();
+        RodLike  MidPart/*, basePart, endEffector*/;
+        double lockDisToAxis = 0;
+        ObjectAttributes blueAttribute;
+        Point3d spiralLockCen = new Point3d();
+        Shaft firstGearShaft;
+        Brep cutBarrel;
+        Brep addBarrel;
+
+
         public int ShaftNum { get => _shaftNum; set => _shaftNum = value; }
+        public Rack EndEffectorRack { get => endEffectorRack; set => endEffectorRack = value; }
 
         public ContinuousTranslation(Brep Model,int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType)
         {
+            int blueIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material blueMat = myDoc.Materials[blueIndex];
+            blueMat.DiffuseColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.SpecularColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.Transparency = 0.7f;
+            blueMat.TransparentColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.CommitChanges();
+            blueAttribute = new ObjectAttributes();
+            //blueAttribute.LayerIndex = 5;
+            blueAttribute.MaterialIndex = blueIndex;
+            blueAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            blueAttribute.ObjectColor = Color.FromArgb(16, 150, 206);
+            blueAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
             _model = Model;
             _selectedAxisIndex = selectedAxisIndex;
             _speed = speed;
@@ -103,6 +132,79 @@ namespace Kinergy.KineticUnit
             entityList.Remove(spring);
             spring = springControl;
             entityList.Add(spring);
+        }
+
+        public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
+        {
+            if(motionControlMethod == 1)
+            {
+                // add the lock for the helical spring
+
+            }
+            else
+            {
+                // add the lock for the spiral spring
+
+                #region ask the user to select the lock position
+                LockSelectionForSpiralSpring lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
+                lockDisToAxis = gtp.parameters.ElementAt(0).radius + gtp.parameters.ElementAt(1).radius;
+                spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
+                #endregion
+
+                if (lockPartIdx.Count > 0)
+                {
+                    for (int i = lockPartIdx.Count - 1; i >= 0; i--)
+                    {
+                        entityList.RemoveAt(i);
+                    }
+                    midPartIdx = -1;
+                    lockPartIdx.Clear();
+                }
+
+                if (locks.Count > 0)
+                    locks.Clear();
+
+                Lock LockHead;
+                double ratchetRadius = lockDisToAxis * 0.5;
+
+                if (spiralLockNorm)
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
+                else
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
+
+                Vector3d centerLinkDirection = new Vector3d(spiralLockCen) - new Vector3d(lockSelection.lockCtrlPointSelected);
+                double centerLinkLen = centerLinkDirection.Length;
+                centerLinkDirection.Unitize();
+
+
+                #region add lock parts to the entitylist
+
+                cutBarrel = null;
+                addBarrel = null;
+                Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
+                Entity tempAddBarrel = new Entity(addBarrel, false, "");
+                entityList.Add(tempAddBarrel);
+
+                lockPartIdx.Add(entityList.Count - 1);
+                entityList.Add(LockHead); // the ratchet gear
+                lockPartIdx.Add(entityList.Count - 1);
+                entityList.Add(lockBase); // the latch
+                lockPartIdx.Add(entityList.Count - 1);
+                locks.Add(LockHead);
+                locks.Add(lockBase);
+                LockHead.RegisterOtherPart(lockBase);
+
+                foreach (Entity en in entityList)
+                {
+                    if (en.Name.Equals("MiddleShellBreakerShaft"))
+                    {
+                        firstGearShaft = (Shaft)en;
+                        _ = new Fixation(firstGearShaft, LockHead);
+                    }
+                }
+                #endregion
+
+            }
         }
         public void AddGears(List<Gear> gears,List<Entity> axelsStoppers,GearTrainParam gearParam)
         {
@@ -532,6 +634,14 @@ namespace Kinergy.KineticUnit
             Brep[] cutResult = Brep.CreateBooleanDifference(part2, cutBox, myDoc.ModelAbsoluteTolerance);
             part2 = cutResult[0];
 
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+            part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+ 
             #endregion
 
             //Cut b3 with gear cylinder
@@ -594,6 +704,7 @@ namespace Kinergy.KineticUnit
             entityList.Add(p2);
             p3 = new Entity(part3);
             entityList.Add(p3);
+
         }
         public void CalculateShaftNumAndGearRadius(int level, out double n, out double r)
         {
@@ -718,40 +829,37 @@ namespace Kinergy.KineticUnit
             }
         }
 
-        public void GenerateSpringMotor(Point3d eeCen, int speed_input, int dis_input, int energy_input)
-        {
-            double shaftNum = 0;
-            double gearRadius = 0;
-            double clearance = 0.3;
-            CalculateShaftNumAndGearRadius(speed_input, out shaftNum, out gearRadius);
+        //public void GenerateSpringMotor(Point3d eeCen, int speed_input, int dis_input, int energy_input)
+        //{
+        //    double shaftNum = 0;
+        //    double gearRadius = 0;
+        //    double clearance = 0.3;
+        //    CalculateShaftNumAndGearRadius(speed_input, out shaftNum, out gearRadius);
 
-            double dis = clearance + 4.5 + (shaftNum - 1) * (gearRadius + clearance + 4.5);
+        //    double dis = clearance + 4.5 + (shaftNum - 1) * (gearRadius + clearance + 4.5);
 
-            double t = 0;
-            _skeleton.ClosestPoint(eeCen, out t);
-            if (t > 0.5)
-            {
-                dis = -dis;
-            }
-            Point3d enginePos = eeCen + direction * dis;
+        //    double t = 0;
+        //    _skeleton.ClosestPoint(eeCen, out t);
+        //    if (t > 0.5)
+        //    {
+        //        dis = -dis;
+        //    }
+        //    Point3d enginePos = eeCen + direction * dis;
             
 
-            if (_inputType == 1)
-            {
-                // press control
+        //    if (_inputType == 1)
+        //    {
+        //        // press control
 
 
 
-            }
-            else
-            {
-                // turn control
+        //    }
+        //    else
+        //    {
+        //        // turn control
 
-            }
+        //    }
 
-        }
-
-       
-        
+        //}
     }
 }

@@ -517,6 +517,104 @@ namespace KinergyUtilities
             }
         }
     }
+
+    public class LockSelectionForSpiralSpring
+    {
+        ObjectAttributes blueAttribute;
+
+        RhinoDoc myDoc;
+        Guid lockCtrlPtID1;
+        Guid lockCtrlPtID2;
+        Point3d pos1Pt;
+        Point3d pos2Pt;
+
+        public Point3d lockCtrlPointSelected;
+        /// <summary>
+        /// This class initiates a side selection operation when one of it's instance is constructed.
+        /// </summary>
+        /// <param name="model_skeleton"></param>
+        /// <param name="currDoc"></param>
+        public LockSelectionForSpiralSpring(RhinoDoc currDoc, ObjectAttributes _blueAttribute, Point3d pos1, Point3d pos2)
+        {
+            blueAttribute = _blueAttribute;
+            myDoc = currDoc;
+            pos1Pt = pos1;
+            pos2Pt = pos2;
+            Rhino.Input.Custom.GetPoint gp3 = new Rhino.Input.Custom.GetPoint();
+            gp3.SetCommandPrompt("Select one lock position.");
+            gp3.MouseDown += Gp_MouseDown;
+            gp3.MouseMove += Gp_MouseMove;
+            //gp3.AcceptNothing(true);
+            GenerateLockPosIndicator(pos1, pos2);
+            Rhino.Input.GetResult r3;
+            r3 = gp3.Get(true);
+
+            //do
+            //{
+            //    r3 = gp3.Get(true);
+            //} while (r3 != Rhino.Input.GetResult.Nothing);
+
+            myDoc.Objects.Hide(lockCtrlPtID1, true);
+            myDoc.Objects.Hide(lockCtrlPtID2, true);
+        }
+        void GenerateLockPosIndicator(Point3d pos1, Point3d pos2)
+        {
+            lockCtrlPtID1 = myDoc.Objects.AddSphere(new Sphere(pos1, 3), blueAttribute);
+            lockCtrlPtID2 = myDoc.Objects.AddSphere(new Sphere(pos2, 3), blueAttribute);
+
+            myDoc.Views.Redraw();
+
+        }
+        private void Gp_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Brep pos1Brep = (Brep)myDoc.Objects.Find(lockCtrlPtID1).Geometry;
+            Brep pos2Brep = (Brep)myDoc.Objects.Find(lockCtrlPtID2).Geometry;
+
+            double pos1_dis = pos1Brep.ClosestPoint(currPos).DistanceTo(currPos);
+            double pos2_dis = pos2Brep.ClosestPoint(currPos).DistanceTo(currPos);
+
+            if (pos1_dis <= 30 || pos2_dis <= 30)
+            {
+                if (pos1_dis <= pos2_dis)
+                {
+                    myDoc.Objects.UnselectAll();
+                    myDoc.Objects.Select(lockCtrlPtID1);
+                }
+                else
+                {
+                    myDoc.Objects.UnselectAll();
+                    myDoc.Objects.Select(lockCtrlPtID2);
+                }
+            }
+            else
+            {
+                myDoc.Objects.UnselectAll();
+            }
+        }
+
+        private void Gp_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            Brep pos1Brep = (Brep)myDoc.Objects.Find(lockCtrlPtID1).Geometry;
+            Brep pos2Brep = (Brep)myDoc.Objects.Find(lockCtrlPtID2).Geometry;
+
+            double pos1_dis = pos1Brep.ClosestPoint(currPos).DistanceTo(currPos);
+            double pos2_dis = pos2Brep.ClosestPoint(currPos).DistanceTo(currPos);
+
+            if (pos1_dis <= 30 || pos2_dis <= 30)
+            {
+                if (pos1_dis <= pos2_dis)
+                {
+                    lockCtrlPointSelected = pos1Pt;
+                }
+                else
+                {
+                    lockCtrlPointSelected = pos2Pt;
+                }
+            }
+        }
+    }
     /// <summary>
     /// This class initiates a circular direction selection operation when one of it's instance is constructed. The selection result is the direction of end effector. 
     /// </summary>

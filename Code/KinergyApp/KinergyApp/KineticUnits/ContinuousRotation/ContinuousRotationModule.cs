@@ -114,7 +114,9 @@ namespace ConRotation
         List<Gear> gears = new List<Gear>();
         List<Entity> spring_entities = new List<Entity>();
         //List<GearParameter> gear_info = new List<GearParameter>();
-        Point3d lockPos = new Point3d();
+        List<Point3d> lockPos = new List<Point3d>();
+        bool spiralLockNorm = false;
+        Vector3d spiralLockDir = new Vector3d();
 
         bool PlaneSelected = false;
         Vector3d selectedAxisVector = Vector3d.Unset;
@@ -711,8 +713,10 @@ namespace ConRotation
                 gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4,false);
                 #endregion
                 
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos);
-                //delete last shaft and replace with needed structure.//The last shaft has a special name. Find it
+
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                //delete last shaft and replace with needed structure
+
                 Shaft lastShaft =null;
                 foreach (Entity e in axel_spacer_entities)
                 {
@@ -720,6 +724,7 @@ namespace ConRotation
                         lastShaft = (Shaft)e;
                 }
                 axel_spacer_entities.Remove(lastShaft);
+
                 if (endEffectorState==1)
                 {
                     //Replace the last shaft with a longer one with a revolute joint at end
