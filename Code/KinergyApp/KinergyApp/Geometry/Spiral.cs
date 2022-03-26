@@ -40,6 +40,9 @@ namespace Kinergy
 
             private bool isSpringDirCW;
 
+            double revLevel = 0;
+            double energyLevel = 0;
+            double rotateAngle = Math.PI / 2;
             #endregion
 
             public int PointsPerRound { get => pointsPerRound;private set => pointsPerRound = value; }
@@ -100,7 +103,7 @@ namespace Kinergy
                 innerRadius = inerRadius_constant;
 
                 //First calculate n with dis
-                double revLevel = maxD / 10.0;
+                revLevel = maxD / 10.0;
                 thicknessX = min_strip_thickness;
                 thicknessY = coilBandwidth;
                
@@ -111,7 +114,7 @@ namespace Kinergy
                 double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
                 maxRevolution = revolutions;
                 thicknessX = Math.Pow(revolutions, 1.0/3.0);
-                double energyLevel = energy / 10.0;
+                energyLevel = energy / 10.0;
                 double pitch = energyLevel * (outerRadius - innerRadius) / 2;
                 roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
                 isSpringDirCW = isSpringCW;
@@ -132,31 +135,47 @@ namespace Kinergy
                 outerRadius = R;
                 innerRadius = inerRadius_constant;
 
-                //First calculate n with dis
-                double revLevel = maxD / 10.0;
+                revLevel = maxD / 10.0;
+                energyLevel = energy / 10.0;
+
+                ////First calculate n with dis
+                //revLevel = maxD / 10.0;
+                //thicknessX = min_strip_thickness;
+                //thicknessY = coilBandwidth;
+
+
+
+                //double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
+                //maxRevolution = revolutions;
+                //thicknessX = Math.Pow(revolutions, 1.0 / 3.0);
+                //energyLevel = energy / 10.0;
+                //double pitch = energyLevel * (outerRadius - innerRadius) / 2;
+                //roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+                //isSpringDirCW = isSpringCW;
+
+                #region compute the spring parameters
+
                 thicknessX = min_strip_thickness;
                 thicknessY = coilBandwidth;
 
-                //roundNum = 2 + maxDegree / (Math.PI) ;
-                //double energy033 = Math.Pow((energy + 2)/2, 0.33);
-                //thicknessX *= energy033;
-
                 double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
-                maxRevolution = revolutions;
-                thicknessX = Math.Pow(revolutions, 1.0 / 3.0);
-                double energyLevel = energy / 10.0;
-                double pitch = energyLevel * (outerRadius - innerRadius) / 2;
+                //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
+
+                thicknessX = (2 - revLevel) * min_strip_thickness;
+
+                double pitch = energyLevel * (outerRadius - innerRadius) / 3;
                 roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
-                isSpringDirCW = isSpringCW;
+
+                #endregion
 
                 angleLoaded += initialAngle;
                 Point3d startCoilPos = GenerateSpiralCurve();
-
 
                 #region generate the spiral and the supporting column for non-instant kinetic units
 
                 Plane basePlane = new Plane(centerPoint, direction);
                 Vector3d X = basePlane.XAxis;
+
                 Plane recPlane = new Plane(centerPoint + X * outerRadius, X, direction);
                 Rectangle3d outline = new Rectangle3d(recPlane, new Interval(-thicknessX, 0), new Interval(0, thicknessY));
                 outline.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
@@ -167,17 +186,24 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == b.SolidOrientation)
                     b.Flip();
 
+                b.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
+
                 double suppColSideLen = 3.2;
                 //Point3d conStart = startCoilPos + thicknessY * direction / direction.Length;
                 //Point3d conStart = startCoilPos/* + (suppColSideLen / 2) * direction / direction.Length*/;
                 //Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction + conStart;
 
                 //conStart.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
-                
+
+                X.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
+
                 Point3d conStartFinal = centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction;
                 Plane supPlane = new Plane(conStartFinal, direction);
                 Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen / 2, suppColSideLen / 2), new Interval(-suppColSideLen, 0));
                 outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+
+                outlineSupport.Transform(Transform.Rotation(rotateAngle, direction, conStartFinal));
+
                 conStartFinal.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
 
                 Curve crossLineCrv = new Line(conStartFinal - direction * int.MaxValue, conStartFinal + direction * int.MaxValue).ToNurbsCurve();
@@ -210,89 +236,90 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == entireSpringModel.SolidOrientation)
                     entireSpringModel.Flip();
 
+                //entireSpringModel.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
                 base.Model = entireSpringModel;
 
                 #endregion
             }
 
 
-            public Spiral(Point3d startPt, Vector3d Direction, Point3d Center, double R, bool isSpringCW, int maxD, bool non_instant, int energy = 5, double initialAngle = 0)
-            {
-                // maxD: 1 - 10
-                // energy: 1 - 10
+            //public Spiral(Point3d startPt, Vector3d Direction, Point3d Center, double R, bool isSpringCW, int maxD, bool non_instant, int energy = 5, double initialAngle = 0)
+            //{
+            //    // maxD: 1 - 10
+            //    // energy: 1 - 10
 
-                startPos = startPt;
-                angleLoaded = initialAngle;
-                center = new Point3d(Center);
-                centerPoint = new Point3d(Center);
-                direction = Direction;
-                outerRadius = R;
-                innerRadius = inerRadius_constant;
+            //    startPos = startPt;
+            //    angleLoaded = initialAngle;
+            //    center = new Point3d(Center);
+            //    centerPoint = new Point3d(Center);
+            //    direction = Direction;
+            //    outerRadius = R;
+            //    innerRadius = inerRadius_constant;
 
-                //First calculate n with dis
-                double revLevel = maxD / 10.0;
-                thicknessX = min_strip_thickness;
-                thicknessY = coilBandwidth;
+            //    //First calculate n with dis
+            //    double revLevel = maxD / 10.0;
+            //    thicknessX = min_strip_thickness;
+            //    thicknessY = coilBandwidth;
 
-                //roundNum = 2 + maxDegree / (Math.PI) ;
-                //double energy033 = Math.Pow((energy + 2)/2, 0.33);
-                //thicknessX *= energy033;
+            //    //roundNum = 2 + maxDegree / (Math.PI) ;
+            //    //double energy033 = Math.Pow((energy + 2)/2, 0.33);
+            //    //thicknessX *= energy033;
 
-                double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
-                maxRevolution = revolutions;
-                thicknessX = Math.Pow(revolutions, 1.0 / 3.0);
-                double energyLevel = energy / 10.0;
-                double pitch = energyLevel * (outerRadius - innerRadius) / 2;
-                roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
-                isSpringDirCW = isSpringCW;
+            //    double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
+            //    maxRevolution = revolutions;
+            //    thicknessX = Math.Pow(revolutions, 1.0 / 3.0);
+            //    double energyLevel = energy / 10.0;
+            //    double pitch = energyLevel * (outerRadius - innerRadius) / 2;
+            //    roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+            //    isSpringDirCW = isSpringCW;
 
-                angleLoaded += initialAngle;
-                Point3d startCoilPos = GenerateSpiralCurve();
+            //    angleLoaded += initialAngle;
+            //    Point3d startCoilPos = GenerateSpiralCurve();
 
 
-                #region generate the spiral and the supporting column for non-instant kinetic units
+            //    #region generate the spiral and the supporting column for non-instant kinetic units
 
-                Plane basePlane = new Plane(centerPoint, direction);
-                Vector3d X = basePlane.XAxis;
-                Plane recPlane = new Plane(centerPoint + X * outerRadius, X, direction);
-                Rectangle3d outline = new Rectangle3d(recPlane, new Interval(-thicknessX, 0), new Interval(0, thicknessY));
-                outline.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
-                Brep b = Brep.CreateFromSweep(base.BaseCurve, outline.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-                b = b.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            //    Plane basePlane = new Plane(centerPoint, direction);
+            //    Vector3d X = basePlane.XAxis;
+            //    Plane recPlane = new Plane(centerPoint + X * outerRadius, X, direction);
+            //    Rectangle3d outline = new Rectangle3d(recPlane, new Interval(-thicknessX, 0), new Interval(0, thicknessY));
+            //    outline.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+            //    Brep b = Brep.CreateFromSweep(base.BaseCurve, outline.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            //    b = b.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
 
-                b.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-                if (BrepSolidOrientation.Inward == b.SolidOrientation)
-                    b.Flip();
+            //    b.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //    if (BrepSolidOrientation.Inward == b.SolidOrientation)
+            //        b.Flip();
 
-                double suppColSideLen = 3.2;
-                //Point3d conStart = startCoilPos + thicknessY * direction / direction.Length;
-                Point3d conStart = startCoilPos + (suppColSideLen/2) * direction / direction.Length;
-                Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction / direction.Length + conStart;
-                Curve conPath = new Line(conStart, conEnd).ToNurbsCurve();
+            //    double suppColSideLen = 3.2;
+            //    //Point3d conStart = startCoilPos + thicknessY * direction / direction.Length;
+            //    Point3d conStart = startCoilPos + (suppColSideLen/2) * direction / direction.Length;
+            //    Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction / direction.Length + conStart;
+            //    Curve conPath = new Line(conStart, conEnd).ToNurbsCurve();
 
-                Plane supPlane = new Plane(centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction / direction.Length, direction);
-                Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen / 2, suppColSideLen / 2), new Interval(-suppColSideLen, 0));
-                outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
-                Brep connectorBrep = Brep.CreateFromSweep(conPath, outlineSupport.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-                connectorBrep = connectorBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                //Brep connectorBrep = Brep.CreatePipe(conPath, thicknessX, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            //    Plane supPlane = new Plane(centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction / direction.Length, direction);
+            //    Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen / 2, suppColSideLen / 2), new Interval(-suppColSideLen, 0));
+            //    outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+            //    Brep connectorBrep = Brep.CreateFromSweep(conPath, outlineSupport.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            //    connectorBrep = connectorBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            //    //Brep connectorBrep = Brep.CreatePipe(conPath, thicknessX, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
 
-                connectorBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-                if (BrepSolidOrientation.Inward == connectorBrep.SolidOrientation)
-                    connectorBrep.Flip();
+            //    connectorBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //    if (BrepSolidOrientation.Inward == connectorBrep.SolidOrientation)
+            //        connectorBrep.Flip();
 
-                Brep entireSpringModel = Brep.CreateBooleanUnion(new List<Brep> { b, connectorBrep }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-                entireSpringModel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-                if (BrepSolidOrientation.Inward == entireSpringModel.SolidOrientation)
-                    entireSpringModel.Flip();
+            //    Brep entireSpringModel = Brep.CreateBooleanUnion(new List<Brep> { b, connectorBrep }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            //    entireSpringModel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //    if (BrepSolidOrientation.Inward == entireSpringModel.SolidOrientation)
+            //        entireSpringModel.Flip();
 
-                base.Model = entireSpringModel;
+            //    base.Model = entireSpringModel;
 
-                #endregion
-            }
+            //    #endregion
+            //}
             public  void AdjustParam(int e, int D, bool isSpringCW)
             {
-                double revLevel = D / 10.0;
+                revLevel = D / 10.0;
                 thicknessX = min_strip_thickness;
                 thicknessY = coilBandwidth;
 
@@ -304,7 +331,7 @@ namespace Kinergy
                 //thicknessX *= energy033;
 
                 double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
-                double energyLevel = e / 10.0;
+                energyLevel = e / 10.0;
                 //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
 
                 thicknessX = (2 - revLevel) * min_strip_thickness;
@@ -366,7 +393,7 @@ namespace Kinergy
                 Curve s = null;
                 if (isSpringDirCW)
                     // the generated spiral spring is CW, which means the turnNum is negative
-                    s = NurbsCurve.CreateSpiral(centerPoint, -direction, spiralStartPt, 0, roundNum, outerRadius, 0.5);
+                    s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, -roundNum, outerRadius, 0.5);
                 else
                     // the generated spiral spring is CCW, which means the turnNum is positive
                     s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, roundNum, outerRadius, 0.5);
@@ -401,9 +428,13 @@ namespace Kinergy
             }
             private void GenerateSpiralBrep(Point3d springStartPos)
             {
+               
                 //Point3d CP = new Point3d(centerPoint);
                 Plane basePlane = new Plane(centerPoint, direction);
                 Vector3d X = basePlane.XAxis;
+                //X.Transform(Transform.Rotation(Math.PI / 2, direction, centerPoint));
+
+
                 Plane recPlane = new Plane(centerPoint + X * outerRadius, X, direction);
                 Rectangle3d outline = new Rectangle3d(recPlane, new Interval(-thicknessX, 0), new Interval(0, thicknessY));
                 outline.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
@@ -414,14 +445,26 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == b.SolidOrientation)
                     b.Flip();
 
+                b.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
+
                 double suppColSideLen = 3.2;
+
+                X.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
+                springStartPos.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
+
                 Point3d conStart = springStartPos + (suppColSideLen / 2) * direction / direction.Length;
+
+                //Point3d conStart = centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction;
+
                 Point3d conEnd = -(centerPoint.DistanceTo(startPos) + thicknessY) * direction / direction.Length + conStart;
                 Curve conPath = new Line(conStart, conEnd).ToNurbsCurve();
 
                 Plane supPlane = new Plane(centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction / direction.Length, direction);
                 Rectangle3d outlineSupport = new Rectangle3d(supPlane, new Interval(-suppColSideLen / 2, suppColSideLen / 2), new Interval(-suppColSideLen, 0));
                 outlineSupport.Transform(Transform.Rotation(-angleLoaded, direction, centerPoint));
+
+                outlineSupport.Transform(Transform.Rotation(rotateAngle, direction, centerPoint + X * (outerRadius - thicknessX / 2) + thicknessY * direction / direction.Length));
+
                 Brep connectorBrep = Brep.CreateFromSweep(conPath, outlineSupport.ToNurbsCurve(), true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
                 connectorBrep = connectorBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
                 //Brep connectorBrep = Brep.CreatePipe(conPath, thicknessX, false, PipeCapMode.Flat, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
@@ -435,6 +478,7 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == entireSpringModel.SolidOrientation)
                     entireSpringModel.Flip();
 
+                //entireSpringModel.Transform(Transform.Rotation(rotateAngle, direction, centerPoint));
                 base.Model = entireSpringModel;
 
             }

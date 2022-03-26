@@ -201,11 +201,11 @@ namespace Kinergy.KineticUnit
 
                 #region re-generate the spring
 
-                if(isEnergyChange || isDistanceChange)
+                if(isEnergyChange || isDistanceChange || isSpeedChange)
                 {
                     Spiral spiralSpring = (Spiral)spring;
                     spiralSpring.AdjustParam(energyLevel, distanceLevel, isSpringCW);
-                    AddSprings(spiralSpring);
+                    //AddSprings(spiralSpring);
                 }
 
                 #endregion

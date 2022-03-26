@@ -19,6 +19,7 @@ using Kinergy.KineticUnit;
 using Kinergy;
 using System.Diagnostics;
 using HumanUIforKinergy.KinergyUtilities;
+using System.Drawing;
 
 namespace Kinergy.KineticUnit
 {
@@ -80,6 +81,18 @@ namespace Kinergy.KineticUnit
         bool old_direction = true;
         Brep ee1Model = null, ee2Model = null;
 
+
+        // New lock approach
+        double lockDisToAxis = 0;
+        ObjectAttributes blueAttribute;
+        Point3d spiralLockCen = new Point3d();
+        List<int> lockPartIdx = new List<int>();
+        int midPartIdx = -1;
+        List<Lock> locks = new List<Lock>();
+        Brep cutBarrel;
+        Brep addBarrel;
+        Shaft firstGearShaft;
+
         public ContinuousRotation(Brep Model, int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType, Helpers helper)
         {
             _model = Model;
@@ -105,6 +118,20 @@ namespace Kinergy.KineticUnit
             _r_shaft_num_List = new List<List<int>>();
 
             _helperFun = helper;
+
+            int blueIndex = myDoc.Materials.Add();
+            Rhino.DocObjects.Material blueMat = myDoc.Materials[blueIndex];
+            blueMat.DiffuseColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.SpecularColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.Transparency = 0.7f;
+            blueMat.TransparentColor = System.Drawing.Color.FromArgb(16, 150, 206);
+            blueMat.CommitChanges();
+            blueAttribute = new ObjectAttributes();
+            //blueAttribute.LayerIndex = 5;
+            blueAttribute.MaterialIndex = blueIndex;
+            blueAttribute.MaterialSource = Rhino.DocObjects.ObjectMaterialSource.MaterialFromObject;
+            blueAttribute.ObjectColor = Color.FromArgb(16, 150, 206);
+            blueAttribute.ColorSource = ObjectColorSource.ColorFromObject;
         }
         //public ContinuousRotation(Brep Model, Vector3d Direction, double Energy, double Speed, int InputType, Brep inCavity)
         //{
@@ -249,11 +276,11 @@ namespace Kinergy.KineticUnit
 
                 #region re-generate the spring
 
-                if (isEnergyChange || isRoundChange || isDirChange)
+                if (isEnergyChange || isRoundChange || isDirChange || isSpeedChange)
                 {
                     Spiral spiralSpring = (Spiral)spring;
                     spiralSpring.AdjustParam(energyLevel, roundLevel, isSpringCW);
-                    AddSprings(spiralSpring);
+                    //AddSprings(spiralSpring);
                 }
 
                 #endregion
@@ -293,183 +320,300 @@ namespace Kinergy.KineticUnit
             }
             //TODO register connecting relations
         }
-        public void ConstructLocks(Transform translationBack, Transform rotationBack, Transform poseRotationBack)
+        //public void ConstructLocks(Transform translationBack, Transform rotationBack, Transform poseRotationBack)
+        //{
+        //    #region old code
+        //    //if(InputType == 1)
+        //    //{
+        //    //    Vector3d backDir = new Vector3d(-1, 0, 0);
+
+
+        //    //    List<Brep> bs = new List<Brep>();
+        //    //    bs.Add(innerShell);
+        //    //    List<Point3d> projPts = new List<Point3d>();
+        //    //    projPts.Add(guideEnd);
+        //    //    Vector3d projDir = new Vector3d(1, 0, 0);
+        //    //    Point3d[] projBrepPts;
+        //    //    projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs, projPts, projDir, MyDoc.ModelAbsoluteTolerance);
+
+        //    //    Point3d lockBtnPt = new Point3d();
+        //    //    if (guideEnd.X >= Math.Min(projBrepPts[0].X, projBrepPts[1].X) && guideEnd.X <= Math.Max(projBrepPts[0].X, projBrepPts[1].X))
+        //    //    {
+        //    //        // extend the button to the outside of the innershell
+        //    //        double extensionDis = guideEnd.X - Math.Min(projBrepPts[0].X, projBrepPts[1].X);
+        //    //        lockBtnPt = guideEnd + backDir * (extensionDis + 2);
+
+        //    //    }
+        //    //    else if (guideEnd.X < Math.Min(projBrepPts[0].X, projBrepPts[1].X))
+        //    //    {
+        //    //        // do nothing
+        //    //        lockBtnPt = guideEnd + backDir * 2;
+        //    //    }
+
+        //    //    Point3d[] hookGuideRailPts = new Point3d[2];
+        //    //    hookGuideRailPts[0] = guideEnd;
+        //    //    hookGuideRailPts[1] = lockBtnPt;
+        //    //    Curve hookGuideRail = new Polyline(hookGuideRailPts).ToNurbsCurve();
+
+        //    //    Brep hookGuideBrep = Brep.CreatePipe(hookGuideRail, 0.8, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+        //    //    Point3d[] hookGuideTipPts = new Point3d[2];
+        //    //    hookGuideTipPts[0] = lockBtnPt;
+        //    //    hookGuideTipPts[1] = lockBtnPt + backDir * 1.6;
+        //    //    Curve hookGuideTipRail = new Polyline(hookGuideTipPts).ToNurbsCurve();
+        //    //    Brep hookGuideTipBrep = Brep.CreatePipe(hookGuideTipRail, 1.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+        //    //    Brep guideBtnPart = Brep.CreateBooleanUnion(new List<Brep> { hookGuideBrep, hookGuideTipBrep }, MyDoc.ModelAbsoluteTolerance)[0];
+
+        //    //    guideBtnPart.Transform(translationBack);
+        //    //    guideBtnPart.Transform(rotationBack);
+        //    //    guideBtnPart.Transform(poseRotationBack);
+
+        //    //    Shape guideBtnShape = new Shape(guideBtnPart, false, "lock");
+        //    //    EntityList.Add(guideBtnShape);
+
+        //    //    // Create the hooks
+        //    //    Vector3d yPos = new Vector3d(0, 1, 0);
+        //    //    Point3d hookStPt = barSt - yPos * 1.2;
+        //    //    Point3d hookEndPt = barSt + yPos * 1.2;
+        //    //    Point3d[] hookPts = new Point3d[2];
+        //    //    hookPts[0] = hookStPt;
+        //    //    hookPts[1] = hookEndPt;
+        //    //    Curve hookRail = new Polyline(hookPts).ToNurbsCurve();
+
+        //    //    // create sweep function
+        //    //    var sweep = new Rhino.Geometry.SweepOneRail();
+        //    //    sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
+        //    //    sweep.ClosedSweep = false;
+        //    //    sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+
+
+        //    //    Plane hookPln = new Plane(hookStPt, yPos);
+
+        //    //    Vector3d hk_xp = 0 * hookPln.XAxis;
+        //    //    Vector3d hk_xn = (-3) * hookPln.XAxis;
+        //    //    Vector3d hk_yp = 4 * hookPln.YAxis;
+        //    //    Vector3d hk_yn = 0 * hookPln.YAxis;
+
+        //    //    Point3d[] hookPlatePts = new Point3d[4];
+        //    //    hookPlatePts[0] = hookStPt + hk_xp + hk_yn;
+        //    //    hookPlatePts[1] = hookStPt + hk_xn + hk_yn;
+        //    //    hookPlatePts[2] = hookStPt + hk_xp + hk_yp;
+        //    //    hookPlatePts[3] = hookStPt + hk_xp + hk_yn;
+
+        //    //    Curve hookPlateRect = new Polyline(hookPlatePts).ToNurbsCurve();
+
+        //    //    Brep hookPlateBrep = new Brep();
+
+        //    //    hookPlateBrep = sweep.PerformSweep(hookRail, hookPlateRect)[0];
+        //    //    hookPlateBrep = hookPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
+
+        //    //    hookPlateBrep.Transform(translationBack);
+        //    //    hookPlateBrep.Transform(rotationBack);
+        //    //    hookPlateBrep.Transform(poseRotationBack);
+
+        //    //    Shape hookPartShape = new Shape(hookPlateBrep, false, "lock");
+        //    //    EntityList.Add(hookPartShape);
+
+        //    //}
+        //    //else
+        //    //{
+        //    //    double ratchetThickness = 1.6;
+        //    //    double tolerance = 0.6;
+        //    //    double lockRadius = 1.5;
+
+        //    //    Vector3d xPos = new Vector3d(1, 0, 0);
+        //    //    Vector3d zPos = new Vector3d(0, 0, 1);
+        //    //    Point3d lockPos = keySSidePt + xPos * (lastGearRadius * 0.9) - zPos * (1.732 * lockRadius/2 + tolerance * 3/2);
+
+        //    //    locks = new List<Lock>();
+
+        //    //    //Build the locking structure.
+
+        //    //    Vector3d springDir = (springSSidePt - keySSidePt) / springSSidePt.DistanceTo(keySSidePt);
+
+
+        //    //    double lockLen = lastGearPos.DistanceTo(keySSidePt) / 2 - tolerance - ratchetThickness;
+        //    //    double extensionLen = 10;
+
+        //    //    Lock LockHead = new Lock(keySSidePt + springDir * lockLen, -springDir, lastGearRadius * 0.9,false,false,"", ratchetThickness);
+
+        //    //    Brep lockheadBrep = LockHead.GetModelinWorldCoordinate();
+
+        //    //    lockheadBrep.Transform(translationBack);
+        //    //    lockheadBrep.Transform(rotationBack);
+        //    //    lockheadBrep.Transform(poseRotationBack);
+        //    //    LockHead.SetModel(lockheadBrep);
+
+        //    //    //Vector3d centerLinkDirection = new Vector3d(lockClosestPointOnAxis) - new Vector3d(LockPosition);
+        //    //    Point3d lockBarSt = lockPos - springDir * extensionLen;
+        //    //    Point3d lockBarEnd = lockPos + springDir * (lockLen - 1);
+
+        //    //    Line lockbarLine = new Line(lockBarSt, lockBarEnd);
+        //    //    Curve lockRail = lockbarLine.ToNurbsCurve();
+        //    //    Brep lockbarRod = Brep.CreatePipe(lockRail, lockRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+        //    //    Brep lockbarRodDiff = Brep.CreatePipe(lockRail, lockRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+        //    //    Sphere lockHandler = new Sphere(lockBarSt, 2 * lockRadius);
+
+        //    //    Point3d lockDisc1PtSt = lockPos - springDir * (1.9 + 1.6 + 1);
+        //    //    Point3d lockDisc1PtEnd = lockDisc1PtSt + springDir * 1;
+
+        //    //    Point3d lockDisc2PtSt = lockPos + springDir * (1);
+        //    //    Point3d lockDisc2PtEnd = lockDisc2PtSt + springDir * 1;
+
+        //    //    Line lockDisc1Line = new Line(lockDisc1PtSt, lockDisc1PtEnd);
+        //    //    Curve lockDisc1Rail = lockDisc1Line.ToNurbsCurve();
+        //    //    Brep lockDisc1 = Brep.CreatePipe(lockDisc1Rail, lockRadius + 2 * tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+        //    //    Line lockDisc2Line = new Line(lockDisc2PtSt, lockDisc2PtEnd);
+        //    //    Curve lockDisc2Rail = lockDisc2Line.ToNurbsCurve();
+        //    //    Brep lockDisc2 = Brep.CreatePipe(lockDisc2Rail, lockRadius + 2 * tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+
+        //    //    Brep lockPart = Brep.CreateBooleanUnion(new List<Brep> { lockbarRod, lockHandler.ToBrep(), lockDisc1, lockDisc2 }, MyDoc.ModelAbsoluteTolerance)[0];
+
+        //    //    lockPart.Transform(translationBack);
+        //    //    lockPart.Transform(rotationBack);
+        //    //    lockPart.Transform(poseRotationBack);
+
+        //    //    lockbarRodDiff.Transform(translationBack);
+        //    //    lockbarRodDiff.Transform(rotationBack);
+        //    //    lockbarRodDiff.Transform(poseRotationBack);
+
+
+        //    //    if (ModelShape != null)
+        //    //    {
+        //    //        Brep finalModel = Brep.CreateBooleanDifference(ModelShape.GetModelinWorldCoordinate(), lockbarRodDiff, MyDoc.ModelAbsoluteTolerance)[0];
+        //    //        Model = finalModel.DuplicateBrep();
+        //    //        ModelShape.SetModel(Model);
+        //    //    }
+
+
+        //    //    locks.Add(LockHead);
+        //    //    locks.Add(new Lock(lockPart, false));
+        //    //    entityList.Add(LockHead);
+        //    //    entityList.Add(locks[1]);
+        //    //    LockHead.RegisterOtherPart(locks[1]);
+        //    //    _ = new Fixation(shaftRodShape, LockHead);
+        //    //}
+        //    #endregion
+        //}
+
+
+        public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
         {
-            #region old code
-            //if(InputType == 1)
-            //{
-            //    Vector3d backDir = new Vector3d(-1, 0, 0);
+            if (motionControlMethod == 1)
+            {
+                // add the lock for the helical spring
+
+            }
+            else
+            {
+                // add the lock for the spiral spring
+
+                #region ask the user to select the lock position
+                LockSelectionForSpiralSpring lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
+                lockDisToAxis = gtp.parameters.ElementAt(0).radius + gtp.parameters.ElementAt(1).radius;
+                spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
+                #endregion
+
+                if (lockPartIdx.Count > 0)
+                {
+                    for (int i = lockPartIdx.Count - 1; i >= 0; i--)
+                    {
+                        entityList.RemoveAt(i);
+                    }
+                    midPartIdx = -1;
+                    lockPartIdx.Clear();
+                }
+
+                if (locks.Count > 0)
+                    locks.Clear();
+
+                Lock LockHead;
+                double ratchetRadius = lockDisToAxis * 0.5;
+
+                if (spiralLockNorm)
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
+                else
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
+
+                LockHead.SetName("lockHead");
+
+                Vector3d centerLinkDirection = new Vector3d(spiralLockCen) - new Vector3d(lockSelection.lockCtrlPointSelected);
+                double centerLinkLen = centerLinkDirection.Length;
+                centerLinkDirection.Unitize();
 
 
-            //    List<Brep> bs = new List<Brep>();
-            //    bs.Add(innerShell);
-            //    List<Point3d> projPts = new List<Point3d>();
-            //    projPts.Add(guideEnd);
-            //    Vector3d projDir = new Vector3d(1, 0, 0);
-            //    Point3d[] projBrepPts;
-            //    projBrepPts = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(bs, projPts, projDir, MyDoc.ModelAbsoluteTolerance);
+                #region add lock parts to the entitylist
 
-            //    Point3d lockBtnPt = new Point3d();
-            //    if (guideEnd.X >= Math.Min(projBrepPts[0].X, projBrepPts[1].X) && guideEnd.X <= Math.Max(projBrepPts[0].X, projBrepPts[1].X))
-            //    {
-            //        // extend the button to the outside of the innershell
-            //        double extensionDis = guideEnd.X - Math.Min(projBrepPts[0].X, projBrepPts[1].X);
-            //        lockBtnPt = guideEnd + backDir * (extensionDis + 2);
+                cutBarrel = null;
+                addBarrel = null;
+                Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
+                lockBase.SetName("lockBase");
 
-            //    }
-            //    else if (guideEnd.X < Math.Min(projBrepPts[0].X, projBrepPts[1].X))
-            //    {
-            //        // do nothing
-            //        lockBtnPt = guideEnd + backDir * 2;
-            //    }
+                Entity tempAddBarrel = new Entity(addBarrel, false, "lockBarrel");
+                entityList.Add(tempAddBarrel);
 
-            //    Point3d[] hookGuideRailPts = new Point3d[2];
-            //    hookGuideRailPts[0] = guideEnd;
-            //    hookGuideRailPts[1] = lockBtnPt;
-            //    Curve hookGuideRail = new Polyline(hookGuideRailPts).ToNurbsCurve();
+                lockPartIdx.Add(entityList.Count - 1);
+                entityList.Add(LockHead); // the ratchet gear
+                lockPartIdx.Add(entityList.Count - 1);
+                entityList.Add(lockBase); // the latch
+                lockPartIdx.Add(entityList.Count - 1);
+                locks.Add(LockHead);
+                locks.Add(lockBase);
+                LockHead.RegisterOtherPart(lockBase);
 
-            //    Brep hookGuideBrep = Brep.CreatePipe(hookGuideRail, 0.8, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+                foreach (Entity en in entityList)
+                {
+                    if (en.Name.Equals("MiddleShellBreakerShaft"))
+                    {
+                        firstGearShaft = (Shaft)en;
+                        _ = new Fixation(firstGearShaft, LockHead);
+                    }
+                }
+                #endregion
 
-            //    Point3d[] hookGuideTipPts = new Point3d[2];
-            //    hookGuideTipPts[0] = lockBtnPt;
-            //    hookGuideTipPts[1] = lockBtnPt + backDir * 1.6;
-            //    Curve hookGuideTipRail = new Polyline(hookGuideTipPts).ToNurbsCurve();
-            //    Brep hookGuideTipBrep = Brep.CreatePipe(hookGuideTipRail, 1.6, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
+            }
+        }
 
-            //    Brep guideBtnPart = Brep.CreateBooleanUnion(new List<Brep> { hookGuideBrep, hookGuideTipBrep }, MyDoc.ModelAbsoluteTolerance)[0];
+        public void RemoveLocks(int controlMethod)
+        {
+            if (controlMethod == 1)
+            {
+                // remove the lock for the helical spring
 
-            //    guideBtnPart.Transform(translationBack);
-            //    guideBtnPart.Transform(rotationBack);
-            //    guideBtnPart.Transform(poseRotationBack);
+            }
+            else
+            {
+                // remove the lock for the spiral spring
+                if (lockPartIdx.Count > 0)
+                {
+                    // delete all the entities that have already been registered
+                    List<int> toRemoveEntityIndexes = new List<int>();
 
-            //    Shape guideBtnShape = new Shape(guideBtnPart, false, "lock");
-            //    EntityList.Add(guideBtnShape);
+                    foreach (Entity en in entityList)
+                    {
+                        if (en.Name.Equals("lockBarrel") || en.Name.Equals("lockBase") || en.Name.Equals("lockHead"))
+                        {
+                            int idx = entityList.IndexOf(en);
+                            toRemoveEntityIndexes.Add(idx);
+                        }
+                    }
 
-            //    // Create the hooks
-            //    Vector3d yPos = new Vector3d(0, 1, 0);
-            //    Point3d hookStPt = barSt - yPos * 1.2;
-            //    Point3d hookEndPt = barSt + yPos * 1.2;
-            //    Point3d[] hookPts = new Point3d[2];
-            //    hookPts[0] = hookStPt;
-            //    hookPts[1] = hookEndPt;
-            //    Curve hookRail = new Polyline(hookPts).ToNurbsCurve();
+                    toRemoveEntityIndexes.Sort((a, b) => b.CompareTo(a)); //sorting by descending
+                    foreach (int idx in toRemoveEntityIndexes)
+                    {
+                        entityList.RemoveAt(idx);
+                    }
 
-            //    // create sweep function
-            //    var sweep = new Rhino.Geometry.SweepOneRail();
-            //    sweep.AngleToleranceRadians = MyDoc.ModelAngleToleranceRadians;
-            //    sweep.ClosedSweep = false;
-            //    sweep.SweepTolerance = MyDoc.ModelAbsoluteTolerance;
+                    lockPartIdx.Clear();
+                    locks.Clear();
+                    lockDisToAxis = 0;
+                }
 
+            }
 
-            //    Plane hookPln = new Plane(hookStPt, yPos);
-
-            //    Vector3d hk_xp = 0 * hookPln.XAxis;
-            //    Vector3d hk_xn = (-3) * hookPln.XAxis;
-            //    Vector3d hk_yp = 4 * hookPln.YAxis;
-            //    Vector3d hk_yn = 0 * hookPln.YAxis;
-
-            //    Point3d[] hookPlatePts = new Point3d[4];
-            //    hookPlatePts[0] = hookStPt + hk_xp + hk_yn;
-            //    hookPlatePts[1] = hookStPt + hk_xn + hk_yn;
-            //    hookPlatePts[2] = hookStPt + hk_xp + hk_yp;
-            //    hookPlatePts[3] = hookStPt + hk_xp + hk_yn;
-
-            //    Curve hookPlateRect = new Polyline(hookPlatePts).ToNurbsCurve();
-
-            //    Brep hookPlateBrep = new Brep();
-
-            //    hookPlateBrep = sweep.PerformSweep(hookRail, hookPlateRect)[0];
-            //    hookPlateBrep = hookPlateBrep.CapPlanarHoles(MyDoc.ModelAbsoluteTolerance);
-
-            //    hookPlateBrep.Transform(translationBack);
-            //    hookPlateBrep.Transform(rotationBack);
-            //    hookPlateBrep.Transform(poseRotationBack);
-
-            //    Shape hookPartShape = new Shape(hookPlateBrep, false, "lock");
-            //    EntityList.Add(hookPartShape);
-
-            //}
-            //else
-            //{
-            //    double ratchetThickness = 1.6;
-            //    double tolerance = 0.6;
-            //    double lockRadius = 1.5;
-
-            //    Vector3d xPos = new Vector3d(1, 0, 0);
-            //    Vector3d zPos = new Vector3d(0, 0, 1);
-            //    Point3d lockPos = keySSidePt + xPos * (lastGearRadius * 0.9) - zPos * (1.732 * lockRadius/2 + tolerance * 3/2);
-
-            //    locks = new List<Lock>();
-
-            //    //Build the locking structure.
-
-            //    Vector3d springDir = (springSSidePt - keySSidePt) / springSSidePt.DistanceTo(keySSidePt);
-
-
-            //    double lockLen = lastGearPos.DistanceTo(keySSidePt) / 2 - tolerance - ratchetThickness;
-            //    double extensionLen = 10;
-
-            //    Lock LockHead = new Lock(keySSidePt + springDir * lockLen, -springDir, lastGearRadius * 0.9,false,false,"", ratchetThickness);
-
-            //    Brep lockheadBrep = LockHead.GetModelinWorldCoordinate();
-
-            //    lockheadBrep.Transform(translationBack);
-            //    lockheadBrep.Transform(rotationBack);
-            //    lockheadBrep.Transform(poseRotationBack);
-            //    LockHead.SetModel(lockheadBrep);
-
-            //    //Vector3d centerLinkDirection = new Vector3d(lockClosestPointOnAxis) - new Vector3d(LockPosition);
-            //    Point3d lockBarSt = lockPos - springDir * extensionLen;
-            //    Point3d lockBarEnd = lockPos + springDir * (lockLen - 1);
-
-            //    Line lockbarLine = new Line(lockBarSt, lockBarEnd);
-            //    Curve lockRail = lockbarLine.ToNurbsCurve();
-            //    Brep lockbarRod = Brep.CreatePipe(lockRail, lockRadius, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-            //    Brep lockbarRodDiff = Brep.CreatePipe(lockRail, lockRadius + tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-            //    Sphere lockHandler = new Sphere(lockBarSt, 2 * lockRadius);
-
-            //    Point3d lockDisc1PtSt = lockPos - springDir * (1.9 + 1.6 + 1);
-            //    Point3d lockDisc1PtEnd = lockDisc1PtSt + springDir * 1;
-
-            //    Point3d lockDisc2PtSt = lockPos + springDir * (1);
-            //    Point3d lockDisc2PtEnd = lockDisc2PtSt + springDir * 1;
-
-            //    Line lockDisc1Line = new Line(lockDisc1PtSt, lockDisc1PtEnd);
-            //    Curve lockDisc1Rail = lockDisc1Line.ToNurbsCurve();
-            //    Brep lockDisc1 = Brep.CreatePipe(lockDisc1Rail, lockRadius + 2 * tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-            //    Line lockDisc2Line = new Line(lockDisc2PtSt, lockDisc2PtEnd);
-            //    Curve lockDisc2Rail = lockDisc2Line.ToNurbsCurve();
-            //    Brep lockDisc2 = Brep.CreatePipe(lockDisc2Rail, lockRadius + 2 * tolerance, false, PipeCapMode.Flat, true, MyDoc.ModelAbsoluteTolerance, MyDoc.ModelAngleToleranceRadians)[0];
-
-            //    Brep lockPart = Brep.CreateBooleanUnion(new List<Brep> { lockbarRod, lockHandler.ToBrep(), lockDisc1, lockDisc2 }, MyDoc.ModelAbsoluteTolerance)[0];
-
-            //    lockPart.Transform(translationBack);
-            //    lockPart.Transform(rotationBack);
-            //    lockPart.Transform(poseRotationBack);
-
-            //    lockbarRodDiff.Transform(translationBack);
-            //    lockbarRodDiff.Transform(rotationBack);
-            //    lockbarRodDiff.Transform(poseRotationBack);
-
-
-            //    if (ModelShape != null)
-            //    {
-            //        Brep finalModel = Brep.CreateBooleanDifference(ModelShape.GetModelinWorldCoordinate(), lockbarRodDiff, MyDoc.ModelAbsoluteTolerance)[0];
-            //        Model = finalModel.DuplicateBrep();
-            //        ModelShape.SetModel(Model);
-            //    }
-
-
-            //    locks.Add(LockHead);
-            //    locks.Add(new Lock(lockPart, false));
-            //    entityList.Add(LockHead);
-            //    entityList.Add(locks[1]);
-            //    LockHead.RegisterOtherPart(locks[1]);
-            //    _ = new Fixation(shaftRodShape, LockHead);
-            //}
-            #endregion
         }
 
         public void ConstructSpring(Point3d startPoint, double xEnd, double outDiameter, double totalThickness, double xSpaceEnd, int outputAxle,

@@ -258,6 +258,12 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == beamDetentRSphereBrep.SolidOrientation)
                 beamDetentRSphereBrep.Flip();
 
+            myDoc.Objects.AddBrep(beamDetentRSphereBrep);
+            myDoc.Views.Redraw();
+
+            myDoc.Objects.AddBrep(beamDetentR);
+            myDoc.Views.Redraw();
+
             Brep beamDetentRNotch = Brep.CreateBooleanDifference(beamDetentRSphereBrep, beamDetentR, myDoc.ModelAbsoluteTolerance)[0];
             beamDetentRNotch.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == beamDetentRNotch.SolidOrientation)

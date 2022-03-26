@@ -688,7 +688,8 @@ namespace KinergyUtilities
                     }
                 }
 
-                Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.8, isCW, displacement, true, energyLevel, -Math.PI/4);
+                //Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.8, isCW, displacement, true, energyLevel, -Math.PI/4);
+                Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.7, isCW, displacement, true, energyLevel, 0);
 
                 models.Add(spiralSpring);
 

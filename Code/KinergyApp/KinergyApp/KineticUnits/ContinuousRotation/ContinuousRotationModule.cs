@@ -405,14 +405,20 @@ namespace ConRotation
 
             Brep dirIndicator = Brep.CreateBooleanUnion(new List<Brep> { arc, arrow }, myDoc.ModelAbsoluteTolerance)[0];
 
+            //if((selectedGearTrainParam.parameters.Count - 1) % 2 == 0)
+            //{
+            //    isCCW = !isCCW;
+            //}
+
             if (isCCW)
             {
                 // flip the indicator
                 Transform tran = Transform.Mirror(canvasOrigin, canvasStart);
                 dirIndicator.Transform(tran);
+                
             }
 
-            isSpringCW = !isCCW;
+            isSpringCW = !isSpringCW;
             rotationDirID = myDoc.Objects.AddBrep(dirIndicator, redAttribute);
             myDoc.Views.Redraw();
         }
@@ -898,7 +904,7 @@ namespace ConRotation
 
                 #region ask the user to select rotation direction and generate spring
 
-                eeMovingDirectionSelection = 3; // 1:CW, 3: CCW
+                eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
                 spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
 
                 // determine the rotating direction
@@ -1659,8 +1665,8 @@ namespace ConRotation
 
             if (toAddLock)
             {
-                //if (motion != null)
-                    //motion.ConstructLocks(transSkeletonBack, rotateAxisToOrientation, offsetTranslation);
+                if (motion != null)
+                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
             }
 
             if (toPreview)
@@ -1677,7 +1683,8 @@ namespace ConRotation
 
             if (toRemoveLock)
             {
-
+                if (motion != null)
+                    motion.RemoveLocks(motionControlMethod);
             }
             if (toBake)
             {
