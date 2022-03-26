@@ -98,14 +98,15 @@ C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
+C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.WarningWin.resources
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\Resources\AddElements.png
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll.config
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.pdb
-D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy\Styles.Default.baml
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy_MarkupCompile.cache
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.g.resources
+D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.WarningWin.resources
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.ProcessingWin.resources
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.Properties.Resources.resources
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.GenerateResource.cache
@@ -113,5 +114,3 @@ D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.cspro
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
-C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.WarningWin.resources
-D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.KinergyUtilities.WarningWin.resources

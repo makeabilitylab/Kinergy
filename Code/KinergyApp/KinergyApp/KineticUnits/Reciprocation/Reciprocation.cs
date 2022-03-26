@@ -135,6 +135,9 @@ namespace Kinergy.KineticUnit
 
         Brep b1 = null, b2 = null, b3 = null;
         Entity p1 = null, p2 = null, p3 = null;
+        Brep eeBrep=null;
+        Entity ee=null;
+        Entity CWP = null, YS = null, BB = null, SW = null;
         bool reversed = false;
 
         public Reciprocation(Brep Model,  Vector3d Direction, double Energy, double Amplitude)
@@ -152,7 +155,12 @@ namespace Kinergy.KineticUnit
             spring = springControl;
             entityList.Add(spring);
         }
-
+        public void SetEndEffector(Brep eeModel)
+        {
+            ee = p3;
+            eeBrep = eeModel;
+            //TODO check if p1 and p3 will be mixed
+        }
         public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
         {
             if (motionControlMethod == 1)
@@ -251,6 +259,23 @@ namespace Kinergy.KineticUnit
                 entityList.Add(e);
             }
             //TODO register connecting relations
+        }
+        public void AddQuickReturn(Entity crankWheelPin, Entity yokeSlider, Entity bearingBlock, Entity stopWall)
+        {
+            entityList.Remove(CWP);
+            entityList.Remove(YS);
+            entityList.Remove(BB);
+            entityList.Remove(SW);
+            //TODO unregister deleted things
+            CWP = crankWheelPin;
+            YS = yokeSlider;
+            BB = bearingBlock;
+            SW = stopWall;
+            //TODO register relations
+            entityList.Add(CWP);
+            entityList.Add(YS);
+            entityList.Add(BB);
+            entityList.Add(SW);
         }
         public void Set3Parts(double T1, double T2, Brep B1, Brep B2, Brep B3)
         {

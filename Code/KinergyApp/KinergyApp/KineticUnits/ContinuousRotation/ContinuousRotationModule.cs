@@ -808,7 +808,7 @@ namespace ConRotation
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,false);
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,2);
                 //select gear param based on input param
                 if (gear_schemes.Count == 0)
                 {

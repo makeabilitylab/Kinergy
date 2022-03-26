@@ -95,6 +95,12 @@ namespace InterReciprocation
         List<Point3d> lockPos = new List<Point3d>();
         bool spiralLockNorm = false;
         Vector3d spiralLockDir = new Vector3d();
+
+        Entity crankWheel;
+        Entity yokeSlider ;
+        Entity stopWall ;
+        Entity bearingBlock ;
+
         /// <summary>
         /// Initializes a new instance of the ReciprocationModule class.
         /// </summary>
@@ -106,6 +112,7 @@ namespace InterReciprocation
             model = null;
             conBrep = new Brep();
             innerCavity = new Brep();
+            brepCut = new List<Brep>();
             t1 = 0;
             t2 = 1;
             skeleton = null;
@@ -136,7 +143,7 @@ namespace InterReciprocation
             testPreBtn = false;
             testBakeBtn = false;
             motionControlMethod = -1;
-
+            helperFun = new Helpers();
             #region material and color settings
 
             int solidIndex = myDoc.Materials.Add();
@@ -311,7 +318,7 @@ namespace InterReciprocation
 
             // variables to control states
             bool toSelectRegion = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAdjustParam = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
-
+            bool toGenerateMechanism = false;
             #region Input check. This determines how the cell respond to changed params
             if (!reg_input && testBodySelBtn)
             {
@@ -512,26 +519,28 @@ namespace InterReciprocation
                     warningwin.Text = "No end effector model is selected.";
                     warningwin.Show();
                 }
-                //Use ee position to calculate important parameters
 
-                //TODO 
-
-                //Then generate gears , crank and more. TODO change from CT to IO
+                motion.SetEndEffector(eeModel);
+                toGenerateMechanism = true;
+            }
+            if(toGenerateMechanism)
+            { 
+                //Then generate gears , quick return and more. TODO change from CT to IO
                 #region generate the spring motor, transmission mechanism, and the mechanism mating the end-effector
-                Point3d startPt = skeleton.PointAtNormalizedLength(0);
-                Point3d endPt = skeleton.PointAtNormalizedLength(1);
-
-                if (t1 > t2)
+                Vector3d mainAxis = Vector3d.Unset, perpAxis = Vector3d.Unset, shaftAxis = Vector3d.Unset;
+                Box Bbox = new Box(model.GetBoundingBox(false));
+                Interval shaftAxisRange=new Interval();
+                switch (selectedAxisIndex)
                 {
-                    endPt = skeleton.PointAtNormalizedLength(t1);
-                    startPt = skeleton.PointAtNormalizedLength(t2);
+                    case 1: mainAxis = Vector3d.XAxis;perpAxis = Vector3d.ZAxis;shaftAxis=Vector3d.YAxis ;shaftAxisRange = Bbox.Y; break;
+                    case 2: mainAxis = Vector3d.YAxis; perpAxis = Vector3d.ZAxis; shaftAxis = Vector3d.XAxis ; shaftAxisRange = Bbox.X; break;
+                    case 3: mainAxis = Vector3d.ZAxis; perpAxis = Vector3d.XAxis; shaftAxis = Vector3d.YAxis ; shaftAxisRange = Bbox.Y; break;
+                    default: break;
                 }
-                else
-                {
-                    startPt = skeleton.PointAtNormalizedLength(t1);
-                    endPt = skeleton.PointAtNormalizedLength(t2);
-                }
-                double unitLenth = startPt.DistanceTo(endPt);
+                mainAxis.Unitize();
+                //reverse main axis if needed based on user selection of ee side.
+                if ((skeleton.PointAtNormalizedLength(0.5) - motionCtrlPointSelected) * mainAxis < 0)
+                    mainAxis = -mainAxis;
                 //double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
                 //motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
 
@@ -542,8 +551,13 @@ namespace InterReciprocation
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
+
+                BoundingBox innerCavityOriginalBbox = innerCavity.GetBoundingBox(true);
+                double lastShaftInwardOffset = 15;
+                eeCenPt = innerCavityOriginalBbox.Center + (innerCavityOriginalBbox.Diagonal * mainAxis / 2 - lastShaftInwardOffset) * mainAxis;
+
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,1);
 
                 if (gear_schemes.Count == 0)
                 {
@@ -595,11 +609,100 @@ namespace InterReciprocation
                     #endregion
 
                     #region generate all the gears
-                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
+                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4,false);
                     #endregion
-                    motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                    //Move add gear to later since they need to be edited
+                    //motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }
                 #endregion
+
+                //Calculate the distance between last 2 shafts to know about quick return params
+                double shaftDistance= selectedGearTrainParam.bullGearRadius + selectedGearTrainParam.pinionRadius + 0.3;
+                double quickReturnRadiusMin = 5, quickReturnRadiusMax= shaftDistance - 8;
+                double quickReturnRadius = quickReturnRadiusMin+(quickReturnRadiusMax-quickReturnRadiusMin)*rangeLevel/10;
+
+                //Use selected gear param to figure out quick return position and direction
+                GearParameter lgp = selectedGearTrainParam.parameters.Last();
+                Point3d lgc = lgp.center;
+                double lgcCoordinate = new Vector3d(lgc) * shaftAxis;
+                double lgcCoordinateOffset = new Vector3d(lgc+lgp.norm*lgp.faceWidth) * shaftAxis;
+                double spaceLeftOver = 0;
+                if(lgcCoordinate<lgcCoordinateOffset)
+                {
+                    spaceLeftOver = shaftAxisRange.Max - lgcCoordinateOffset-0.6;
+
+                }
+                else
+                {
+                    spaceLeftOver = lgcCoordinateOffset - shaftAxisRange.Min-0.6;
+                }
+                if(spaceLeftOver<15)//TODO test this threshold to see if it's too big or too small
+                {
+                    warningwin.Text = "The selected body is too small to add the quick return structure!";
+                    warningwin.Show();
+                }
+                else
+                {
+                    //Generate quick return and add it
+                    QuickReturn qr = new QuickReturn(lgc + lgp.norm * (lgp.faceWidth+0.6), lgp.norm, mainAxis, quickReturnRadius * 2, 3.6, lastShaftInwardOffset + quickReturnRadius + 5);
+                    //Add qr models
+                    Brep cw = qr.CrankWheelSolid, pin = qr.PinSolid;
+                    Brep cwpin = Brep.CreateBooleanUnion(new List<Brep> { cw, pin }, myDoc.ModelAbsoluteTolerance)[0];
+                    crankWheel = new Entity(cwpin, false, "Crank wheel with pin on");
+                    Brep yoke = qr.YokeSolid, slider = qr.SliderSolid;
+                    Brep ys = Brep.CreateBooleanUnion(new List<Brep> { yoke, slider }, myDoc.ModelAbsoluteTolerance)[0];
+                    yokeSlider = new Entity(ys, false, "Yoke and slider joined");
+                    stopWall = new Entity(qr.StopWallSolid, false, "Stop wall");
+                    bearingBlock = new Entity(qr.BearingBlockSolid, false, "Bearing block");
+                    motion.AddQuickReturn(crankWheel, yokeSlider, stopWall, bearingBlock);
+                    //Find last shaft and replace it with 2 one sided shaft for quick return
+                    Shaft lastShaft = null;
+                    foreach (Entity e in axel_spacer_entities)
+                    {
+                        if (e.Name == "lastShaft")
+                            lastShaft = (Shaft)e;
+                    }
+                    //Replace it
+                    axel_spacer_entities.Remove(lastShaft);
+                    Point3d pt1 = lastShaft.StartPt;
+                    Point3d pt2 = pt1 + lastShaft.AxisDir * lastShaft.Len;
+                    //Tell which one is for socket, which is for regular shaft
+                    Point3d axel1Start, axel1End, discStart, revoluteJointCenter;
+                    Point3d axel2Start, axel2End;
+                    Vector3d axelDir;
+                    double axelLen;
+                    if (lastShaft.AxisDir*lgp.norm>0.99)
+                    {//pt1 is for socket, pt2 is for shaft
+                        axel1Start = pt1 + lgp.norm * 2.75;
+                        revoluteJointCenter = pt1 + lgp.norm * 4.5;
+                        axel1End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 3.6);
+                        discStart = axel1Start;
+                        axel2Start = pt2;
+                        axel2End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 9.1);
+                    }
+                    else
+                    {//pt2 is for socket,pt1 is for shaft. Use reversed direction
+                        axel1Start = pt2 + lgp.norm * 2.75;
+                        revoluteJointCenter = pt2 + lgp.norm * 4.5;
+                        axel1End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 3.6);
+                        discStart = axel1Start;
+                        axel2Start = pt1;
+                        axel2End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 9.1);
+                    }
+                    //Params of replaced axel, disc, revolute joint
+                    
+                    
+                    Socket ShaftSocket = new Socket(revoluteJointCenter, lgp.norm);
+                    Shaft newLastShaft1 = new Shaft(axel1Start, axel1Start.DistanceTo(axel1End), 1.5, lgp.norm);
+                    Shaft newLastShaft2 = new Shaft(axel2Start, axel2Start.DistanceTo(axel2End), 1.5, -lgp.norm);
+                    Shaft newLastShaft1Disc = new Shaft(discStart, 1.5, 3.8, lgp.norm);
+                    axel_spacer_entities.Add(ShaftSocket);
+                    axel_spacer_entities.Add(newLastShaft1);
+                    axel_spacer_entities.Add(newLastShaft1Disc);
+                    axel_spacer_entities.Add(newLastShaft2);
+                    motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                }
+                toGenerateMechanism = false;
             }
 
             if (toSetAxisDir)
