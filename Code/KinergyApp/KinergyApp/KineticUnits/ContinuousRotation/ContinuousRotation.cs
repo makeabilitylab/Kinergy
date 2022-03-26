@@ -74,6 +74,11 @@ namespace Kinergy.KineticUnit
         double t1 = 0, t2 = 0;
 
         Helpers _helperFun;
+        int old_speedValue = -1;
+        int old_energyValue = -1;
+        int old_roundValue = -1;
+        bool old_direction = true;
+        Brep ee1Model = null, ee2Model = null;
 
         public ContinuousRotation(Brep Model, int selectedAxisIndex, Vector3d Direction, Brep innerCavity, Point3d motionCtrlPt, int speed, int dis, int eneryg, int InputType, Helpers helper)
         {
@@ -116,9 +121,143 @@ namespace Kinergy.KineticUnit
 
         //}
 
-        public void AdjustParameter(int energylevel, int speedlevel,int roundLevel)
+        public void AdjustParameter(int speedLevel, int roundLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod)
         {
-            //TODO adjust param
+            bool isSpeedChange = false;
+            bool isEnergyChange = false;
+            bool isRoundChange = false;
+            bool isDirChange = false;
+
+            if (speedLevel != old_speedValue)
+            {
+                isSpeedChange = true;
+                old_speedValue = speedLevel;
+            }
+
+            if (roundLevel != old_roundValue)
+            {
+                isRoundChange = true;
+                old_roundValue = roundLevel;
+            }
+
+            if (energyLevel != old_energyValue)
+            {
+                isEnergyChange = true;
+                old_energyValue = energyLevel;
+            }
+
+            if(isSpringCW != old_direction)
+            {
+                old_direction = isSpringCW;
+                isDirChange = true;
+            }
+
+            if (motionControlMethod == 1)
+            {
+                // Adjust the parameters for the helical spring control
+
+            }
+            else
+            {
+                // Adjust the parameters for the spiral spring control
+                int schemeNum = -1;
+                int paramNum = -1;
+
+                _helperFun.mapSpeedToGears(speedLevel, gr_list, gear_schemes, out schemeNum, out paramNum);
+
+                GearTrainParam selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
+
+                #region re-generate all the shafts, spacers, and gears
+
+                if (isSpeedChange)
+                {
+                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod, 0.3);
+                    List<Gear> gears = _helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
+
+                    //delete last shaft and replace with needed structure
+
+                    Shaft lastShaft = null;
+                    foreach (Entity e in axel_spacer_entities)
+                    {
+                        if (e.Name == "lastShaft")
+                            lastShaft = (Shaft)e;
+                    }
+                    axel_spacer_entities.Remove(lastShaft);
+
+                    if (endEffectorState == 1)
+                    {
+                        //Replace the last shaft with a longer one with a revolute joint at end
+                        Point3d pt1 = lastShaft.StartPt;
+                        Point3d pt2 = pt1 + lastShaft.AxisDir * lastShaft.Len;
+                        //Tell which one is closer to ee
+                        double dis1 = pt1.DistanceTo(ee1Model.ClosestPoint(pt1));
+                        double dis2 = pt2.DistanceTo(ee1Model.ClosestPoint(pt1));
+                        //Params of replaced axel, disc, revolute joint
+                        Point3d axelStart, axelEnd, discStart, revoluteJointCenter;
+                        Vector3d axelDir;
+                        double axelLen;
+                        if (dis1 < dis2)
+                        {
+                            axelDir = -lastShaft.AxisDir;
+                            axelStart = pt2 + axelDir * 2.75;
+                            axelEnd = ee1Model.GetBoundingBox(true).Center;
+                            discStart = axelStart;
+                            revoluteJointCenter = pt2 + axelDir * 4.5;
+                            axelLen = axelStart.DistanceTo(axelEnd);
+                        }
+                        else
+                        {
+                            axelDir = lastShaft.AxisDir;
+                            axelStart = pt1 + axelDir * 2.75;
+                            axelEnd = ee1Model.GetBoundingBox(true).Center;
+                            discStart = axelStart;
+                            revoluteJointCenter = pt1 + axelDir * 4.5;
+                            axelLen = axelStart.DistanceTo(axelEnd);
+                        }
+                        Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        newLastShaft.SetName("MiddleShellBreakerShaft");
+                        Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
+                        axel_spacer_entities.Add(ShaftSocket);
+                        axel_spacer_entities.Add(newLastShaft);
+                        axel_spacer_entities.Add(newLastShaftDisc);
+                    }
+                    else if (endEffectorState == 2)
+                    {
+                        //Replace the last shaft with a longer one with 2 holes and spacers
+                        Point3d pt1 = lastShaft.StartPt;
+                        Point3d pt2 = pt1 + lastShaft.AxisDir * lastShaft.Len;
+                        //Add shaft to link 2 ees
+                        Point3d axelStart = ee1Model.GetBoundingBox(true).Center;
+                        Point3d axelEnd = ee2Model.GetBoundingBox(true).Center;
+                        Vector3d axelDir = axelEnd - axelStart;
+                        double axelLen = axelDir.Length;
+                        axelDir.Unitize();
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        newLastShaft.SetName("MiddleShellBreakerShaft");
+                        //TODO Add spacer along line within model ? Not adding for now to prevent bug
+                        axel_spacer_entities.Add(newLastShaft);
+                    }
+                    else
+                    {
+                        throw new Exception("Unexpected situation! Invalid end effector state");
+                    }
+                    AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                }
+
+                #endregion
+
+                #region re-generate the spring
+
+                if (isEnergyChange || isRoundChange || isDirChange)
+                {
+                    Spiral spiralSpring = (Spiral)spring;
+                    spiralSpring.AdjustParam(energyLevel, roundLevel, isSpringCW);
+                    AddSprings(spiralSpring);
+                }
+
+                #endregion
+            }
         }
         public void AddSprings(Entity springControl)
         {
@@ -1892,6 +2031,13 @@ namespace Kinergy.KineticUnit
                 Entity ee = new Entity(b, false, "endEffector");
                 entityList.Add(ee);
                 endEffectors.Add(ee);
+            }
+            if (eeState == 1)
+                ee1Model = ees[0];
+            else if(eeState==2)
+            {
+                ee1Model = ees[0];
+                ee2Model = ees[1];
             }
         }
         public void CreateShell()

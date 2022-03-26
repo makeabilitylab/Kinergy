@@ -205,6 +205,7 @@ namespace Kinergy.KineticUnit
                 {
                     Spiral spiralSpring = (Spiral)spring;
                     spiralSpring.AdjustParam(energyLevel, distanceLevel, isSpringCW);
+                    AddSprings(spiralSpring);
                 }
 
                 #endregion
