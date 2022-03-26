@@ -117,17 +117,17 @@ namespace Kinergy
 
                 #region generate the pin curve
 
-                _pinCrv = new Circle(new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1)), new Point3d(_amplitude/2, 0, 0), _p/2).ToNurbsCurve();
+                _pinCrv = new Circle(new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1)), new Point3d(-_amplitude/2, 0, 0), _p/2).ToNurbsCurve();
 
                 #endregion
 
                 #region generete the yoke curve
 
                 List<Curve> yokeCrvs = new List<Curve>();
-                Curve rightSideLn = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t, _amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t, -_amplitude / 2, 0)).ToNurbsCurve();
-                Curve bottomHalfCircle = new Arc(new Point3d(_amplitude / 2 + _p / 2 + _t, -_amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, -_amplitude / 2 - (_p + 2 * _t) / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), -_amplitude / 2, 0)).ToNurbsCurve();
-                Curve leftSideLn = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), -_amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), _amplitude / 2, 0)).ToNurbsCurve();
-                Curve topHalfCircle = new Arc(new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), _amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, _amplitude / 2 + (_p + 2 * _t) / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t, _amplitude / 2, 0)).ToNurbsCurve();
+                Curve rightSideLn = new Line(new Point3d(-_amplitude / 2 + _p / 2 + _t, _amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t, -_amplitude / 2, 0)).ToNurbsCurve();
+                Curve bottomHalfCircle = new Arc(new Point3d(-_amplitude / 2 + _p / 2 + _t, -_amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, -_amplitude / 2 - (_p + 2 * _t) / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), -_amplitude / 2, 0)).ToNurbsCurve();
+                Curve leftSideLn = new Line(new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), -_amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), _amplitude / 2, 0)).ToNurbsCurve();
+                Curve topHalfCircle = new Arc(new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t), _amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, _amplitude / 2 + (_p + 2 * _t) / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t, _amplitude / 2, 0)).ToNurbsCurve();
                 yokeCrvs.Add(rightSideLn);
                 yokeCrvs.Add(bottomHalfCircle);
                 yokeCrvs.Add(leftSideLn);
@@ -139,10 +139,10 @@ namespace Kinergy
                 _yokeCrv.Transform(yokeMove);
 
                 List<Curve> yokeOuterCrvs = new List<Curve>();
-                Curve rightSideLnOuter = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, _amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, -_amplitude / 2, 0)).ToNurbsCurve();
-                Curve bottomHalfCircleOuter = new Arc(new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, -_amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, -_amplitude / 2 - (_p + 2 * _t) / 2 - _yokeWidth, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, -_amplitude / 2, 0)).ToNurbsCurve();
-                Curve leftSideLnOuter = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, -_amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, _amplitude / 2, 0)).ToNurbsCurve();
-                Curve topHalfCircleOuter = new Arc(new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, _amplitude / 2, 0), new Point3d(_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, _amplitude / 2 + (_p + 2 * _t) / 2 + _yokeWidth, 0), new Point3d(_amplitude / 2 + _p / 2 + _t + _yokeWidth, _amplitude / 2, 0)).ToNurbsCurve();
+                Curve rightSideLnOuter = new Line(new Point3d(-_amplitude / 2 + _p / 2 + _t + _yokeWidth, _amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t + _yokeWidth, -_amplitude / 2, 0)).ToNurbsCurve();
+                Curve bottomHalfCircleOuter = new Arc(new Point3d(-_amplitude / 2 + _p / 2 + _t + _yokeWidth, -_amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, -_amplitude / 2 - (_p + 2 * _t) / 2 - _yokeWidth, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, -_amplitude / 2, 0)).ToNurbsCurve();
+                Curve leftSideLnOuter = new Line(new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, -_amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, _amplitude / 2, 0)).ToNurbsCurve();
+                Curve topHalfCircleOuter = new Arc(new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) - _yokeWidth, _amplitude / 2, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t - (_p + 2 * _t) / 2, _amplitude / 2 + (_p + 2 * _t) / 2 + _yokeWidth, 0), new Point3d(-_amplitude / 2 + _p / 2 + _t + _yokeWidth, _amplitude / 2, 0)).ToNurbsCurve();
                 yokeOuterCrvs.Add(rightSideLnOuter);
                 yokeOuterCrvs.Add(bottomHalfCircleOuter);
                 yokeOuterCrvs.Add(leftSideLnOuter);
@@ -156,7 +156,7 @@ namespace Kinergy
                 #region generate the axis of the slider
 
                 double sliderLen = _connectorLen + _p + _crankRadius + _blockLen;
-                _sliderCrv = new Line(new Point3d(_amplitude / 2 + _p / 2 + _t, 0, 0), new Point3d(sliderLen - (_amplitude / 2 + _p / 2 + _t), 0, 0)).ToNurbsCurve();
+                _sliderCrv = new Line(new Point3d(-_amplitude / 2 + _p / 2 + _t, 0, 0), new Point3d(sliderLen + (-_amplitude / 2 + _p / 2 + _t), 0, 0)).ToNurbsCurve();
                 Transform slidingMove = Transform.Translation(new Vector3d(0, 0, 2.2 + _thickness + _sliderRadius));
                 _sliderCrv.Transform(slidingMove);
 

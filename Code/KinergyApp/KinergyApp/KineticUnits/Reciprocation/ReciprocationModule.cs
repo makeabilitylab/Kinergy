@@ -488,7 +488,7 @@ namespace InterReciprocation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new Reciprocation(model, direction,  energy_input,  speed_input);//TODO adjust
+                    motion = new Reciprocation(model, direction,  energy_input,  speed_input,innerCavity);//TODO adjust
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -511,8 +511,8 @@ namespace InterReciprocation
                     ObjRef currObj = new ObjRef(ee);
                     myDoc.Objects.Select(currObj);
                     eeModel = currObj.Brep();
-                    myDoc.Objects.Hide(ee, true);
-                    myDoc.Views.Redraw();
+                    //myDoc.Objects.Hide(ee, true);
+                    //myDoc.Views.Redraw();
                 }
                 else
                 {
@@ -537,7 +537,7 @@ namespace InterReciprocation
                     case 3: mainAxis = Vector3d.ZAxis; perpAxis = Vector3d.XAxis; shaftAxis = Vector3d.YAxis ; shaftAxisRange = Bbox.Y; break;
                     default: break;
                 }
-                mainAxis.Unitize();
+                motion.Set3Axis(mainAxis, perpAxis, shaftAxis);
                 //reverse main axis if needed based on user selection of ee side.
                 if ((skeleton.PointAtNormalizedLength(0.5) - motionCtrlPointSelected) * mainAxis < 0)
                     mainAxis = -mainAxis;
@@ -609,7 +609,7 @@ namespace InterReciprocation
                     #endregion
 
                     #region generate all the gears
-                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4,false);
+                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4,true);
                     #endregion
                     //Move add gear to later since they need to be edited
                     //motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
@@ -644,7 +644,10 @@ namespace InterReciprocation
                 else
                 {
                     //Generate quick return and add it
-                    QuickReturn qr = new QuickReturn(lgc + lgp.norm * (lgp.faceWidth+0.6), lgp.norm, mainAxis, quickReturnRadius * 2, 3.6, lastShaftInwardOffset + quickReturnRadius + 5);
+                    BoundingBox bboxMid = brepCut[1].GetBoundingBox(true);
+                    double sliderLen = quickReturnRadius + mainAxis * (bboxMid.Max - lgc)+10;
+
+                    QuickReturn qr = new QuickReturn(lgc + lgp.norm * (lgp.faceWidth+0.6), lgp.norm, mainAxis, quickReturnRadius * 2, 3.6, sliderLen);
                     //Add qr models
                     Brep cw = qr.CrankWheelSolid, pin = qr.PinSolid;
                     Brep cwpin = Brep.CreateBooleanUnion(new List<Brep> { cw, pin }, myDoc.ModelAbsoluteTolerance)[0];
@@ -653,9 +656,15 @@ namespace InterReciprocation
                     Brep ys = Brep.CreateBooleanUnion(new List<Brep> { yoke, slider }, myDoc.ModelAbsoluteTolerance)[0];
                     yokeSlider = new Entity(ys, false, "Yoke and slider joined");
                     stopWall = new Entity(qr.StopWallSolid, false, "Stop wall");
-                    bearingBlock = new Entity(qr.BearingBlockSolid, false, "Bearing block");
-                    motion.AddQuickReturn(crankWheel, yokeSlider, stopWall, bearingBlock);
-                    //Find last shaft and replace it with 2 one sided shaft for quick return
+                    Brep bb = qr.BearingBlockSolid;
+                    //Move bearing block model to edge of part2
+                    BoundingBox bboxbb = bb.GetBoundingBox(true);
+                    Vector3d bbTranslation = mainAxis * (mainAxis * (bboxMid.Max - bboxbb.Min));
+                    bb.Transform(Transform.Translation(bbTranslation));
+                    bearingBlock = new Entity(bb, false, "Bearing block");
+                    motion.AddQuickReturn(crankWheel, yokeSlider, bearingBlock,stopWall,slider);
+
+                    #region Find last shaft and replace it with 2 one sided shaft for quick return
                     Shaft lastShaft = null;
                     foreach (Entity e in axel_spacer_entities)
                     {
@@ -667,39 +676,43 @@ namespace InterReciprocation
                     Point3d pt1 = lastShaft.StartPt;
                     Point3d pt2 = pt1 + lastShaft.AxisDir * lastShaft.Len;
                     //Tell which one is for socket, which is for regular shaft
-                    Point3d axel1Start, axel1End, discStart, revoluteJointCenter;
+                    Point3d axel1Start, axel1End;
                     Point3d axel2Start, axel2End;
-                    Vector3d axelDir;
-                    double axelLen;
                     if (lastShaft.AxisDir*lgp.norm>0.99)
                     {//pt1 is for socket, pt2 is for shaft
-                        axel1Start = pt1 + lgp.norm * 2.75;
-                        revoluteJointCenter = pt1 + lgp.norm * 4.5;
+                        axel1Start = pt1 ;
                         axel1End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 3.6);
-                        discStart = axel1Start;
                         axel2Start = pt2;
                         axel2End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 9.1);
                     }
                     else
                     {//pt2 is for socket,pt1 is for shaft. Use reversed direction
-                        axel1Start = pt2 + lgp.norm * 2.75;
-                        revoluteJointCenter = pt2 + lgp.norm * 4.5;
+                        axel1Start = pt2 ;
                         axel1End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 3.6);
-                        discStart = axel1Start;
                         axel2Start = pt1;
                         axel2End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 9.1);
                     }
                     //Params of replaced axel, disc, revolute joint
                     
                     
-                    Socket ShaftSocket = new Socket(revoluteJointCenter, lgp.norm);
                     Shaft newLastShaft1 = new Shaft(axel1Start, axel1Start.DistanceTo(axel1End), 1.5, lgp.norm);
                     Shaft newLastShaft2 = new Shaft(axel2Start, axel2Start.DistanceTo(axel2End), 1.5, -lgp.norm);
-                    Shaft newLastShaft1Disc = new Shaft(discStart, 1.5, 3.8, lgp.norm);
-                    axel_spacer_entities.Add(ShaftSocket);
                     axel_spacer_entities.Add(newLastShaft1);
-                    axel_spacer_entities.Add(newLastShaft1Disc);
                     axel_spacer_entities.Add(newLastShaft2);
+                    //Move last gear to join lg and cw
+                    gears.Last().Model.Transform(Transform.Translation( lgp.norm * 0.6));
+                    //Remove last 2 spacers
+                    List<Spacer> generatedSpacers = new List<Spacer>();
+                    for(int i=0;i<axel_spacer_entities.Count;i++)
+                    {
+                        Entity e = axel_spacer_entities[i];
+                        if (e.GetType() == typeof(Spacer))
+                            generatedSpacers.Add((Spacer)e);
+                    }
+                    axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
+                    axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
+                    #endregion
+
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }
                 toGenerateMechanism = false;
@@ -722,6 +735,11 @@ namespace InterReciprocation
             }
 
             if (toPreview)
+            {
+                
+            }
+
+            if (toBake)
             {
                 myDoc.Objects.Delete(reserveBrepID1, true);
                 myDoc.Objects.Delete(reserveBrepID2, true);
@@ -756,11 +774,6 @@ namespace InterReciprocation
                         this.ExpirePreview(true);
                     }
                 }
-            }
-
-            if (toBake)
-            {
-
             }
 
             if (toAdjustParam)

@@ -877,7 +877,7 @@ namespace ConTranslation
 
                 #region quick-return test
 
-                QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
+                //QuickReturn tempQR = new QuickReturn(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
                 //QuickReturn tempQR1 = new QuickReturn(new Point3d(0, -100, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 20, 3.6, 80);
 
                 //foreach (Brep b in tempQR.QuickReturnModels)
