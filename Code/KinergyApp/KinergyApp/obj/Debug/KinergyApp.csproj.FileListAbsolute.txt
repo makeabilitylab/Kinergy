@@ -97,7 +97,6 @@ C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
-C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\Resources\AddElements.png
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll.config
 D:\2020_02 Kinergy\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll
