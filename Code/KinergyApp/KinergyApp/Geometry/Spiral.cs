@@ -366,7 +366,7 @@ namespace Kinergy
                 Curve s = null;
                 if (isSpringDirCW)
                     // the generated spiral spring is CW, which means the turnNum is negative
-                    s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, -roundNum, outerRadius, 0.5);
+                    s = NurbsCurve.CreateSpiral(centerPoint, -direction, spiralStartPt, 0, roundNum, outerRadius, 0.5);
                 else
                     // the generated spiral spring is CCW, which means the turnNum is positive
                     s = NurbsCurve.CreateSpiral(centerPoint, direction, spiralStartPt, 0, roundNum, outerRadius, 0.5);

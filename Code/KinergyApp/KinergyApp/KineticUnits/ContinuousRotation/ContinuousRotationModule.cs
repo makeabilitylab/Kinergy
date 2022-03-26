@@ -125,6 +125,9 @@ namespace ConRotation
         bool dirReverseState = false;
         Guid rotationDirID = Guid.Empty;
         bool isSpringCW = true;
+        Vector3d shaftAxis = Vector3d.Unset;
+        List<double> gr_list = new List<double>();
+        List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
 
         /// <summary>
         /// Initializes a new instance of the ContinuousRotationModule class.
@@ -184,6 +187,7 @@ namespace ConRotation
             reserveBrepID2 = Guid.Empty;
             motionCtrlPointSelected = new Point3d();
             helperFun = new Helpers();
+
             #region material and color settings
 
             int solidIndex = myDoc.Materials.Add();
@@ -283,30 +287,37 @@ namespace ConRotation
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-            switch (selectedAxisIndex)
-            {
-                case 1:
-                    canvasNormal = Vector3d.XAxis;
-                    canvasStart = Vector3d.YAxis;
-                    canvasEnd = Vector3d.ZAxis;
-                    canvasOrigin = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 10) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
-                    extrudeEnd = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 13) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
-                    break;
-                case 2:
-                    canvasNormal = Vector3d.YAxis;
-                    canvasStart = Vector3d.ZAxis;
-                    canvasEnd = Vector3d.XAxis;
-                    canvasOrigin = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 10) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
-                    extrudeEnd = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 13) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
-                    break;
-                case 3:
-                    canvasNormal = Vector3d.ZAxis;
-                    canvasStart = Vector3d.XAxis;
-                    canvasEnd = Vector3d.YAxis;
-                    canvasOrigin = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 10) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
-                    extrudeEnd = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 13) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
-                    break;
-            }
+            //switch (selectedAxisIndex)
+            //{
+            //    case 1:
+            //        canvasNormal = Vector3d.XAxis;
+            //        canvasStart = Vector3d.YAxis;
+            //        canvasEnd = Vector3d.ZAxis;
+            //        canvasOrigin = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 10) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+            //        extrudeEnd = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 13) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+            //        break;
+            //    case 2:
+            //        canvasNormal = Vector3d.YAxis;
+            //        canvasStart = Vector3d.ZAxis;
+            //        canvasEnd = Vector3d.XAxis;
+            //        canvasOrigin = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 10) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+            //        extrudeEnd = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 13) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+            //        break;
+            //    case 3:
+            //        canvasNormal = Vector3d.ZAxis;
+            //        canvasStart = Vector3d.XAxis;
+            //        canvasEnd = Vector3d.YAxis;
+            //        canvasOrigin = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 10) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+            //        extrudeEnd = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 13) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+            //        break;
+            //}
+
+            canvasNormal = shaftAxis;
+            Plane t_pln = new Plane(model.GetBoundingBox(true).Center, shaftAxis);
+            canvasStart = t_pln.XAxis;
+            canvasEnd = t_pln.YAxis;
+            canvasOrigin = model.GetBoundingBox(true).Center + shaftAxis / shaftAxis.Length * 40;
+            extrudeEnd = model.GetBoundingBox(true).Center + shaftAxis / shaftAxis.Length * 43;
 
             Curve rail = new Line(canvasOrigin, extrudeEnd).ToNurbsCurve();
 
@@ -570,7 +581,11 @@ namespace ConRotation
             {
                 dirReverseState = revdir_input;
                 showDirIndicator(dirReverseState);
-                //motion.AdjustParameter(energyLevel, displacement, isSpringCW);
+                if(spring_entities.Count != 0)
+                {
+                    motion.AdjustParameter(speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod);
+                }
+               
                 //motion.updateLock(dirReverseState);
             }
 
@@ -743,9 +758,10 @@ namespace ConRotation
                 #endregion
                 #region Step 2 Then use the given ee to calculate direction, generate gear and shaft
                 //Clacluate direction
-                
 
-                Vector3d mainAxis = Vector3d.Unset, perpAxis = Vector3d.Unset,shaftAxis= Vector3d.Unset;
+
+                Vector3d mainAxis = Vector3d.Unset, perpAxis = Vector3d.Unset;
+                
                 BoundingBox Bbox = model.GetBoundingBox(false);
                 double x = 0, y = 0;
                 switch (selectedAxisIndex)
@@ -808,7 +824,7 @@ namespace ConRotation
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,2);
+                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,2);
                 //select gear param based on input param
                 if (gear_schemes.Count == 0)
                 {
@@ -831,7 +847,7 @@ namespace ConRotation
                     //}
                     #endregion
 
-                    List<double> gr_list = new List<double>();
+                    gr_list = new List<double>();
                     foreach (GearTrainScheme gts in gear_schemes)
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
@@ -882,8 +898,10 @@ namespace ConRotation
 
                 #region ask the user to select rotation direction and generate spring
 
-                eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
+                eeMovingDirectionSelection = 3; // 1:CW, 3: CCW
                 spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+
+                // determine the rotating direction
                 showDirIndicator(false);
 
                 #endregion
@@ -1653,8 +1671,8 @@ namespace ConRotation
             if (toAdjustParam)
             {
                 if (motion != null)
-                    // Reconstruct spiral and the gear train
-                    motion.AdjustParameter(energyLevel,speedLevel, roundLevel);
+                    motion.AdjustParameter(speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod);
+
             }
 
             if (toRemoveLock)
