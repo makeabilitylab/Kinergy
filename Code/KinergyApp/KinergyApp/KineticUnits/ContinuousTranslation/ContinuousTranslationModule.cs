@@ -896,13 +896,13 @@ namespace ConTranslation
 
                 #region crank and slotted lever
 
-                //CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
+                CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
 
-                //foreach (Brep b in tempCSL.CrankSlottedLeverModels)
-                //{
-                //    myDoc.Objects.AddBrep(b);
-                //    myDoc.Views.Redraw();
-                //}
+                foreach (Brep b in tempCSL.CrankSlottedLeverModels)
+                {
+                    myDoc.Objects.AddBrep(b);
+                    myDoc.Views.Redraw();
+                }
 
                 #endregion
             }

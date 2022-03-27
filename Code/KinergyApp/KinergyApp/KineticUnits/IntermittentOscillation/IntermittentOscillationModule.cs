@@ -300,7 +300,7 @@ namespace InterOscillation
 
             // variables to control states
             bool toSelectRegion = false, toAdjustParam = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false;
-
+            bool toGenerateMechanism = false;
             #region Input check. This determines how the cell respond to changed params
             if (!reg_input && testBodySelBtn)
             {
@@ -507,12 +507,15 @@ namespace InterOscillation
                     warningwin.Text = "No end effector model is selected.";
                     warningwin.Show();
                 }
-                //Use ee position to calculate important parameters
+                toGenerateMechanism = true;
 
-                //TODO 
+                
 
+            }
+            if(toGenerateMechanism)
+            {
                 //Then generate gears , crank and more. TODO change from CT to IO
-                #region generate the spring motor, transmission mechanism, and the mechanism mating the end-effector
+                #region generate transmission mechanism, and the mechanism mating the end-effector
                 Point3d startPt = skeleton.PointAtNormalizedLength(0);
                 Point3d endPt = skeleton.PointAtNormalizedLength(1);
 
@@ -595,9 +598,8 @@ namespace InterOscillation
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }
                 #endregion
-
+                toGenerateMechanism = false;
             }
-
             if (toSetAxisDir)
             {
 
