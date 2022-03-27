@@ -532,8 +532,11 @@ namespace Kinergy.KineticUnit
         public void AdjustParameter(int KineticStrength, int MaxLoadingDegree, bool isSpringCW)
         {
             maxDegree = MaxLoadingDegree;
-            //GenerateSpiralAndAxis();
-            spiralSpring.AdjustParam(KineticStrength, maxDegree, isSpringCW);
+            //GenerateSpiralAndAxis(); 
+            List<Point3d> lockPos = new List<Point3d>();
+            bool spiralLockNorm = false;
+            Vector3d spiralLockDir = new Vector3d();
+            spiralSpring.AdjustParam(null, model, 0, KineticStrength, maxDegree, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
             energy = KineticStrength;
         }
       

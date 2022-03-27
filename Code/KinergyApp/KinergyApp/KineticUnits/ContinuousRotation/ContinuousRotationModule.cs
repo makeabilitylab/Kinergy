@@ -589,7 +589,7 @@ namespace ConRotation
                 showDirIndicator(dirReverseState);
                 if(spring_entities.Count != 0)
                 {
-                    motion.AdjustParameter(speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod);
+                    motion.AdjustParameter(eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
                 }
                
                 //motion.updateLock(dirReverseState);
@@ -1677,7 +1677,7 @@ namespace ConRotation
             if (toAdjustParam)
             {
                 if (motion != null)
-                    motion.AdjustParameter(speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod);
+                    motion.AdjustParameter(eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
 
             }
 

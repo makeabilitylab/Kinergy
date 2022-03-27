@@ -148,7 +148,7 @@ namespace Kinergy.KineticUnit
 
         //}
 
-        public void AdjustParameter(int speedLevel, int roundLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod)
+        public void AdjustParameter(int eeMovingDirectionSelection, int speedLevel, int roundLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod, ref List<Point3d> lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
         {
             bool isSpeedChange = false;
             bool isEnergyChange = false;
@@ -173,7 +173,7 @@ namespace Kinergy.KineticUnit
                 old_energyValue = energyLevel;
             }
 
-            if(isSpringCW != old_direction)
+            if (isSpringCW != old_direction)
             {
                 old_direction = isSpringCW;
                 isDirChange = true;
@@ -279,9 +279,13 @@ namespace Kinergy.KineticUnit
                 if (isEnergyChange || isRoundChange || isDirChange || isSpeedChange)
                 {
                     Spiral spiralSpring = (Spiral)spring;
-                    spiralSpring.AdjustParam(energyLevel, roundLevel, isSpringCW);
-                    //AddSprings(spiralSpring);
+                    spiralSpring.AdjustParam(selectedGearTrainParam.parameters, this.Model, eeMovingDirectionSelection, energyLevel, roundLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                    AddSprings(spiralSpring);
                 }
+                //else if ((isEnergyChange || isRoundChange || isDirChange) && isSpeedChange)
+                //{
+                //    Spiral spiralSpring = _helperFun.genSprings(selectedGearTrainParam.parameters, this.Model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                //}
 
                 #endregion
             }
@@ -531,7 +535,7 @@ namespace Kinergy.KineticUnit
                     locks.Clear();
 
                 Lock LockHead;
-                double ratchetRadius = lockDisToAxis * 0.5;
+                double ratchetRadius = lockDisToAxis * 0.35;
 
                 if (spiralLockNorm)
                     LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
@@ -2245,6 +2249,14 @@ namespace Kinergy.KineticUnit
 
             Brep[] cutResult = Brep.CreateBooleanDifference(part2, cutBox, myDoc.ModelAbsoluteTolerance);
             part2 = cutResult[0];
+
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+            part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
 
             #endregion
 

@@ -148,7 +148,7 @@ namespace Kinergy.KineticUnit
         /// <param name="distanceLevel">the level of the distance on the slider: 1-10</param>
         /// <param name="energyLevel">the level of energy on the slider: 1-10</param>
         /// <param name="motionControlMethod"></param>
-        public void AdjustParameter(int speedLevel, int distanceLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod)
+        public void AdjustParameter(int eeMovingDirectionSelection, int speedLevel, int distanceLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod, ref List<Point3d> lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
         {
 
             bool isSpeedChange = false;
@@ -204,8 +204,8 @@ namespace Kinergy.KineticUnit
                 if(isEnergyChange || isDistanceChange || isSpeedChange)
                 {
                     Spiral spiralSpring = (Spiral)spring;
-                    spiralSpring.AdjustParam(energyLevel, distanceLevel, isSpringCW);
-                    //AddSprings(spiralSpring);
+                    spiralSpring.AdjustParam(selectedGearTrainParam.parameters, _model, eeMovingDirectionSelection, energyLevel, distanceLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir,eePos);
+                    AddSprings(spiralSpring);
                 }
 
                 #endregion
