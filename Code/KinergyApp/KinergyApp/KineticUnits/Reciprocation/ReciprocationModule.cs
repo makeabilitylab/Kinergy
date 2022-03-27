@@ -615,9 +615,9 @@ namespace InterReciprocation
                     //motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }
                 #endregion
-
+                #region add quick return
                 //Calculate the distance between last 2 shafts to know about quick return params
-                double shaftDistance= selectedGearTrainParam.bullGearRadius + selectedGearTrainParam.pinionRadius + 0.3;
+                double shaftDistance = selectedGearTrainParam.bullGearRadius + selectedGearTrainParam.pinionRadius + 0.3;
                 double quickReturnRadiusMin = 5, quickReturnRadiusMax= shaftDistance - 8;
                 double quickReturnRadius = quickReturnRadiusMin+(quickReturnRadiusMax-quickReturnRadiusMin)*rangeLevel/10;
 
@@ -715,6 +715,11 @@ namespace InterReciprocation
 
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }
+                #endregion
+                #region generate spring
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                motion.AddSprings(spring_entities.ElementAt(0));
+                #endregion
                 toGenerateMechanism = false;
             }
 

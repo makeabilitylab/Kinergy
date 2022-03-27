@@ -2158,6 +2158,13 @@ namespace Kinergy.KineticUnit
             _mainAxis = main;
             _perpAxis = perp;
             _otherAxis = shaft;
+            //Use main axis to tell if b1 and b3 is reversed
+            if ((b3.GetBoundingBox(true).Center - b1.GetBoundingBox(true).Center) * _mainAxis < 0)
+            {
+                Brep t = b1;
+                b1 = b3;
+                b3 = t;
+            }
         }
         public void SetEndEffectors(int eeState,List<Brep> ees)
         {

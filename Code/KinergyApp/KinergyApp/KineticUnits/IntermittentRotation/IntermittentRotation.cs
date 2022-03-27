@@ -143,7 +143,11 @@ namespace Kinergy.KineticUnit
         Brep b1 = null, b2 = null, b3 = null;
         Entity p1 = null, p2 = null, p3 = null;
         bool reversed = false;
-        public IntermittentRotation(Brep Model,  Vector3d Direction, double Energy, double Angle, int Speed)
+        private List<Entity> endEffectors = new List<Entity>();
+        private int endEffectorState;
+        Brep ee1Model = null, ee2Model = null;
+        Entity GDWP = null, GW = null, GS = null;
+        public IntermittentRotation(Brep Model, Brep innerCavity, Vector3d Direction, double Energy, double Angle, int Speed)
         {
             model = Model;
             energy = Energy;
@@ -153,6 +157,7 @@ namespace Kinergy.KineticUnit
             myDoc = RhinoDoc.ActiveDoc;
             locks = new List<Lock>();
             speed = Speed;
+            _innerCavity = innerCavity;
         }
         public void AddSprings(Entity springControl)
         {
@@ -286,21 +291,60 @@ namespace Kinergy.KineticUnit
             entityList.Remove(p2);
             entityList.Remove(p3);
         }
+        public void Set3Axis(Vector3d main, Vector3d perp, Vector3d shaft)
+        {
+            _mainAxis = main;
+            _perpAxis = perp;
+            _otherAxis = shaft;
+            //Use main axis to tell if b1 and b3 is reversed
+            if ((b3.GetBoundingBox(true).Center - b1.GetBoundingBox(true).Center) * _mainAxis < 0)
+            {
+                Brep t = b1;
+                b1 = b3;
+                b3 = t;
+            }
+        }
+        public void SetEndEffectors(int eeState, List<Brep> ees)
+        {
+            endEffectorState = eeState;
+            if (endEffectors.Count > 0)
+            {
+                foreach (Entity e in endEffectors)
+                {
+                    entityList.Remove(e);
+                }
+            }
+            endEffectors.Clear();
+            foreach (Brep b in ees)
+            {
+                Entity ee = new Entity(b, false, "endEffector");
+                entityList.Add(ee);
+                endEffectors.Add(ee);
+            }
+            if (eeState == 1)
+                ee1Model = ees[0];
+            else if (eeState == 2)
+            {
+                ee1Model = ees[0];
+                ee2Model = ees[1];
+            }
+        }
+        public void AddGenevaDrive(Entity GenevaDrivingWheelWithPin,Entity  GenevaWheel,Entity  GenevaStopper)
+        {
+            entityList.Remove(GDWP);
+            entityList.Remove(GW);
+            entityList.Remove(GS);
+            GDWP = GenevaDrivingWheelWithPin;
+            GW = GenevaWheel;
+            GS = GenevaStopper;
+            entityList.Add(GDWP);
+            entityList.Add(GW);
+            entityList.Add(GS);
+        }
         public void CreateShell()
         {
             double shellThickness = 2;
-            Brep part2;
-            GearParameter lgp = _gearParam.parameters.Last();
-            Brep lgCylinder = new Cylinder(new Circle(new Plane(lgp.center, lgp.norm), lgp.radius + 2), lgp.faceWidth + 0.6 + 1.3 * 2).ToBrep(true, true);
-            lgCylinder.Transform(Transform.Translation(-lgp.norm * 1.6));
-            part2 = Brep.CreateBooleanDifference(b2, lgCylinder, myDoc.ModelAbsoluteTolerance)[0];
-            Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
-            Brep innerShell = shells[0];
-            innerShell.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == innerShell.SolidOrientation)
-                innerShell.Flip();
-            part2 = Brep.CreateBooleanDifference(part2, innerShell, myDoc.ModelAbsoluteTolerance)[0];
-            //Cut b2 with shaft if needed
+            Brep part2=(Brep)b2.Duplicate();
             foreach (Entity e in entityList)
             {
                 if (e.Name == "MiddleShellBreakerShaft")
@@ -312,6 +356,14 @@ namespace Kinergy.KineticUnit
                     part2 = Brep.CreateBooleanDifference(part2, cy.ToBrep(true, true), myDoc.ModelAbsoluteTolerance)[0];
                 }
             }
+            Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
+            Brep innerShell = shells[0];
+            innerShell.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == innerShell.SolidOrientation)
+                innerShell.Flip();
+            part2 = Brep.CreateBooleanDifference(part2, innerShell, myDoc.ModelAbsoluteTolerance)[0];
+            //Cut b2 with shaft if needed
+            
             //Cut part 2 open
             #region Cut part 2 open with box
             BoundingBox inncerCavityBbox = _innerCavity.GetBoundingBox(true);
@@ -351,64 +403,18 @@ namespace Kinergy.KineticUnit
             part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == part2.SolidOrientation)
                 part2.Flip();
-            part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
-            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
-                part2.Flip();
-
-            #endregion
-
-            //Cut b3 with gear cylinder
-            Brep part3 = Brep.CreateBooleanDifference(b3, lgCylinder, myDoc.ModelAbsoluteTolerance)[0];
-            //Cut b3 with a horizontal rod to let water in
-            BoundingBox part3bbox = part3.GetBoundingBox(true);
-            Brep cuttingRod = new Cylinder(new Circle(new Plane(part3bbox.Center, _otherAxis), 5), bboxMainDimension * 10).ToBrep(true, true);
-            cuttingRod.Transform(Transform.Translation(_otherAxis * (-bboxMainDimension * 5)));
-            cuttingRod.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == cuttingRod.SolidOrientation)
-                cuttingRod.Flip();
             try
             {
-                part3 = Brep.CreateBooleanDifference(part3, cuttingRod, myDoc.ModelAbsoluteTolerance)[0];
+                part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
             }
             catch { }
-            //Cut part 3 with plane to greate a gap
-            //Plane cutter;
-            //try
-            //{
-            //    cutter = new Plane(_skeleton.PointAtNormalizedLength(t1), _mainAxis);
-            //    cutter.Transform(Transform.Translation(_mainAxis * 0.3));
-            //    Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
-            //    part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-            //}
-            //catch
-            //{
-            //    cutter = new Plane(_skeleton.PointAtNormalizedLength(t2), _mainAxis);
-            //    cutter.Transform(Transform.Translation(_mainAxis * 0.3));
-            //    Brep[] Cut_Brep = part3.Trim(cutter, myDoc.ModelAbsoluteTolerance);
-            //    part3 = Cut_Brep[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-            //}
-            part3.Transform(Transform.Translation(_mainAxis * clearance2));
-            //Cut part123 with constraining structure
-            Brep part1 = b1;
-            //constrainingStructureSpaceTaken.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            //if (BrepSolidOrientation.Inward == constrainingStructureSpaceTaken.SolidOrientation)
-            //    constrainingStructureSpaceTaken.Flip();
-            //try
-            //{
-            //    part1 = Brep.CreateBooleanDifference(part1, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
-            //}
-            //catch { }
-            //try
-            //{
-            //    part2 = Brep.CreateBooleanDifference(part2, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
-            //}
-            //catch { }
-            //try
-            //{
-            //    part3 = Brep.CreateBooleanDifference(part3, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
-            //}
-            //catch { }
+
+            #endregion
+            Brep part1=b1,part3 = b3;
+            
             entityList.Remove(p1);
             entityList.Remove(p2);
             entityList.Remove(p3);
