@@ -110,6 +110,17 @@ namespace InterRotation
         bool spiralLockNorm = false;
         Vector3d spiralLockDir = new Vector3d();
 
+        Guid ee1, ee2;
+        Brep ee1Model, ee2Model;
+        int endEffectorState = 0;//0 for unset, 1 for one ee, 2 for 2 ee;
+        Vector3d mainAxis = Vector3d.Unset, perpAxis = Vector3d.Unset,shaftAxis=Vector3d.Unset;
+
+        List<double> gr_list = new List<double>();
+        List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
+        GenevaDrive genevaDrive = null;
+        Entity GenevaWheel = null;
+        Entity GenevaDrivingWheelWithPin = null;
+        Entity GenevaStopper = null;
         /// <summary>
         /// Initializes a new instance of the IntermittentRotationModule class.
         /// </summary>
@@ -151,7 +162,8 @@ namespace InterRotation
             testPreBtn = false;
             testBakeBtn = false;
             motionControlMethod = -1;
-
+            brepCut = new List<Brep>() ;
+            helperFun = new Helpers();
             #region material and color settings
 
             int solidIndex = myDoc.Materials.Add();
@@ -414,19 +426,6 @@ namespace InterRotation
         }
 
 
-        double ConvertInputAngleToDoubleType(string angleText)
-        {
-            double result = 0;
-            try
-            {
-                result = Convert.ToDouble(angleText);
-            }
-            catch (Exception e)
-            {
-                result = 0;
-            }
-            return result;
-        }
 
         /// <summary>
         /// This is the method that actually does the work.
@@ -472,7 +471,7 @@ namespace InterRotation
 
             // variables to control states
             bool toSelectRegion = false, toAdjustParam = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false, toRevDir = false;
-
+            bool toGenerateMechanism = false;
             #region Input check. This determines how the cell respond to changed params
             if (!reg_input && testBodySelBtn)
             {
@@ -649,7 +648,7 @@ namespace InterRotation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new IntermittentRotation(model, direction, energy_input, stroke_input, speed_input);
+                    motion = new IntermittentRotation(model,innerCavity, direction, energy_input, stroke_input, speed_input);
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -662,65 +661,141 @@ namespace InterRotation
 
             if (toSetEEPos)
             {
-                // select a direction around a circle on the end-effector's side
-                EndEffectorDirectionSelection directionSelection = new EndEffectorDirectionSelection(brepCut, skeleton, direction, motionCtrlPointSelected, t1, t2, myDoc, redAttribute);
+                //The new process to implement. Let user select one or 2 models. When 1 model is selected, use the direction as shaft direction and generate gears.
+                //If 2 models are selected, tell is they are on 2 sides, if not, throw exception; if so, use the direction as shaft direction.
+                //When 1 ee is selected, use revolute joint. when 2, use a cut through axis.
 
-                kineticUnitDir = directionSelection.kineticUnitDir;
-                axelDir = directionSelection.axelDir;
-                eeCenPt = directionSelection.eeCenPt;
-                //Xia's note: moved eeCenPt by 2mm inward.
-
-                //Then select ee model
+                #region Step 1 First let user choose the ee models.Remind them not to accidentally click on 3 parts
                 ObjRef objSel_ref1;
-                var rc1 = RhinoGet.GetOneObject("Select the end effector model. ", false, ObjectType.AnyObject, out objSel_ref1);
+                var rc1 = RhinoGet.GetOneObject("Select the 1st end effector model. ", false, ObjectType.AnyObject, out objSel_ref1);
                 if (rc1 == Rhino.Commands.Result.Success)
                 {
                     //set up first ee
-                    ee = objSel_ref1.ObjectId;
-                    ObjRef currObj = new ObjRef(ee);
-                    myDoc.Objects.Select(currObj);
-                    eeModel = currObj.Brep();
-                    myDoc.Objects.Hide(ee, true);
+                    ee1 = objSel_ref1.ObjectId;
+                    ObjRef currObj = new ObjRef(ee1);
+                    //myDoc.Objects.Select(currObj);
+                    ee1Model = currObj.Brep();
+                    myDoc.Objects.Hide(ee1, true);
                     myDoc.Views.Redraw();
                 }
                 else
                 {
+                    endEffectorState = 0;
                     warningwin.Text = "No end effector model is selected.";
                     warningwin.Show();
                 }
-                //Use ee position to calculate important parameters
-
-                //TODO 
-
-                //Then generate gears , crank and more. TODO change from CT to IO
-                #region generate the spring motor, transmission mechanism, and the mechanism mating the end-effector
-                Point3d startPt = skeleton.PointAtNormalizedLength(0);
-                Point3d endPt = skeleton.PointAtNormalizedLength(1);
-
-                if (t1 > t2)
+                if (rc1 == Rhino.Commands.Result.Success)
                 {
-                    endPt = skeleton.PointAtNormalizedLength(t1);
-                    startPt = skeleton.PointAtNormalizedLength(t2);
+                    ObjRef objSel_ref2;
+                    var rc2 = RhinoGet.GetOneObject("Select the second end effector model if neeed. Or press Enter to skip this selection and go with one model ", true, ObjectType.AnyObject, out objSel_ref2);
+                    if (rc2 == Rhino.Commands.Result.Success)
+                    {
+                        if (objSel_ref2 == null)
+                        {
+                            //Go with one ee
+                            endEffectorState = 1;
+                        }
+                        else
+                        {
+                            //set up second ee 
+                            ee2 = objSel_ref2.ObjectId;
+                            ObjRef currObj = new ObjRef(ee2);
+                            myDoc.Objects.Select(currObj);
+                            ee2Model = currObj.Brep();
+                            endEffectorState = 2;
+                            myDoc.Objects.Hide(ee2, true);
+                            myDoc.Views.Redraw();
+                        }
+                    }
+                }
+
+
+                #endregion
+                
+                toGenerateMechanism = true;
+            }
+            if(toGenerateMechanism)
+            {
+                #region Use the given ee to calculate direction, generate gear and shaft
+                //Clacluate direction
+                Vector3d mainAxis = Vector3d.Unset, perpAxis = Vector3d.Unset;
+
+                BoundingBox Bbox = model.GetBoundingBox(false);
+                switch (selectedAxisIndex)
+                {
+                    case 1: mainAxis = Vector3d.XAxis; break;
+                    case 2: mainAxis = Vector3d.YAxis; break;
+                    case 3: mainAxis = Vector3d.ZAxis; break;
+                    default: break;
+                }
+                mainAxis.Unitize();
+                //reverse main axis if needed based on user selection of ee side.
+                if ((skeleton.PointAtNormalizedLength(0.5) - motionCtrlPointSelected) * mainAxis < 0)
+                    mainAxis = -mainAxis;
+
+                #region find the end effector center point
+                BoundingBox innerCavityOriginalBbox = innerCavity.GetBoundingBox(true);
+                double lastShaftInwardOffset = 15.5 + 2 + 0.6;//Xia's note: this value is to make sure the driven wheel is completely within middle part
+                eeCenPt = innerCavityOriginalBbox.Center + (innerCavityOriginalBbox.Diagonal * mainAxis / 2 - lastShaftInwardOffset) * mainAxis;
+                //myDoc.Objects.AddPoint(eeCenPt);
+                //myDoc.Views.Redraw();
+                #endregion
+
+                if (endEffectorState == 1)
+                {
+                    //find the direction from eeCenpt to ee center
+                    BoundingBox eeBbox = ee1Model.GetBoundingBox(true);
+                    Vector3d eeVectorPrimitive = eeBbox.Center - eeCenPt;
+                    Vector3d eeVector = eeVectorPrimitive - mainAxis * (eeVectorPrimitive * mainAxis);
+                    shaftAxis = new Vector3d(eeVector);
+                    shaftAxis.Unitize();
+                    ObjRef currObj = new ObjRef(ee1);
+                    ee1Model = currObj.Brep();
+                    //move ee model to match eeVector
+                    //ee1 = myDoc.Objects.Transform(ee1, Transform.Translation(eeVector - eeVectorPrimitive), true);
+                    //myDoc.Objects.Hide(ee1, true);
+                    ee1Model.Transform(Transform.Translation(eeVector - eeVectorPrimitive));
                 }
                 else
                 {
-                    startPt = skeleton.PointAtNormalizedLength(t1);
-                    endPt = skeleton.PointAtNormalizedLength(t2);
+                    //find the direction from one ee to the other
+                    BoundingBox ee1Bbox = ee1Model.GetBoundingBox(true);
+                    BoundingBox ee2Bbox = ee2Model.GetBoundingBox(true);
+                    Vector3d eeVectorPrimitive = ee1Bbox.Center - ee2Bbox.Center;
+                    Vector3d eeVector = eeVectorPrimitive - mainAxis * (eeVectorPrimitive * mainAxis);
+                    shaftAxis = new Vector3d(eeVector);
+                    shaftAxis.Unitize();
+                    //move ee model to match ee vector. first move middle point to eeCenpt, then move 2 ee to same perp plane
+                    Point3d eeMidPt = new Line(ee1Bbox.Center, ee2Bbox.Center).ToNurbsCurve().PointAtNormalizedLength(0.5);
+                    Vector3d translation1 = eeCenPt - eeMidPt;
+                    Vector3d translation2 = eeVector - eeVectorPrimitive;
+                    ObjRef currObj = new ObjRef(ee1);
+                    ee1Model = currObj.Brep();
+                    currObj = new ObjRef(ee2);
+                    ee2Model = currObj.Brep();
+                    //ee1 = myDoc.Objects.Transform(ee1, Transform.Translation(translation1 + translation2 / 2), true);
+                    //ee2 = myDoc.Objects.Transform(ee2, Transform.Translation(translation1 - translation2 / 2), true);
+                    //myDoc.Objects.Hide(ee1, true);
+                    //myDoc.Objects.Hide(ee2, true);
+                    ee1Model.Transform(Transform.Translation(translation1 + translation2 / 2));
+                    ee2Model.Transform(Transform.Translation(translation1 - translation2 / 2));
                 }
-                double unitLenth = startPt.DistanceTo(endPt);
-                //double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
-                //motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
-
-                // wait for Xia, eeLineDotPt is the point passed to Xia's function 
-                //motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
-
-                // convert the inner cavity brep into box
+                perpAxis = new Plane(eeCenPt, mainAxis, shaftAxis).Normal;
+                perpAxis.Unitize();
+                motion.Set3Axis(mainAxis, perpAxis, shaftAxis);
+                //calculate last gear position using given params
+                double _b = 15.5;
+                double _c = _b / Math.Cos(180.0 / step_angle_input * Math.PI / 180);
+                double _a = Math.Sqrt(Math.Pow(_c, 2) - Math.Pow(_b, 2));
+                Point3d lgc = eeCenPt - mainAxis * _c;
+                #endregion
+                #region generate gear, shaft, geneva drive and ee shaft
+                //generate gear param
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
-                // gear's facewidth is fixed for our project except for the first gear in the gear train
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
-
+                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, lgc, innerCavityBox, 3.6, 1);
+                //select gear param based on input param
                 if (gear_schemes.Count == 0)
                 {
                     // the selected body is too small to embed the kinetic unit
@@ -729,25 +804,15 @@ namespace InterRotation
                 }
                 else
                 {
-                    #region for testing
-                    //List<GearParameter> parameters = gear_schemes[0].parameters[0].parameters;
-                    //for (int i = 0; i < parameters.Count; i++)
-                    //{
-                    //    GearParameter p = parameters[i];
-                    //    Gear newGear = new Gear(p.center, p.norm, p.xDirection, (int)Math.Floor(p.radius * 2), 1, 20, p.faceWidth, 0, false);
-                    //    newGear.Generate();
 
-                    //    myDoc.Objects.AddBrep(newGear.Model);
-                    //    myDoc.Views.Redraw();
-                    //}
-                    #endregion
-
-                    List<double> gr_list = new List<double>();
+                    gr_list = new List<double>();
                     foreach (GearTrainScheme gts in gear_schemes)
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
-                            gr_list.Add(gtp.gearRatio);
+                            //Xia's note: added a distance filter to make sure geneva driving wheel won't correlate with shaft
+                            if(gtp.bullGearRadius+gtp.pinionRadius+0.3>_a+1.5+0.6)
+                                gr_list.Add(gtp.gearRatio);
                         }
                     }
 
@@ -755,29 +820,210 @@ namespace InterRotation
 
                     int schemeNum = -1;
                     int paramNum = -1;
-
+                    if(gr_list.Count==0)
+                    {
+                        warningwin.Text = "The selected body is too small to add the kinetic unit!";
+                        warningwin.Show();
+                        return;
+                    }
                     helperFun.mapSpeedToGears(speed_input, gr_list, gear_schemes, out schemeNum, out paramNum);
 
                     if (paramNum == -1 || schemeNum == -1)
                     {
+                        warningwin.Text = "The selected body is too small to add the kinetic unit!";
+                        warningwin.Show();
                         return;
                     }
                     selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
                     //gear_info.Clear();
                     //gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
 
-                    #region generate all the axels and spacers for the gears
-                    axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
+
+                }
+
+                //Register EE in motion
+                List<Brep> ees = new List<Brep>();
+                if (endEffectorState == 1)
+                {
+                    ees.Add(ee1Model);
+                }
+                else if (endEffectorState == 2)
+                {
+                    ees.Add(ee1Model);
+                    ees.Add(ee2Model);
+                }
+                motion.SetEndEffectors(endEffectorState, ees);
+                //Generate gear, shaft and spring
+                #region generate all the axels and spacers for the gears
+                axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
+                #endregion
+
+                #region generate all the gears
+                gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4, true);
+                #endregion
+
+                #region ask the user to select rotation direction and generate spring
+
+                eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
+                //TODO check the param input
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+
+                // determine the rotating direction
+                showDirIndicator(false);
+
+                #endregion
+                #region Generate Geneva drive
+                GearParameter lgp = selectedGearTrainParam.parameters.Last();
+                lgc = lgp.center;
+                double lgcCoordinate = new Vector3d(lgc) * shaftAxis;
+                double lgcCoordinateOffset = new Vector3d(lgc + lgp.norm * lgp.faceWidth) * shaftAxis;
+                double spaceLeftOver = 0;
+                //Get the shaft axis range to tell if there's enough space for geneva drive
+                Shaft lastShaft = null;
+                foreach (Entity e in axel_spacer_entities)
+                {
+                    if (e.Name == "lastShaft")
+                        lastShaft = (Shaft)e;
+                }
+                Point3d lastShaftStart = lastShaft.StartPt;
+                Point3d lastShaftEnd = lastShaft.StartPt+lastShaft.AxisDir*lastShaft.Len;
+                double lastShaftStartCoordinate = new Vector3d(lastShaftStart) * shaftAxis;
+                double lastShaftEndCoordinate = new Vector3d(lastShaftEnd) * shaftAxis;
+                Interval shaftAxisRange = new Interval(lastShaftStartCoordinate, lastShaftEndCoordinate);
+                if (lastShaftEndCoordinate < lastShaftStartCoordinate)
+                    shaftAxisRange.Swap();
+                if (lgcCoordinate < lgcCoordinateOffset)
+                {
+                    spaceLeftOver = shaftAxisRange.Max - lgcCoordinateOffset - 0.6;
+                }
+                else
+                {
+                    spaceLeftOver = lgcCoordinateOffset - shaftAxisRange.Min - 0.6;
+                }
+                if (spaceLeftOver < 8)//TODO test this threshold to see if it's too big or too small
+                {
+                    warningwin.Text = "The selected body is too small to add the quick return structure!";
+                    warningwin.Show();
+                }
+                else
+                {
+                    //Generate quick return and add it
+                    BoundingBox bboxMid = brepCut[1].GetBoundingBox(true);
+                    Point3d genevaDrivenWheelCenter = lgc + lgp.norm * (lgp.faceWidth + 0.6) + lgp.norm * 3.9 + mainAxis * _c;
+                    genevaDrive = new GenevaDrive(genevaDrivenWheelCenter, step_angle_input,lgp.norm,3.6,mainAxis);
+                    //Add geneva models
+                    Brep gw = genevaDrive.GenevaModels[0], dw = genevaDrive.GenevaModels[1], pin = genevaDrive.GenevaModels[2], stopper = genevaDrive.GenevaModels[3];
+                    Brep dwpin = Brep.CreateBooleanUnion(new List<Brep> { dw, pin }, myDoc.ModelAbsoluteTolerance)[0];
+                    GenevaDrivingWheelWithPin = new Entity(dwpin, false, "Drivng wheel wheel with pin on");
+                    GenevaWheel=new Entity(gw,false,"Geneva Wheel");
+                    GenevaStopper = new Entity(stopper, false, "Geneva Stopper");
+                    
+                    motion.AddGenevaDrive(GenevaDrivingWheelWithPin, GenevaWheel, GenevaStopper);
+                    //Move last gear to join lg and cw
+                    gears.Last().Model.Transform(Transform.Translation(lgp.norm * 0.6));
+
+                    #region add a new last shaft to connect ee
+                    //Remove last 2 spacers
+                    //List<Spacer> generatedSpacers = new List<Spacer>();
+                    //for (int i = 0; i < axel_spacer_entities.Count; i++)
+                    //{
+                    //    Entity e = axel_spacer_entities[i];
+                    //    if (e.GetType() == typeof(Spacer))
+                    //        generatedSpacers.Add((Spacer)e);
+                    //}
+                    //axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
+                    //axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
+
+                    //Intersect with middle part to know how long shaft will be
+                    axelDir = shaftAxis;
+                    Curve crossLineCrv = new Line(genevaDrivenWheelCenter - axelDir * int.MaxValue, genevaDrivenWheelCenter + axelDir * int.MaxValue).ToNurbsCurve();
+                    Curve[] crvs;
+                    Point3d[] pts;
+                    Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, model, myDoc.ModelAbsoluteTolerance, out crvs, out pts);
+
+                    Point3d ptEnd = new Point3d();
+                    Point3d ptStart = new Point3d();
+                    Vector3d intersectVec = (pts[0] - pts[1]);
+                    intersectVec.Unitize();
+                    if (intersectVec * axelDir > 0.99)
+                    {
+                        ptEnd = pts[0] - axelDir * 1;
+                        ptStart = pts[1] + axelDir * 1;
+                    }
+                    else
+                    {
+                        ptEnd = pts[1] - axelDir * 1;
+                        ptStart = pts[0] + axelDir * 1;
+                    }
+
+                    //add new last shaft for geneva drive driven wheel. If one ee, use revolute joint. If 2 ee, use regular shaft
+                    if (endEffectorState == 1)
+                    {
+                        //Add a new last shaft with a longer one with a revolute joint at end
+                        Point3d pt1 = ptStart;
+                        Point3d pt2 = ptEnd;
+                        //Tell which one is closer to ee
+                        double dis1 = pt1.DistanceTo(ee1Model.ClosestPoint(pt1));
+                        double dis2 = pt2.DistanceTo(ee1Model.ClosestPoint(pt1));
+                        //Params of replaced axel, disc, revolute joint
+                        Point3d axelStart, axelEnd, discStart, revoluteJointCenter;
+                        Vector3d axelDir;
+                        double axelLen;
+                        if (dis1 < dis2)
+                        {
+                            axelDir = -lastShaft.AxisDir;
+                            axelStart = pt2 + axelDir * 2.75;
+                            axelEnd = ee1Model.GetBoundingBox(true).Center;
+                            discStart = axelStart;
+                            revoluteJointCenter = pt2 + axelDir * 4.5;
+                            axelLen = axelStart.DistanceTo(axelEnd);
+                        }
+                        else
+                        {
+                            axelDir = lastShaft.AxisDir;
+                            axelStart = pt1 + axelDir * 2.75;
+                            axelEnd = ee1Model.GetBoundingBox(true).Center;
+                            discStart = axelStart;
+                            revoluteJointCenter = pt1 + axelDir * 4.5;
+                            axelLen = axelStart.DistanceTo(axelEnd);
+                        }
+                        Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        newLastShaft.SetName("MiddleShellBreakerShaft");
+                        Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
+                        axel_spacer_entities.Add(ShaftSocket);
+                        axel_spacer_entities.Add(newLastShaft);
+                        axel_spacer_entities.Add(newLastShaftDisc);
+                    }
+                    else if (endEffectorState == 2)
+                    {
+                        //Replace the last shaft with a longer one with 2 holes and spacers
+                        Point3d pt1 = ptStart;
+                        Point3d pt2 = ptEnd;
+                        //Add shaft to link 2 ees
+                        Point3d axelStart = ee1Model.GetBoundingBox(true).Center;
+                        Point3d axelEnd = ee2Model.GetBoundingBox(true).Center;
+                        Vector3d axelDir = axelEnd - axelStart;
+                        double axelLen = axelDir.Length;
+                        axelDir.Unitize();
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        newLastShaft.SetName("MiddleShellBreakerShaft");
+                        //TODO Add spacer along line within model ? Not adding for now to prevent bug
+                        axel_spacer_entities.Add(newLastShaft);
+                    }
+                    else
+                    {
+                        throw new Exception("Unexpected situation! Invalid end effector state");
+                    }
+                    motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                    motion.AddSprings(spring_entities.ElementAt(0));
                     #endregion
 
-                    #region generate all the gears
-                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
-                    #endregion
-                    motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }
                 #endregion
+                
+                #endregion
             }
-
             if (toSetAxisDir)
             {
 
@@ -800,7 +1046,39 @@ namespace InterRotation
 
             if (toBake)
             {
+                myDoc.Objects.Delete(reserveBrepID1, true);
+                myDoc.Objects.Delete(reserveBrepID2, true);
+                myDoc.Objects.Delete(convertedPortion, true);
+                if (motion != null)
+                    motion.CreateShell();
+                if (motion != null)
+                {
+                    //foreach (Guid id in endEffectorCandidates)
+                    //{
+                    //    myDoc.Objects.Hide(id, true);
+                    //}
 
+                    if (motion.EntityList != null)
+                    {
+                        foreach (Entity b in motion.EntityList)
+                        {
+                            Brep tempB = b.GetModelinWorldCoordinate();
+                            myDoc.Objects.AddBrep(tempB);
+                        }
+                        //if (motion.Spring.SpringDimensions != null)
+                        //{
+                        //    foreach (LinearDimension d in motion.Spring.SpringDimensions)
+                        //    {
+                        //        //if(d.Plane.ClosestPoint(d.Arrowhead1End))
+                        //        //{
+                        //        myDoc.Objects.AddLinearDimension(d);
+                        //        //}
+                        //    }
+                        //}
+                        myDoc.Views.Redraw();
+                        this.ExpirePreview(true);
+                    }
+                }
             }
 
             if (toAdjustParam)

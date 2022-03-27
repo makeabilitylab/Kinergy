@@ -375,8 +375,10 @@ namespace Kinergy
                 Vector3d originalTrajDir = new Vector3d(1, 0, 0);
                 originalTrajDir.Transform(move);
                 originalTrajDir.Transform(rotate);
-
-                Transform selfRotate = Transform.Rotation(originalTrajDir, _trajDir,_drivenCenPos);
+                //Xia's note: the previous self Rotate is not along a specific rotation axis, it might cause error.
+                double angle = Vector3d.VectorAngle(originalTrajDir, _trajDir);
+                Transform selfRotate = Transform.Rotation(angle,DrivenAxisDir, _drivenCenPos);
+                //Transform selfRotate = Transform.Rotation(originalTrajDir, _trajDir,_drivenCenPos);
 
                 genevaWheelSolid.Transform(move);
                 genevaWheelSolid.Transform(rotate);
