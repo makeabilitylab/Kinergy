@@ -140,6 +140,7 @@ namespace Kinergy.KineticUnit
         Entity CWP = null, YS = null, BB = null, SW = null;
         Brep slider = null;
         bool reversed = false;
+        LockSelectionForSpiralSpring lockSelection;
 
         public Reciprocation(Brep Model,  Vector3d Direction, double Energy, double Amplitude, Brep innerCavity)
         {
@@ -175,7 +176,7 @@ namespace Kinergy.KineticUnit
                 // add the lock for the spiral spring
 
                 #region ask the user to select the lock position
-                LockSelectionForSpiralSpring lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
+                lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
                 lockDisToAxis = gtp.parameters.ElementAt(0).radius + gtp.parameters.ElementAt(1).radius;
                 spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
                 #endregion
@@ -192,17 +193,17 @@ namespace Kinergy.KineticUnit
                 if (locks.Count > 0)
                     locks.Clear();
 
-                Lock LockHead;
-                double ratchetRadius = lockDisToAxis * 0.5;
-
-                if (spiralLockNorm)
-                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
-                else
-                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
-
                 Vector3d centerLinkDirection = new Vector3d(spiralLockCen) - new Vector3d(lockSelection.lockCtrlPointSelected);
                 double centerLinkLen = centerLinkDirection.Length;
                 centerLinkDirection.Unitize();
+
+                Lock LockHead;
+                double ratchetRadius = Math.Min(centerLinkLen * 0.45, lockDisToAxis * 0.7);
+
+                if (spiralLockNorm)
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
+                else
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
 
 
                 #region add lock parts to the entitylist
@@ -210,8 +211,10 @@ namespace Kinergy.KineticUnit
                 cutBarrel = null;
                 addBarrel = null;
                 Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
-                Entity tempAddBarrel = new Entity(addBarrel, false, "");
-                entityList.Add(tempAddBarrel);
+                //Entity tempAddBarrel = new Entity(addBarrel, false, "");
+                //entityList.Add(tempAddBarrel);
+
+                lockBase.SetName("lockBase");
 
                 lockPartIdx.Add(entityList.Count - 1);
                 entityList.Add(LockHead); // the ratchet gear
@@ -234,6 +237,46 @@ namespace Kinergy.KineticUnit
 
             }
         }
+
+        public void RemoveLocks(int controlMethod)
+        {
+            if (controlMethod == 1)
+            {
+                // remove the lock for the helical spring
+
+            }
+            else
+            {
+                // remove the lock for the spiral spring
+                if (lockPartIdx.Count > 0)
+                {
+                    // delete all the entities that have already been registered
+                    List<int> toRemoveEntityIndexes = new List<int>();
+
+                    foreach (Entity en in entityList)
+                    {
+                        if (en.Name.Equals("lockBarrel") || en.Name.Equals("lockBase") || en.Name.Equals("lockHead"))
+                        {
+                            int idx = entityList.IndexOf(en);
+                            toRemoveEntityIndexes.Add(idx);
+                        }
+                    }
+
+                    toRemoveEntityIndexes.Sort((a, b) => b.CompareTo(a)); //sorting by descending
+                    foreach (int idx in toRemoveEntityIndexes)
+                    {
+                        entityList.RemoveAt(idx);
+                    }
+
+                    lockPartIdx.Clear();
+                    locks.Clear();
+                    lockDisToAxis = 0;
+                }
+
+            }
+
+        }
+
         public void AddGears(List<Gear> gears, List<Entity> axelsStoppers, GearTrainParam gearParam)
         {
             _gearParam = gearParam;
@@ -366,8 +409,11 @@ namespace Kinergy.KineticUnit
 
             }
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
-            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.3, bboxMainDimension * 0.3), new Interval(-10, 10)
+            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
                 , new Interval(0, bboxMainDimension * 5)).ToBrep();
+            if ((lockSelection.lockCtrlPointSelected- inncerCavityBbox.Center)*boxPlane.Normal>0)
+                cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+                , new Interval(- bboxMainDimension * 5,0)).ToBrep();
             cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
                 cutBox.Flip();
@@ -384,6 +430,20 @@ namespace Kinergy.KineticUnit
             part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == part2.SolidOrientation)
                 part2.Flip();
+
+            try
+            {
+                part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
+
+                part2 = Brep.CreateBooleanUnion(new List<Brep> { part2, addBarrel }, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
+            }
+            catch { }
 
             #endregion
 

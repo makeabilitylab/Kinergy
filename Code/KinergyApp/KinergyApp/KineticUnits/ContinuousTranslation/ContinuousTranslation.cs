@@ -204,7 +204,7 @@ namespace Kinergy.KineticUnit
                 if(isEnergyChange || isDistanceChange || isSpeedChange)
                 {
                     Spiral spiralSpring = (Spiral)spring;
-                    spiralSpring.AdjustParam(selectedGearTrainParam.parameters, _model, eeMovingDirectionSelection, energyLevel, distanceLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir,eePos);
+                    spiralSpring.AdjustParam(direction, selectedGearTrainParam.parameters, _model, eeMovingDirectionSelection, energyLevel, distanceLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir,eePos);
                     AddSprings(spiralSpring);
                 }
 

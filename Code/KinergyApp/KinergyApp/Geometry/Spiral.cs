@@ -317,7 +317,7 @@ namespace Kinergy
 
             //    #endregion
             //}
-            public void AdjustParam(List<GearParameter> gear_info, Brep body, int dir, int e, int D, bool isSpringCW, ref List<Point3d>lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
+            public void AdjustParam(Vector3d mainAxis, List<GearParameter> gear_info, Brep body, int dir, int e, int D, bool isSpringCW, ref List<Point3d>lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
             {
                 if(gear_info == null)
                 {
@@ -436,6 +436,29 @@ namespace Kinergy
                     //Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.7, isCW, displacement, true, energyLevel, 0);
 
                     #endregion
+
+                    #region Step 2: generate the lock position
+
+                    spiralLockNorm = isCW;
+                    spiralLockDir = sDir;
+
+                    Point3d lockCen = springCen + sDir * (3.5 + 6 + 1.8);
+
+                    // find the vector that is orthogonal to both sDir and mainAxis
+                    Vector3d lockV = Vector3d.CrossProduct(sDir, mainAxis);
+                    lockV.Unitize();
+                    Curve lockCrossLineCrv = new Line(lockCen - lockV * int.MaxValue, lockCen + lockV * int.MaxValue).ToNurbsCurve();
+                    Curve[] lockCrvs;
+                    Point3d[] lockPts;
+                    Rhino.Geometry.Intersect.Intersection.CurveBrep(lockCrossLineCrv, body, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out lockCrvs, out lockPts);
+
+                    lockPos.Clear();
+                    lockPos.Add(lockPts[0]);
+                    lockPos.Add(lockPts[1]);
+                    lockPos.Add(lockCen);
+
+                    #endregion
+
 
                     #region re-generate the parameters for the new spiral spring
 

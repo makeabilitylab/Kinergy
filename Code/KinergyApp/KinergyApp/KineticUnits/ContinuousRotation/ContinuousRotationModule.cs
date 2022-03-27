@@ -128,7 +128,7 @@ namespace ConRotation
         Vector3d shaftAxis = Vector3d.Unset;
         List<double> gr_list = new List<double>();
         List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
-
+        Vector3d eeTranslation = Vector3d.Unset;
         /// <summary>
         /// Initializes a new instance of the ContinuousRotationModule class.
         /// </summary>
@@ -589,7 +589,7 @@ namespace ConRotation
                 showDirIndicator(dirReverseState);
                 if(spring_entities.Count != 0)
                 {
-                    motion.AdjustParameter(eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                    motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
                 }
                
                 //motion.updateLock(dirReverseState);
@@ -597,22 +597,22 @@ namespace ConRotation
 
             #endregion
 
-            if (toBake)
-            {
-                if (motion != null)
-                {
-                    if (motion.EntityList != null)
-                    {
-                        foreach (Entity b in motion.EntityList)
-                        {
-                            Brep tempB = b.GetModelinWorldCoordinate();
-                            RhinoDoc.ActiveDoc.Objects.AddBrep(tempB);
-                        }
-                        RhinoDoc.ActiveDoc.Views.Redraw();
-                        this.ExpirePreview(true);
-                    }
-                }
-            }
+            //if (toBake)
+            //{
+            //    if (motion != null)
+            //    {
+            //        if (motion.EntityList != null)
+            //        {
+            //            foreach (Entity b in motion.EntityList)
+            //            {
+            //                Brep tempB = b.GetModelinWorldCoordinate();
+            //                RhinoDoc.ActiveDoc.Objects.AddBrep(tempB);
+            //            }
+            //            RhinoDoc.ActiveDoc.Views.Redraw();
+            //            this.ExpirePreview(true);
+            //        }
+            //    }
+            //}
 
             if (toSelectRegion)
             {
@@ -789,7 +789,7 @@ namespace ConRotation
                 //myDoc.Objects.AddPoint(eeCenPt);
                 //myDoc.Views.Redraw();
                 #endregion
-
+                
                 if (endEffectorState==1)
                 {
                     //find the direction from eeCenpt to ee center
@@ -822,10 +822,15 @@ namespace ConRotation
                     //myDoc.Objects.Hide(ee2, true);
                     ee1Model.Transform(Transform.Translation(translation1 + translation2 / 2));
                     ee2Model.Transform(Transform.Translation(translation1 - translation2 / 2));
+                    eeTranslation = translation1;
                 }
                 perpAxis = new Plane(eeCenPt, mainAxis, shaftAxis).Normal;
                 perpAxis.Unitize();
                 motion.Set3Axis(mainAxis, perpAxis, shaftAxis);
+                if(endEffectorState==2)
+                {
+                    eeTranslation = eeTranslation * perpAxis * perpAxis;
+                }
                 //generate gear param
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
@@ -979,6 +984,23 @@ namespace ConRotation
                 else
                 {
                     throw new Exception("Unexpected situation! Invalid end effector state");
+                }
+                if(endEffectorState==2)
+                {
+                    foreach(Entity e in gears)
+                    {
+                        e.Model.Transform(Transform.Translation(-eeTranslation));
+                    }
+                    foreach (Entity e in axel_spacer_entities)
+                    {
+                        e.Model.Transform(Transform.Translation(-eeTranslation));
+                    }
+                    foreach (Entity e in spring_entities)
+                    {
+                        e.Model.Transform(Transform.Translation(-eeTranslation));
+                    }
+                    ee1Model.Transform(Transform.Translation(-eeTranslation));
+                    ee2Model.Transform(Transform.Translation(-eeTranslation));
                 }
                 motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 motion.AddSprings(spring_entities.ElementAt(0));
@@ -1666,7 +1688,7 @@ namespace ConRotation
             if (toAddLock)
             {
                 if (motion != null)
-                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
+                    motion.ConstructLocks(-eeTranslation, lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
             }
 
             if (toPreview)
@@ -1677,8 +1699,23 @@ namespace ConRotation
             if (toAdjustParam)
             {
                 if (motion != null)
-                    motion.AdjustParameter(eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                    motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
 
+                //if (endEffectorState == 2)
+                //{
+                //    foreach (Entity e in gears)
+                //    {
+                //        e.Model.Transform(Transform.Translation(-eeTranslation));
+                //    }
+                //    foreach (Entity e in axel_spacer_entities)
+                //    {
+                //        e.Model.Transform(Transform.Translation(-eeTranslation));
+                //    }
+                //    foreach (Entity e in spring_entities)
+                //    {
+                //        e.Model.Transform(Transform.Translation(-eeTranslation));
+                //    }
+                //}
             }
 
             if (toRemoveLock)

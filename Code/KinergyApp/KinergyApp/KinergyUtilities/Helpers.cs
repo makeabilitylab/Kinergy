@@ -700,7 +700,7 @@ namespace KinergyUtilities
                 lockNorm = isCW;
                 lockDir = sDir;
 
-                Point3d lockCen = springCen + sDir * (4 + 6 + 1.8);
+                Point3d lockCen = springCen + sDir * (3 + 6 + 1.8);
 
                 // find the vector that is orthogonal to both sDir and mainAxis
                 Vector3d lockV = Vector3d.CrossProduct(sDir, mainAxis);
@@ -712,6 +712,7 @@ namespace KinergyUtilities
 
                 lockPos.Add(lockPts[0]);
                 lockPos.Add(lockPts[1]);
+                lockPos.Add(lockCen);
 
                 #endregion
             }
