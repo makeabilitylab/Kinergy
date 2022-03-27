@@ -585,7 +585,8 @@ namespace InterReciprocation
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
-                            gr_list.Add(gtp.gearRatio);
+                            if(gtp.gearSetNumber>1)
+                                gr_list.Add(gtp.gearRatio);
                         }
                     }
 
@@ -723,10 +724,6 @@ namespace InterReciprocation
                 toGenerateMechanism = false;
             }
 
-            if (toSetAxisDir)
-            {
-
-            }
 
             if (toAddLock)
             {
@@ -736,7 +733,8 @@ namespace InterReciprocation
 
             if (toRemoveLock)
             {
-
+                if (motion != null)
+                    motion.RemoveLocks(motionControlMethod);
             }
 
             if (toPreview)

@@ -11,7 +11,7 @@ using Rhino.DocObjects;
 using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
-
+using KinergyUtilities;
 
 namespace Kinergy
 {
@@ -317,31 +317,181 @@ namespace Kinergy
 
             //    #endregion
             //}
-            public  void AdjustParam(int e, int D, bool isSpringCW)
+            public void AdjustParam(Vector3d mainAxis, List<GearParameter> gear_info, Brep body, int dir, int e, int D, bool isSpringCW, ref List<Point3d>lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
             {
-                revLevel = D / 10.0;
-                thicknessX = min_strip_thickness;
-                thicknessY = coilBandwidth;
+                if(gear_info == null)
+                {
+                    revLevel = D / 10.0;
+                    thicknessX = min_strip_thickness;
+                    thicknessY = coilBandwidth;
 
-                //roundNum = 2 + maxDegree / (Math.PI);
-                ////Then calculate thicknessY&X with energy
-                ////double Len = roundNum * (outerRadius + innerRadius) * Math.PI;
-                ////Maybe just simplify it by turning the 1-10 M to the power of 0.25, and 0.75, then expand Y&X respectively
-                //double energy033 = Math.Pow((e + 2)/ 2, 0.33);
-                //thicknessX *= energy033;
+                    double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
+                    energyLevel = e / 10.0;
+                    //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
 
-                double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
-                energyLevel = e / 10.0;
-                //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
+                    thicknessX = (2 - revLevel) * min_strip_thickness;
 
-                thicknessX = (2 - revLevel) * min_strip_thickness;
+                    double pitch = energyLevel * (outerRadius - innerRadius) / 3;
+                    roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+                    isSpringDirCW = isSpringCW;
 
-                double pitch = energyLevel * (outerRadius - innerRadius) / 3;
-                roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+                    LoadSpiral(0);
+                }
+                else
+                {
+                    #region Step 1: find the spring position and orientation
 
-                isSpringDirCW = isSpringCW;
+                    Point3d springCen = new Point3d();
 
-                LoadSpiral(0);
+                    Point3d firstGearCen = gear_info.ElementAt(0).center;
+                    Point3d secondGearCen = gear_info.ElementAt(1).center;
+                    Vector3d axelDir = firstGearCen - secondGearCen;
+                    axelDir.Unitize();
+
+                    Curve crossLineCrv = new Line(firstGearCen - axelDir * int.MaxValue, firstGearCen + axelDir * int.MaxValue).ToNurbsCurve();
+                    Curve[] crvs;
+                    Point3d[] pts;
+                    Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, body, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out crvs, out pts);
+
+                    Point3d ptEnd = new Point3d();
+                    Point3d ptStart = new Point3d();
+                    if ((pts[0] - pts[1]) / (pts[0].DistanceTo(pts[1])) == axelDir)
+                    {
+                        ptEnd = pts[0] - axelDir * 1;
+                        ptStart = pts[1] + axelDir * 1;
+                    }
+                    else
+                    {
+                        ptEnd = pts[1] - axelDir * 1;
+                        ptStart = pts[0] + axelDir * 1;
+                    }
+
+                    // Project the end-effector's position to the first shaft 
+                    Vector3d sDir = new Vector3d();
+                    if (eePos != new Point3d())
+                    {
+                        double t = -1;
+                        crossLineCrv.ClosestPoint(eePos, out t);
+                        Point3d eePos_proj = crossLineCrv.PointAt(t);
+                        sDir = secondGearCen - eePos_proj;
+                        sDir.Unitize();
+                        eePos_proj = eePos_proj + sDir * 7;
+
+                        //myDoc.Objects.AddPoint(eePos_proj);
+                        //myDoc.Views.Redraw();
+
+                        //myDoc.Objects.AddPoint(secondGearCen);
+                        //myDoc.Views.Redraw();
+
+                        if (secondGearCen.DistanceTo(eePos_proj) > 13)
+                        {
+                            springCen = eePos_proj + sDir * 0.6;
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        springCen = (ptEnd + firstGearCen) / 2;
+                        sDir = firstGearCen - ptEnd;
+                        sDir.Unitize();
+                        springCen = springCen - sDir * 3;
+                    }
+
+                    Point3d axisStart = ptEnd;
+                    Vector3d springDir = ptStart - ptEnd;
+                    springDir.Unitize();
+
+                    bool isCW = true;
+                    int predDir = 1;
+
+                    // determine the spring rotation direction based on the direction of the end rack
+                    if ((gear_info.Count - 1) % 2 == 1)
+                    {
+                        if (dir != 1 && dir != 2)
+                        {
+                            // perpendicular down
+                            isCW = false;
+                        }
+                        else
+                        {
+                            isCW = true;
+                        }
+                    }
+                    else
+                    {
+                        if (dir != 1 && dir != 2)
+                        {
+                            // perpendicular down
+                            isCW = true;
+                        }
+                        else
+                        {
+                            isCW = false;
+                        }
+                    }
+
+                    //Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.7, isCW, displacement, true, energyLevel, 0);
+
+                    #endregion
+
+                    #region Step 2: generate the lock position
+
+                    spiralLockNorm = isCW;
+                    spiralLockDir = sDir;
+
+                    Point3d lockCen = springCen + sDir * (3.5 + 6 + 1.8);
+
+                    // find the vector that is orthogonal to both sDir and mainAxis
+                    Vector3d lockV = Vector3d.CrossProduct(sDir, mainAxis);
+                    lockV.Unitize();
+                    Curve lockCrossLineCrv = new Line(lockCen - lockV * int.MaxValue, lockCen + lockV * int.MaxValue).ToNurbsCurve();
+                    Curve[] lockCrvs;
+                    Point3d[] lockPts;
+                    Rhino.Geometry.Intersect.Intersection.CurveBrep(lockCrossLineCrv, body, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out lockCrvs, out lockPts);
+
+                    lockPos.Clear();
+                    lockPos.Add(lockPts[0]);
+                    lockPos.Add(lockPts[1]);
+                    lockPos.Add(lockCen);
+
+                    #endregion
+
+
+                    #region re-generate the parameters for the new spiral spring
+
+                    startPos = axisStart;
+                    angleLoaded = 0;
+                    center = new Point3d(springCen);
+                    centerPoint = new Point3d(springCen);
+                    direction = springDir;
+                    outerRadius = (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.7;
+                    innerRadius = inerRadius_constant;
+
+                    revLevel = D / 10.0;
+                    energyLevel = e / 10.0;
+
+                    #region compute the spring parameters
+
+                    thicknessX = min_strip_thickness;
+                    thicknessY = coilBandwidth;
+
+                    double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
+                    //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
+
+                    thicknessX = (2 - revLevel) * min_strip_thickness;
+
+                    double pitch = energyLevel * (outerRadius - innerRadius) / 3;
+                    roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
+
+                    #endregion
+
+                    #endregion
+
+                    LoadSpiral(0);
+                }
             }
             /// <summary> Constructor with parameter but no center point given </summary>
             /// <returns> Returns instance with gear brep generated</returns>

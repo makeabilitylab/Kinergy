@@ -147,6 +147,9 @@ namespace Kinergy.KineticUnit
         private int endEffectorState;
         Brep ee1Model = null, ee2Model = null;
         Entity GDWP = null, GW = null, GS = null;
+
+        LockSelectionForSpiralSpring lockSelection;
+
         public IntermittentRotation(Brep Model, Brep innerCavity, Vector3d Direction, double Energy, double Angle, int Speed)
         {
             model = Model;

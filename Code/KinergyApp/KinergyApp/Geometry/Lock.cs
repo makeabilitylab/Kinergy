@@ -143,9 +143,6 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == centralAxis.SolidOrientation)
                 centralAxis.Flip();
 
-            myDoc.Objects.AddBrep(centralAxis);
-            myDoc.Views.Redraw();
-
             #endregion
 
             #region create the beams
@@ -188,6 +185,7 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == beamHolder.SolidOrientation)
                 beamHolder.Flip();
 
+
             double hookRadius = 1;
             double notchRadius = 1.6;
             double moveDis = tipLen + latchClearance + 2 * 0.6 - 2 * hookRadius;
@@ -210,10 +208,10 @@ namespace Kinergy.Geom
             Point3d beamLeverRPt3 = beamPos + tipDir * (beamOffset - beamLeverThickness) + direction / direction.Length * beamWidthOffset;
             Point3d beamLeverRPt4 = beamLeverRPt0;
 
-            Point3d beamDetentRPt0 = beamLeverRPt0 + centerLinkDirection * (axisLen / 4.0);
-            Point3d beamDetentRPt1 = beamLeverRPt1 + centerLinkDirection * (axisLen / 4.0);
-            Point3d beamDetentRPt2 = beamPos + tipDir * (beamOffset - hookRadius) - direction / direction.Length * beamWidthOffset + centerLinkDirection * (axisLen / 4.0);
-            Point3d beamDetentRPt3 = beamPos + tipDir * (beamOffset - hookRadius) + direction / direction.Length * beamWidthOffset + centerLinkDirection * (axisLen / 4.0);
+            Point3d beamDetentRPt0 = beamLeverRPt0 + centerLinkDirection * (axisLen / 3.0);
+            Point3d beamDetentRPt1 = beamLeverRPt1 + centerLinkDirection * (axisLen / 3.0);
+            Point3d beamDetentRPt2 = beamPos + tipDir * (beamOffset - hookRadius) - direction / direction.Length * beamWidthOffset + centerLinkDirection * (axisLen / 3.0);
+            Point3d beamDetentRPt3 = beamPos + tipDir * (beamOffset - hookRadius) + direction / direction.Length * beamWidthOffset + centerLinkDirection * (axisLen / 3.0);
             Point3d beamDetentRPt4 = beamDetentRPt0;
 
             List<Point3d> beamLeverRCorners = new List<Point3d>();
@@ -239,7 +237,7 @@ namespace Kinergy.Geom
             Brep[] beamLeverRBreps = sweep.PerformSweep(beamLeverTraj, beamLeverRRectCrv);
             Brep beamLeverRBrep = beamLeverRBreps[0];
             Brep beamLeverR = beamLeverRBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
+            
             beamLeverR.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == beamLeverR.SolidOrientation)
                 beamLeverR.Flip();
@@ -258,9 +256,7 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == beamDetentRSphereBrep.SolidOrientation)
                 beamDetentRSphereBrep.Flip();
 
-     
-
-            Brep beamDetentRNotch = Brep.CreateBooleanDifference(beamDetentRSphereBrep, beamDetentR, myDoc.ModelAbsoluteTolerance)[0];
+            Brep beamDetentRNotch = Brep.CreateBooleanDifference(beamDetentRSphereBrep, beamDetentR, myDoc.ModelRelativeTolerance)[0];
             beamDetentRNotch.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == beamDetentRNotch.SolidOrientation)
                 beamDetentRNotch.Flip();
@@ -287,6 +283,9 @@ namespace Kinergy.Geom
             Point3d barrelEnd = barrelStart + centerLinkDirection * (barrelStart.DistanceTo(axisMidPoint) + 4 * hookRadius + moveDis + 2);
             Curve barrelTraj = new Line(barrelStart, barrelEnd).ToNurbsCurve();
 
+            Point3d barrelDeductEnd = barrelStart + centerLinkDirection * (barrelStart.DistanceTo(axisMidPoint) + 4 * hookRadius + moveDis + 2) * 1.5;
+            Curve barrelDeductTraj = new Line(barrelStart, barrelDeductEnd).ToNurbsCurve();
+
             Point3d barrelHollowStart = barrelStart + centerLinkDirection * barrelStart.DistanceTo(axisMidPoint);
             Point3d barrelHollowEnd = barrelHollowStart + centerLinkDirection * (4 * hookRadius + moveDis);
             Curve barrelHollowTraj = new Line(barrelHollowStart, barrelHollowEnd).ToNurbsCurve();
@@ -304,7 +303,7 @@ namespace Kinergy.Geom
 
             #region deduct the lock from the middle part
 
-            Brep barrelCylinderDeduct = Brep.CreatePipe(barrelTraj, barrelCylinderRadius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Brep barrelCylinderDeduct = Brep.CreatePipe(barrelDeductTraj, barrelCylinderRadius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
             barrelCylinderDeduct.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == barrelCylinderDeduct.SolidOrientation)
@@ -455,13 +454,17 @@ namespace Kinergy.Geom
             c1.Transform(Transform.Translation((new Vector3d(end) - new Vector3d(start))/2));
             Curve rail = new Line(start, end).ToNurbsCurve();
             Brep b1 = Brep.CreateFromSweep(rail, c, true, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
-            Brep b2 = Brep.CreatePatch(new List<Curve> { c }, null, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-            Brep b3 = Brep.CreatePatch(new List<Curve> { c1 }, null, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            //Brep b2 = Brep.CreatePatch(new List<Curve> { c }, null, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            //Brep b3 = Brep.CreatePatch(new List<Curve> { c1 }, null, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
             //Brep m = Brep.CreateSolid(new List<Brep> { b1, b2, b3 }, 0.001)[0];
             Brep m = new Brep();
-            m.Append(b1);
-            m.Append(b2);
-            m.Append(b3);
+            m = b1.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            m.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == m.SolidOrientation)
+                m.Flip();
+            //m.Append(b1);
+            //m.Append(b2);
+            //m.Append(b3);
             return m;
         }
         

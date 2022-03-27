@@ -96,7 +96,7 @@ namespace ConTranslation
 
         List<double> gr_list = new List<double>();
         List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
-
+        Point3d rackPos = new Point3d();
 
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
@@ -641,7 +641,7 @@ namespace ConTranslation
 
                 #region generate the spring
                 GearParameter lgp = selectedGearTrainParam.parameters.Last();
-                Point3d rackPos = lgp.center + lgp.norm * lgp.faceWidth;
+                rackPos = lgp.center + lgp.norm * lgp.faceWidth;
 
                 if(eeMovingDirectionSelection == 1)
                     spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, rackPos);
@@ -910,7 +910,7 @@ namespace ConTranslation
             if (toAdjustParam)
             {
                 if (motion != null)
-                    motion.AdjustParameter(speedLevel, distanceLevel, energyLevel, gr_list, gear_schemes, spiralLockNorm, spring_entities.ElementAt(0), motionControlMethod);
+                    motion.AdjustParameter(eeMovingDirectionSelection, speedLevel, distanceLevel, energyLevel, gr_list, gear_schemes, spiralLockNorm, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir, rackPos);
 
             }
 
