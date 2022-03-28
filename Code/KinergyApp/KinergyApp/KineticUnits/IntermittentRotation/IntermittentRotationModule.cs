@@ -729,7 +729,7 @@ namespace InterRotation
                 
                 toGenerateMechanism = true;
             }
-            if(toGenerateMechanism)
+            if (toGenerateMechanism)
             {
                 #region Use the given ee to calculate direction, generate gear and shaft
                 //Clacluate direction
@@ -831,7 +831,7 @@ namespace InterRotation
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
                             //Xia's note: added a distance filter to make sure geneva driving wheel won't correlate with shaft
-                            if(gtp.bullGearRadius+gtp.pinionRadius+0.3>_a+1.5+0.6)
+                            if (gtp.bullGearRadius + gtp.pinionRadius + 0.3 > _a + 1.5 + 0.6)
                                 gr_list.Add(gtp.gearRatio);
                         }
                     }
@@ -840,7 +840,7 @@ namespace InterRotation
 
                     int schemeNum = -1;
                     int paramNum = -1;
-                    if(gr_list.Count==0)
+                    if (gr_list.Count == 0)
                     {
                         warningwin.Text = "The selected body is too small to add the kinetic unit!";
                         warningwin.Show();
@@ -906,7 +906,7 @@ namespace InterRotation
                         lastShaft = (Shaft)e;
                 }
                 Point3d lastShaftStart = lastShaft.StartPt;
-                Point3d lastShaftEnd = lastShaft.StartPt+lastShaft.AxisDir*lastShaft.Len;
+                Point3d lastShaftEnd = lastShaft.StartPt + lastShaft.AxisDir * lastShaft.Len;
                 double lastShaftStartCoordinate = new Vector3d(lastShaftStart) * shaftAxis;
                 double lastShaftEndCoordinate = new Vector3d(lastShaftEnd) * shaftAxis;
                 Interval shaftAxisRange = new Interval(lastShaftStartCoordinate, lastShaftEndCoordinate);
@@ -930,14 +930,14 @@ namespace InterRotation
                     //Generate quick return and add it
                     BoundingBox bboxMid = brepCut[1].GetBoundingBox(true);
                     Point3d genevaDrivenWheelCenter = lgc + lgp.norm * (lgp.faceWidth) + lgp.norm * 3.9 + mainAxis * _c;
-                    genevaDrive = new GenevaDrive(genevaDrivenWheelCenter, step_angle_input,lgp.norm,3.6,mainAxis);
+                    genevaDrive = new GenevaDrive(genevaDrivenWheelCenter, step_angle_input, lgp.norm, 3.6, mainAxis);
                     //Add geneva models
                     Brep gw = genevaDrive.GenevaModels[0], dw = genevaDrive.GenevaModels[1], pin = genevaDrive.GenevaModels[2], stopper = genevaDrive.GenevaModels[3];
                     Brep dwpin = Brep.CreateBooleanUnion(new List<Brep> { dw, pin }, myDoc.ModelAbsoluteTolerance)[0];
                     GenevaDrivingWheelWithPin = new Entity(dwpin, false, "Drivng wheel wheel with pin on");
-                    GenevaWheel=new Entity(gw,false,"Geneva Wheel");
+                    GenevaWheel = new Entity(gw, false, "Geneva Wheel");
                     GenevaStopper = new Entity(stopper, false, "Geneva Stopper");
-                    
+
                     motion.AddGenevaDrive(GenevaDrivingWheelWithPin, GenevaWheel, GenevaStopper);
                     //Move last gear to join lg and cw
                     //gears.Last().Model.Transform(Transform.Translation(lgp.norm * 0.6));
@@ -1054,30 +1054,31 @@ namespace InterRotation
                         ee1Model.Transform(Transform.Translation(-eeTranslation));
                         ee2Model.Transform(Transform.Translation(-eeTranslation));
 
-                    List<Spacer> generatedSpacers = new List<Spacer>();
-                    for (int i = 0; i < axel_spacer_entities.Count; i++)
-                    {
-                        Entity e = axel_spacer_entities[i];
-                        if (e.GetType() == typeof(Spacer))
-                            generatedSpacers.Add((Spacer)e);
-                    }
-                    if ((generatedSpacers[generatedSpacers.Count - 1].StartPt - lgc) * lgp.norm > 0)
-                    {
-                        axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
-                    }
-                    else
-                    {
-                        axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
-                    }
+                        List<Spacer> generatedSpacers = new List<Spacer>();
+                        for (int i = 0; i < axel_spacer_entities.Count; i++)
+                        {
+                            Entity e = axel_spacer_entities[i];
+                            if (e.GetType() == typeof(Spacer))
+                                generatedSpacers.Add((Spacer)e);
+                        }
+                        if ((generatedSpacers[generatedSpacers.Count - 1].StartPt - lgc) * lgp.norm > 0)
+                        {
+                            axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
+                        }
+                        else
+                        {
+                            axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
+                        }
 
-                    motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
-                    motion.AddSprings(spring_entities.ElementAt(0));
+                        motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                        motion.AddSprings(spring_entities.ElementAt(0));
+                        #endregion
+
+                    }
                     #endregion
 
+                    #endregion
                 }
-                #endregion
-                
-                #endregion
             }
 
 

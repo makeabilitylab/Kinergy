@@ -536,7 +536,7 @@ namespace InterOscillation
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                double crankRadius = 12;
+                double crankRadius = 10;
                 double lgcInwardOffset =crankRadius+0.6;
                 List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt-mainAxis*lgcInwardOffset, innerCavityBox, 3.6,2);
 
@@ -591,7 +591,7 @@ namespace InterOscillation
                     #endregion
 
                     #region generate all the gears
-                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
+                    gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4, true);
                     #endregion
                     #region generate and add crank slotted lever
                     GearParameter lgp = selectedGearTrainParam.parameters.Last();
@@ -692,11 +692,6 @@ namespace InterOscillation
                 toGenerateMechanism = false;
             }
 
-            if (toSetAxisDir)
-            {
-
-            }
-
             if (toAddLock)
             {
                 if (motion != null)
@@ -705,7 +700,8 @@ namespace InterOscillation
 
             if (toRemoveLock)
             {
-
+                if (motion != null)
+                    motion.RemoveLocks(motionControlMethod);
             }
 
             if (toPreview)

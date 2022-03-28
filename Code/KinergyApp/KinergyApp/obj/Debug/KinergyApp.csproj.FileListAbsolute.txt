@@ -103,7 +103,6 @@ C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll.config
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\bin\HumanUIforKinergy.pdb
-C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy\Styles.Default.baml
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy_MarkupCompile.cache
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.g.resources
@@ -115,3 +114,4 @@ C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csproj.CopyComplete
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.dll
 C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\HumanUIforKinergy.pdb
+C:\Users\ediga\OneDrive\Documents\GitHub\Kinergy\Code\KinergyApp\KinergyApp\obj\Debug\KinergyApp.csprojAssemblyReference.cache
