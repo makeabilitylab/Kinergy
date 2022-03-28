@@ -95,7 +95,7 @@ namespace InterOscillation
         List<Point3d> lockPos = new List<Point3d>();
         bool spiralLockNorm = false;
         Vector3d spiralLockDir = new Vector3d();
-
+        Vector3d mainAxis;
         /// <summary>
         /// Initializes a new instance of the IntermittentOscillation class.
         /// </summary>
@@ -136,7 +136,8 @@ namespace InterOscillation
             testPreBtn = false;
             testBakeBtn = false;
             motionControlMethod = -1;
-
+            brepCut = new List<Brep>();
+            helperFun = new Helpers();
             #region material and color settings
 
             int solidIndex = myDoc.Materials.Add();
@@ -508,41 +509,36 @@ namespace InterOscillation
                     warningwin.Text = "No end effector model is selected.";
                     warningwin.Show();
                 }
+                //get the main axis
+                mainAxis = Vector3d.Unset;
+                switch (selectedAxisIndex)
+                {
+                    case 1: mainAxis = Vector3d.XAxis; break;
+                    case 2: mainAxis = Vector3d.YAxis; break;
+                    case 3: mainAxis = Vector3d.ZAxis; break;
+                    default: break;
+                }
+                mainAxis.Unitize();
+                //reverse main axis if needed based on user selection of ee side.
+                if ((skeleton.PointAtNormalizedLength(0.5) - motionCtrlPointSelected) * mainAxis < 0)
+                    mainAxis = -mainAxis;
+                motion.Set3Axis(mainAxis, kineticUnitDir, axelDir);
+                motion.SetEndEffector(eeModel);
                 toGenerateMechanism = true;
-
-                
 
             }
             if(toGenerateMechanism)
             {
                 //Then generate gears , crank and more. TODO change from CT to IO
                 #region generate transmission mechanism, and the mechanism mating the end-effector
-                Point3d startPt = skeleton.PointAtNormalizedLength(0);
-                Point3d endPt = skeleton.PointAtNormalizedLength(1);
-
-                if (t1 > t2)
-                {
-                    endPt = skeleton.PointAtNormalizedLength(t1);
-                    startPt = skeleton.PointAtNormalizedLength(t2);
-                }
-                else
-                {
-                    startPt = skeleton.PointAtNormalizedLength(t1);
-                    endPt = skeleton.PointAtNormalizedLength(t2);
-                }
-                double unitLenth = startPt.DistanceTo(endPt);
-                //double initialOffset = finalGearPositionRatio * pts[1].DistanceTo(pts[0]);
-                //motion.CalculateSpaceForKineticUnit(kineticUnitDir, axelDir, axelSpace, gearSpace, unitLenth, initialOffset, finalGearPositionRatio);
-
-                // wait for Xia, eeLineDotPt is the point passed to Xia's function 
-                //motion.GenerateGearTrain(finalGearPositionRatio, eeCenPt, speed_input, kineticUnitDir, axelDir);
-
-                // convert the inner cavity brep into box
+                
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
+                double crankRadius = 12;
+                double lgcInwardOffset =crankRadius+0.6;
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt-mainAxis*lgcInwardOffset, innerCavityBox, 3.6,2);
 
                 if (gear_schemes.Count == 0)
                 {
@@ -570,7 +566,8 @@ namespace InterOscillation
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
-                            gr_list.Add(gtp.gearRatio);
+                            if(gtp.bullGearRadius+gtp.pinionRadius+0.3-1.5>crankRadius*1.5+3.5 && gtp.gearSetNumber>1)
+                                gr_list.Add(gtp.gearRatio);
                         }
                     }
 
@@ -596,11 +593,105 @@ namespace InterOscillation
                     #region generate all the gears
                     gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
                     #endregion
+                    #region generate and add crank slotted lever
+                    GearParameter lgp = selectedGearTrainParam.parameters.Last();
+                    CrankSlottedLever CSL = new CrankSlottedLever(lgp.center + lgp.norm * lgp.faceWidth, lgp.norm, mainAxis, crankRadius, 35);
+                    motion.AddCrankSlottedLever(CSL);
+                    #endregion
+                    #region Adjust last shaft
+                    Shaft lastShaft = null;
+                    foreach (Entity e in axel_spacer_entities)
+                    {
+                        if (e.Name == "lastShaft")
+                            lastShaft = (Shaft)e;
+                    }
+                    Point3d lastShaftStart = lastShaft.StartPt;
+                    Point3d lastShaftEnd = lastShaft.StartPt + lastShaft.AxisDir * lastShaft.Len;
+                    axel_spacer_entities.Remove(lastShaft);
+                    Point3d shaft1Start = Point3d.Unset;
+                    Point3d shaft1End = Point3d.Unset;
+                    Point3d shaft2Start = Point3d.Unset;
+                    Point3d shaft2End = Point3d.Unset;
+                    Vector3d shaft1Dir = Vector3d.Unset;
+                    Vector3d shaft2Dir = Vector3d.Unset;
+                    if (lastShaft.AxisDir*lgp.norm>0)
+                    {
+                        shaft1Start = lastShaftStart;
+                        shaft1End = lgp.center + lgp.norm * (lgp.faceWidth + 3.6 + 0.3 + 1);
+                        shaft2Start = lastShaftEnd;
+                        shaft2End= lgp.center + lgp.norm * (lgp.faceWidth + 8.1);
+                        shaft1Dir = lgp.norm;
+                        shaft2Dir = -lgp.norm;
+                    }
+                    else
+                    {
+                        shaft1Start = lastShaftEnd;
+                        shaft1End = lgp.center + lgp.norm * (lgp.faceWidth + 3.6 + 0.3 + 1);
+                        shaft2Start = lastShaftStart;
+                        shaft2End = lgp.center + lgp.norm * (lgp.faceWidth + 8.1);
+                        shaft1Dir = -lgp.norm;
+                        shaft2Dir = lgp.norm;
+                    }
+                    Shaft shaft1 = new Shaft(shaft1Start, shaft1Start.DistanceTo(shaft1End), 1.5, shaft1Dir);
+                    Shaft shaft2 = new Shaft(shaft2Start, shaft2Start.DistanceTo(shaft2End), 1.5, shaft2Dir);
+                    axel_spacer_entities.Add(shaft1);
+                    axel_spacer_entities.Add(shaft2);
+                    //Adjust spacer position
+                    List<Spacer> generatedSpacers = new List<Spacer>();
+                    for (int i = 0; i < axel_spacer_entities.Count; i++)
+                    {
+                        Entity e = axel_spacer_entities[i];
+                        if (e.GetType() == typeof(Spacer))
+                            generatedSpacers.Add((Spacer)e);
+                    }
+                    if ((generatedSpacers[generatedSpacers.Count - 1].StartPt - lgp.center) * lgp.norm > 0)
+                    {
+                        generatedSpacers[generatedSpacers.Count - 1].Model.Transform(Transform.Translation(lgp.norm * 3.6));
+                    }
+                    else
+                    {
+                        generatedSpacers[generatedSpacers.Count - 2].Model.Transform(Transform.Translation(lgp.norm * 3.6));
+                    }
+                    //Add a new shaft for lever
+                    Point3d anchorCenter = CSL.AnchorCenter+lgp.norm*2.2;
+                    Curve crossLineCrv = new Line(anchorCenter - axelDir * int.MaxValue, anchorCenter + axelDir * int.MaxValue).ToNurbsCurve();
+                    Curve[] crvs;
+                    Point3d[] pts;
+                    Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, model, myDoc.ModelAbsoluteTolerance, out crvs, out pts);
+                    
+                    Point3d ptEnd = new Point3d();
+                    Point3d ptStart = new Point3d();
+                    Vector3d intersectVec = (pts[1] - pts[0]);
+                    intersectVec.Unitize();
+                    if (intersectVec * lgp.norm > 0.99)
+                    {
+                        ptEnd = anchorCenter-lgp.norm*1.3;
+                        ptStart = pts[1] - lgp.norm * 1;
+                    }
+                    else
+                    {
+                        ptEnd = anchorCenter - lgp.norm * 1.3;
+                        ptStart = pts[0] - lgp.norm * 1;
+                    }
+                    Shaft anchorShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), 1.5, -lgp.norm);
+                    //Add 2 spacer for anchor shaft
+                    Spacer s1 = new Spacer(ptEnd, 1, 2.2, 3, lgp.norm);
+                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.3), 1, 2.2, 3, lgp.norm);
+                    axel_spacer_entities.Add(s1);
+                    axel_spacer_entities.Add(s2);
+                    axel_spacer_entities.Add(anchorShaft);
+                    #endregion
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+
+                    eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
+                                                    //TODO check the param input
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                    motion.AddSprings(spring_entities.ElementAt(0));
                 }
                 #endregion
                 toGenerateMechanism = false;
             }
+
             if (toSetAxisDir)
             {
 

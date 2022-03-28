@@ -558,7 +558,7 @@ namespace InterReciprocation
                 eeCenPt = innerCavityOriginalBbox.Center + (innerCavityOriginalBbox.Diagonal * mainAxis / 2 - lastShaftInwardOffset) * mainAxis;
 
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,1);
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,2);
 
                 if (gear_schemes.Count == 0)
                 {
@@ -649,7 +649,7 @@ namespace InterReciprocation
                     BoundingBox bboxMid = brepCut[1].GetBoundingBox(true);
                     double sliderLen = quickReturnRadius + mainAxis * (bboxMid.Max - lgc)+10;
 
-                    QuickReturn qr = new QuickReturn(lgc + lgp.norm * (lgp.faceWidth+0.6), lgp.norm, mainAxis, quickReturnRadius * 2, 3.6, sliderLen);
+                    QuickReturn qr = new QuickReturn(lgc + lgp.norm * (lgp.faceWidth), lgp.norm, mainAxis, quickReturnRadius * 2, 3.6, sliderLen);
                     //Add qr models
                     Brep cw = qr.CrankWheelSolid, pin = qr.PinSolid;
                     Brep cwpin = Brep.CreateBooleanUnion(new List<Brep> { cw, pin }, myDoc.ModelAbsoluteTolerance)[0];
@@ -683,26 +683,26 @@ namespace InterReciprocation
                     if (lastShaft.AxisDir*lgp.norm>0.99)
                     {//pt1 is for socket, pt2 is for shaft
                         axel1Start = pt1 ;
-                        axel1End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 3.6);
+                        axel1End = lgp.center + lgp.norm * (lgp.faceWidth +  3.6);
                         axel2Start = pt2;
-                        axel2End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 9.1);
+                        axel2End = lgp.center + lgp.norm * (lgp.faceWidth  + 9.1);
                     }
                     else
                     {//pt2 is for socket,pt1 is for shaft. Use reversed direction
                         axel1Start = pt2 ;
-                        axel1End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 3.6);
+                        axel1End = lgp.center + lgp.norm * (lgp.faceWidth  + 3.6);
                         axel2Start = pt1;
-                        axel2End = lgp.center + lgp.norm * (lgp.faceWidth + 0.6 + 9.1);
+                        axel2End = lgp.center + lgp.norm * (lgp.faceWidth  + 9.1);
                     }
                     //Params of replaced axel, disc, revolute joint
                     
                     
-                    Shaft newLastShaft1 = new Shaft(axel1Start, axel1Start.DistanceTo(axel1End), 1.5, lgp.norm);
+                    Shaft newLastShaft1 = new Shaft(axel1Start, axel1Start.DistanceTo(axel1End) + 0.3+1, 1.5, lgp.norm);//0.3 for clearance, 1 for spacer thickness
                     Shaft newLastShaft2 = new Shaft(axel2Start, axel2Start.DistanceTo(axel2End), 1.5, -lgp.norm);
                     axel_spacer_entities.Add(newLastShaft1);
                     axel_spacer_entities.Add(newLastShaft2);
                     //Move last gear to join lg and cw
-                    gears.Last().Model.Transform(Transform.Translation( lgp.norm * 0.6));
+                    //gears.Last().Model.Transform(Transform.Translation( lgp.norm * 0.6));
                     //Remove last 2 spacers
                     List<Spacer> generatedSpacers = new List<Spacer>();
                     for(int i=0;i<axel_spacer_entities.Count;i++)
@@ -711,8 +711,16 @@ namespace InterReciprocation
                         if (e.GetType() == typeof(Spacer))
                             generatedSpacers.Add((Spacer)e);
                     }
-                    axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
-                    axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
+                    //axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
+                    //axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
+                    if((generatedSpacers[generatedSpacers.Count - 1].StartPt-lgc)*lgp.norm>0)
+                    {
+                        generatedSpacers[generatedSpacers.Count - 1].Model.Transform(Transform.Translation(lgp.norm * 3.6));
+                    }
+                    else
+                    {
+                        generatedSpacers[generatedSpacers.Count - 2].Model.Transform(Transform.Translation(lgp.norm * 3.6));
+                    }
                     #endregion
 
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);

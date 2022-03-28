@@ -814,7 +814,7 @@ namespace InterRotation
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
-                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, lgc, innerCavityBox, 3.6, 1);
+                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, lgc, innerCavityBox, 3.6, 2);
                 //select gear param based on input param
                 if (gear_schemes.Count == 0)
                 {
@@ -929,7 +929,7 @@ namespace InterRotation
                 {
                     //Generate quick return and add it
                     BoundingBox bboxMid = brepCut[1].GetBoundingBox(true);
-                    Point3d genevaDrivenWheelCenter = lgc + lgp.norm * (lgp.faceWidth + 0.6) + lgp.norm * 3.9 + mainAxis * _c;
+                    Point3d genevaDrivenWheelCenter = lgc + lgp.norm * (lgp.faceWidth) + lgp.norm * 3.9 + mainAxis * _c;
                     genevaDrive = new GenevaDrive(genevaDrivenWheelCenter, step_angle_input,lgp.norm,3.6,mainAxis);
                     //Add geneva models
                     Brep gw = genevaDrive.GenevaModels[0], dw = genevaDrive.GenevaModels[1], pin = genevaDrive.GenevaModels[2], stopper = genevaDrive.GenevaModels[3];
@@ -940,7 +940,7 @@ namespace InterRotation
                     
                     motion.AddGenevaDrive(GenevaDrivingWheelWithPin, GenevaWheel, GenevaStopper);
                     //Move last gear to join lg and cw
-                    gears.Last().Model.Transform(Transform.Translation(lgp.norm * 0.6));
+                    //gears.Last().Model.Transform(Transform.Translation(lgp.norm * 0.6));
 
                     #region add a new last shaft to connect ee
                     //Remove last 2 spacers
@@ -1036,6 +1036,7 @@ namespace InterRotation
                         throw new Exception("Unexpected situation! Invalid end effector state");
                     }
 
+
                     if (endEffectorState == 2)
                     {
                         foreach (Entity e in gears)
@@ -1052,6 +1053,21 @@ namespace InterRotation
                         }
                         ee1Model.Transform(Transform.Translation(-eeTranslation));
                         ee2Model.Transform(Transform.Translation(-eeTranslation));
+
+                    List<Spacer> generatedSpacers = new List<Spacer>();
+                    for (int i = 0; i < axel_spacer_entities.Count; i++)
+                    {
+                        Entity e = axel_spacer_entities[i];
+                        if (e.GetType() == typeof(Spacer))
+                            generatedSpacers.Add((Spacer)e);
+                    }
+                    if ((generatedSpacers[generatedSpacers.Count - 1].StartPt - lgc) * lgp.norm > 0)
+                    {
+                        axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
+                    }
+                    else
+                    {
+                        axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
                     }
 
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
