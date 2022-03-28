@@ -42,6 +42,7 @@ namespace Kinergy
             private Curve _slotCrv;
             private Curve _stopWallCrv;
 
+            private Point3d anchorCenter;
             private List<Brep> _crankSlottedLeverModels;
 
             public CrankSlottedLever(Point3d pos, Vector3d axisDir, Vector3d dir, double wheelRadius, double connectorLen)
@@ -88,9 +89,11 @@ namespace Kinergy
                 #region generate the anchor curve
 
                 _anchorCrv = new Circle(new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1)), new Point3d(-_anchorDis, 0, 0), _anchorRadius).ToNurbsCurve();
+                anchorCenter = new Circle(new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1)), new Point3d(-_anchorDis, 0, 0), _anchorRadius).Center;
                 Transform trans = Transform.Translation(new Vector3d(0, 0, _thickness));
                 Transform trans1 = Transform.Translation(new Vector3d(0, 0, _thickness + 2.2));
                 _anchorCrv.Transform(trans);
+                anchorCenter.Transform(trans);
 
                 #endregion
 
@@ -279,6 +282,10 @@ namespace Kinergy
                 stopWallSolid.Transform(rotate);
                 stopWallSolid.Transform(selfRotate);
 
+                anchorCenter.Transform(move);
+                anchorCenter.Transform(rotate);
+                anchorCenter.Transform(selfRotate);
+
                 _crankSlottedLeverModels.Add(wheelCrankSolid);
                 _crankSlottedLeverModels.Add(pinSolid);
                 _crankSlottedLeverModels.Add(slottedLeverSolid);
@@ -308,6 +315,7 @@ namespace Kinergy
             public double AnchorRadius { get => _anchorRadius; set => _anchorRadius = value; }
             public double AnchorLeverClearance { get => _anchorLeverClearance; set => _anchorLeverClearance = value; }
             public Curve StopWallCrv { get => _stopWallCrv; set => _stopWallCrv = value; }
+            public Point3d AnchorCenter { get => anchorCenter;}
         }
     }
 }
