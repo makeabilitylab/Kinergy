@@ -302,7 +302,9 @@ namespace Kinergy.KineticUnit
                     Spiral spiralSpring = (Spiral)spring;
                     spiralSpring.AdjustParam(direction, selectedGearTrainParam.parameters, this.Model, eeMovingDirectionSelection, energyLevel, roundLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
                     AddSprings(spiralSpring);
-                    spiralSpring.Model.Transform(Transform.Translation(transVec));
+
+                    if(endEffectorState == 2)
+                        spiralSpring.Model.Transform(Transform.Translation(transVec));
                 }
                 //else if ((isEnergyChange || isRoundChange || isDirChange) && isSpeedChange)
                 //{
@@ -646,9 +648,13 @@ namespace Kinergy.KineticUnit
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
             Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
                 , new Interval(0, bboxMainDimension * 5)).ToBrep();
-            if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
-                cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
-                , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            if(lockSelection != null)
+            {
+                if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            }
+            
             cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
                 cutBox.Flip();

@@ -580,6 +580,7 @@ namespace ConRotation
             {
                 speedLevel = speed_input;
                 roundLevel = round_input;
+                energyLevel = energy_input;
                 toAdjustParam = true;
             }
 

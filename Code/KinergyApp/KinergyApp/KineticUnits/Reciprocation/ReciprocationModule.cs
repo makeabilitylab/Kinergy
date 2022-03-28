@@ -399,6 +399,7 @@ namespace InterReciprocation
                 speedLevel = speed_input;
                 rangeLevel = amp_input;
                 strokeLevel = stroke_input;
+                energyLevel = energy_input;
                 toAdjustParam = true;
             }
 

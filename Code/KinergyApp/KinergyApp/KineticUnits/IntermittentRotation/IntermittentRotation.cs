@@ -149,8 +149,13 @@ namespace Kinergy.KineticUnit
         Entity GDWP = null, GW = null, GS = null;
 
         LockSelectionForSpiralSpring lockSelection;
+        Helpers _helperFun;
+        int old_speedValue = -1;
+        int old_energyValue = -1;
+        int old_strokeValue = -1;
+        bool old_direction = true;
 
-        public IntermittentRotation(Brep Model, Brep innerCavity, Vector3d Direction, double Energy, double Angle, int Speed)
+        public IntermittentRotation(Brep Model, Brep innerCavity, Vector3d Direction, double Energy, double Angle, int Speed, Helpers helper)
         {
             model = Model;
             energy = Energy;
@@ -161,6 +166,8 @@ namespace Kinergy.KineticUnit
             locks = new List<Lock>();
             speed = Speed;
             _innerCavity = innerCavity;
+
+            _helperFun = helper;
         }
         public void AddSprings(Entity springControl)
         {
@@ -169,7 +176,173 @@ namespace Kinergy.KineticUnit
             entityList.Add(spring);
         }
 
-        public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
+        public void AdjustParameter(Vector3d transVec, int eeMovingDirectionSelection, int speedLevel, int strokeLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod, ref List<Point3d> lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
+        {
+            bool isSpeedChange = false;
+            bool isEnergyChange = false;
+            bool isStrokeChange = false;
+            bool isDirChange = false;
+
+            if (speedLevel != old_speedValue)
+            {
+                isSpeedChange = true;
+                old_speedValue = speedLevel;
+            }
+
+            if (strokeLevel != old_strokeValue)
+            {
+                isStrokeChange = true;
+                old_strokeValue = strokeLevel;
+            }
+
+            if (energyLevel != old_energyValue)
+            {
+                isEnergyChange = true;
+                old_energyValue = energyLevel;
+            }
+
+            if (isSpringCW != old_direction)
+            {
+                old_direction = isSpringCW;
+                isDirChange = true;
+            }
+
+            if (motionControlMethod == 1)
+            {
+                // Adjust the parameters for the helical spring control
+
+            }
+            else
+            {
+                // Adjust the parameters for the spiral spring control
+                int schemeNum = -1;
+                int paramNum = -1;
+
+                _helperFun.mapSpeedToGears(speedLevel, gr_list, gear_schemes, out schemeNum, out paramNum);
+
+                GearTrainParam selectedGearTrainParam = gear_schemes[schemeNum].parameters[paramNum];
+
+                #region re-generate all the shafts, spacers, and gears
+
+                if (isSpeedChange)
+                {
+                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod, 0.3);
+                    List<Gear> gears = _helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4, false);
+
+                    //delete last shaft and replace with needed structure
+
+                    Shaft lastShaft = null;
+                    foreach (Entity e in axel_spacer_entities)
+                    {
+                        if (e.Name == "lastShaft")
+                            lastShaft = (Shaft)e;
+                    }
+                    axel_spacer_entities.Remove(lastShaft);
+
+                    if (endEffectorState == 1)
+                    {
+                        //Replace the last shaft with a longer one with a revolute joint at end
+                        Point3d pt1 = lastShaft.StartPt;
+                        Point3d pt2 = pt1 + lastShaft.AxisDir * lastShaft.Len;
+                        //Tell which one is closer to ee
+                        double dis1 = pt1.DistanceTo(ee1Model.ClosestPoint(pt1));
+                        double dis2 = pt2.DistanceTo(ee1Model.ClosestPoint(pt1));
+                        //Params of replaced axel, disc, revolute joint
+                        Point3d axelStart, axelEnd, discStart, revoluteJointCenter;
+                        Vector3d axelDir;
+                        double axelLen;
+                        if (dis1 < dis2)
+                        {
+                            axelDir = -lastShaft.AxisDir;
+                            axelStart = pt2 + axelDir * 2.75;
+                            axelEnd = ee1Model.GetBoundingBox(true).Center;
+                            discStart = axelStart;
+                            revoluteJointCenter = pt2 + axelDir * 4.5;
+                            axelLen = axelStart.DistanceTo(axelEnd);
+                        }
+                        else
+                        {
+                            axelDir = lastShaft.AxisDir;
+                            axelStart = pt1 + axelDir * 2.75;
+                            axelEnd = ee1Model.GetBoundingBox(true).Center;
+                            discStart = axelStart;
+                            revoluteJointCenter = pt1 + axelDir * 4.5;
+                            axelLen = axelStart.DistanceTo(axelEnd);
+                        }
+                        Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        newLastShaft.SetName("MiddleShellBreakerShaft");
+                        Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
+                        axel_spacer_entities.Add(ShaftSocket);
+                        axel_spacer_entities.Add(newLastShaft);
+                        axel_spacer_entities.Add(newLastShaftDisc);
+                    }
+                    else if (endEffectorState == 2)
+                    {
+                        //Replace the last shaft with a longer one with 2 holes and spacers
+                        Point3d pt1 = lastShaft.StartPt;
+                        Point3d pt2 = pt1 + lastShaft.AxisDir * lastShaft.Len;
+                        //Add shaft to link 2 ees
+
+                        ee1Model.Transform(Transform.Translation(-transVec));
+                        ee2Model.Transform(Transform.Translation(-transVec));
+
+                        Point3d axelStart = ee1Model.GetBoundingBox(true).Center;
+                        Point3d axelEnd = ee2Model.GetBoundingBox(true).Center;
+                        Vector3d axelDir = axelEnd - axelStart;
+                        double axelLen = axelDir.Length;
+                        axelDir.Unitize();
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        newLastShaft.SetName("MiddleShellBreakerShaft");
+                        //TODO Add spacer along line within model ? Not adding for now to prevent bug
+                        axel_spacer_entities.Add(newLastShaft);
+
+                        ee1Model.Transform(Transform.Translation(transVec));
+                        ee2Model.Transform(Transform.Translation(transVec));
+                    }
+                    else
+                    {
+                        throw new Exception("Unexpected situation! Invalid end effector state");
+                    }
+                    AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+
+
+                    if (endEffectorState == 2)
+                    {
+                        foreach (Entity en in gears)
+                        {
+                            en.Model.Transform(Transform.Translation(transVec));
+                        }
+
+                        foreach (Entity en in axel_spacer_entities)
+                        {
+                            en.Model.Transform(Transform.Translation(transVec));
+                        }
+                    }
+                }
+
+                #endregion
+
+                #region re-generate the spring
+
+                if (isEnergyChange || isStrokeChange || isDirChange || isSpeedChange)
+                {
+                    Spiral spiralSpring = (Spiral)spring;
+                    spiralSpring.AdjustParam(direction, selectedGearTrainParam.parameters, this.Model, eeMovingDirectionSelection, energyLevel, strokeLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                    AddSprings(spiralSpring);
+
+                    if (endEffectorState == 2)
+                        spiralSpring.Model.Transform(Transform.Translation(transVec));
+                }
+                //else if ((isEnergyChange || isRoundChange || isDirChange) && isSpeedChange)
+                //{
+                //    Spiral spiralSpring = _helperFun.genSprings(selectedGearTrainParam.parameters, this.Model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                //}
+
+                #endregion
+            }
+        }
+        public void ConstructLocks(Vector3d transDir, List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
         {
             if (motionControlMethod == 1)
             {
@@ -181,9 +354,10 @@ namespace Kinergy.KineticUnit
                 // add the lock for the spiral spring
 
                 #region ask the user to select the lock position
-                LockSelectionForSpiralSpring lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
+                lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
                 lockDisToAxis = gtp.parameters.ElementAt(0).radius + gtp.parameters.ElementAt(1).radius;
-                spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
+                //spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
+                spiralLockCen = lockPos.ElementAt(2);
                 #endregion
 
                 if (lockPartIdx.Count > 0)
@@ -199,25 +373,61 @@ namespace Kinergy.KineticUnit
                     locks.Clear();
 
                 Lock LockHead;
-                double ratchetRadius = lockDisToAxis * 0.5;
-
-                if (spiralLockNorm)
-                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
-                else
-                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
 
                 Vector3d centerLinkDirection = new Vector3d(spiralLockCen) - new Vector3d(lockSelection.lockCtrlPointSelected);
                 double centerLinkLen = centerLinkDirection.Length;
                 centerLinkDirection.Unitize();
 
+                double ratchetRadius = Math.Min(centerLinkLen * 0.45, lockDisToAxis * 0.7);
+
+                if (spiralLockNorm)
+                {
+                    Point3d tempPt = spiralLockCen;
+
+                    if (endEffectorState == 2)
+                    {
+                        tempPt.Transform(Transform.Translation(transDir));
+                    }
+
+                    LockHead = new Lock(tempPt, spiralLockDir, ratchetRadius, true);
+                }
+
+                else
+                {
+                    Point3d tempPt = spiralLockCen;
+
+                    if (endEffectorState == 2)
+                    {
+                        tempPt.Transform(Transform.Translation(transDir));
+                    }
+
+                    LockHead = new Lock(tempPt, spiralLockDir, ratchetRadius, false);
+                }
+
+                LockHead.SetName("lockHead");
 
                 #region add lock parts to the entitylist
 
                 cutBarrel = null;
                 addBarrel = null;
                 Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
-                Entity tempAddBarrel = new Entity(addBarrel, false, "");
-                entityList.Add(tempAddBarrel);
+
+                if (endEffectorState == 2)
+                {
+                    lockBase.Model.Transform(Transform.Translation(transDir));
+                    addBarrel.Transform(Transform.Translation(transDir));
+                    cutBarrel.Transform(Transform.Translation(transDir));
+                }
+
+                lockBase.SetName("lockBase");
+
+                //Entity tempAddBarrel = new Entity(addBarrel, false, "lockBarrel");
+                //entityList.Add(tempAddBarrel);
+
+                //lockBase.Model.Transform(Transform.Translation(transDir));
+                //LockHead.Model.Transform(Transform.Translation(transDir));
+                //cutBarrel.Transform(Transform.Translation(transDir));
+                //tempAddBarrel.Model.Transform(Transform.Translation(transDir));
 
                 lockPartIdx.Add(entityList.Count - 1);
                 entityList.Add(LockHead); // the ratchet gear
@@ -240,6 +450,118 @@ namespace Kinergy.KineticUnit
 
             }
         }
+
+        public void RemoveLocks(int controlMethod)
+        {
+            if (controlMethod == 1)
+            {
+                // remove the lock for the helical spring
+
+            }
+            else
+            {
+                // remove the lock for the spiral spring
+                if (lockPartIdx.Count > 0)
+                {
+                    // delete all the entities that have already been registered
+                    List<int> toRemoveEntityIndexes = new List<int>();
+
+                    foreach (Entity en in entityList)
+                    {
+                        if (en.Name.Equals("lockBarrel") || en.Name.Equals("lockBase") || en.Name.Equals("lockHead"))
+                        {
+                            int idx = entityList.IndexOf(en);
+                            toRemoveEntityIndexes.Add(idx);
+                        }
+                    }
+
+                    toRemoveEntityIndexes.Sort((a, b) => b.CompareTo(a)); //sorting by descending
+                    foreach (int idx in toRemoveEntityIndexes)
+                    {
+                        entityList.RemoveAt(idx);
+                    }
+
+                    lockPartIdx.Clear();
+                    locks.Clear();
+                    lockDisToAxis = 0;
+                }
+
+            }
+
+        }
+
+
+        //public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
+        //{
+        //    if (motionControlMethod == 1)
+        //    {
+        //        // add the lock for the helical spring
+
+        //    }
+        //    else
+        //    {
+        //        // add the lock for the spiral spring
+
+        //        #region ask the user to select the lock position
+        //        LockSelectionForSpiralSpring lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
+        //        lockDisToAxis = gtp.parameters.ElementAt(0).radius + gtp.parameters.ElementAt(1).radius;
+        //        spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
+        //        #endregion
+
+        //        if (lockPartIdx.Count > 0)
+        //        {
+        //            for (int i = lockPartIdx.Count - 1; i >= 0; i--)
+        //            {
+        //                entityList.RemoveAt(i);
+        //            }
+        //            lockPartIdx.Clear();
+        //        }
+
+        //        if (locks.Count > 0)
+        //            locks.Clear();
+
+        //        Lock LockHead;
+        //        double ratchetRadius = lockDisToAxis * 0.5;
+
+        //        if (spiralLockNorm)
+        //            LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
+        //        else
+        //            LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
+
+        //        Vector3d centerLinkDirection = new Vector3d(spiralLockCen) - new Vector3d(lockSelection.lockCtrlPointSelected);
+        //        double centerLinkLen = centerLinkDirection.Length;
+        //        centerLinkDirection.Unitize();
+
+
+        //        #region add lock parts to the entitylist
+
+        //        cutBarrel = null;
+        //        addBarrel = null;
+        //        Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
+        //        Entity tempAddBarrel = new Entity(addBarrel, false, "");
+        //        entityList.Add(tempAddBarrel);
+
+        //        lockPartIdx.Add(entityList.Count - 1);
+        //        entityList.Add(LockHead); // the ratchet gear
+        //        lockPartIdx.Add(entityList.Count - 1);
+        //        entityList.Add(lockBase); // the latch
+        //        lockPartIdx.Add(entityList.Count - 1);
+        //        locks.Add(LockHead);
+        //        locks.Add(lockBase);
+        //        LockHead.RegisterOtherPart(lockBase);
+
+        //        foreach (Entity en in entityList)
+        //        {
+        //            if (en.Name.Equals("MiddleShellBreakerShaft"))
+        //            {
+        //                firstGearShaft = (Shaft)en;
+        //                _ = new Fixation(firstGearShaft, LockHead);
+        //            }
+        //        }
+        //        #endregion
+
+        //    }
+        //}
         public void AddGears(List<Gear> gears, List<Entity> axelsStoppers, GearTrainParam gearParam)
         {
             _gearParam = gearParam;
@@ -388,8 +710,16 @@ namespace Kinergy.KineticUnit
 
             }
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
-            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.3, bboxMainDimension * 0.3), new Interval(-10, 10)
+            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
                 , new Interval(0, bboxMainDimension * 5)).ToBrep();
+
+            if (lockSelection != null)
+            {
+                if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            }
+
             cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
                 cutBox.Flip();
@@ -409,6 +739,11 @@ namespace Kinergy.KineticUnit
             try
             {
                 part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
+
+                part2 = Brep.CreateBooleanUnion(new List<Brep> { part2, addBarrel }, myDoc.ModelAbsoluteTolerance)[0];
                 part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == part2.SolidOrientation)
                     part2.Flip();

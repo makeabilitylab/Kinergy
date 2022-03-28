@@ -76,7 +76,7 @@ namespace Kinergy
                 else { wireRadius = 0.5 * length / 25; }
                 if (round_Num != 0)
                 { roundNum = round_Num; }
-                else { roundNum = 5; }
+                else { roundNum = 3; }
                 startPoint = new Point3d(0, 0, 0);
                 endPoint = new Point3d(length, 0, 0);
                 maxPressDistance = maxPress;
@@ -103,7 +103,7 @@ namespace Kinergy
                 else { wireRadius = 0.5 * length / 25; }
                 if (round_Num != 0)
                 { roundNum = round_Num; }
-                else { roundNum = 5; }
+                else { roundNum = 3; }
                 maxPressDistance = maxPress;
                 velocity = 0;
                 travel = 0;
@@ -124,7 +124,7 @@ namespace Kinergy
                 else { wireRadius = 0.5 * length / 25; }
                 if (round_Num != 0)
                 { roundNum = round_Num; }
-                else { roundNum = 5; }
+                else { roundNum = 3; }
                 maxPressDistance = maxPress;
                 velocity = 0;
                 travel = 0;

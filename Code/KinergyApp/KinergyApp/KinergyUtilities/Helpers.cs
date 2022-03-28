@@ -564,10 +564,19 @@ namespace KinergyUtilities
             {
                 // helical spring control
                 double springPadThickness = 2;
+
                 #region Step 1: find the spring position and length
-                //TODO find position - Liang's 
                 //Now just use first gear center with some offset as the spring end point
-                Point3d helicalEndPoint = gear_info[0].center - mainAxis * (gear_info[0].radius + 0.3 + springPadThickness);
+                Vector3d shaftDir = gear_info[0].center - gear_info[1].center;
+                shaftDir.Unitize();
+                //Find the vector that is orthogonal to both the mainAxis and the shaftDir
+                Vector3d rkDir = Vector3d.CrossProduct(shaftDir, mainAxis);
+                rkDir.Unitize();
+
+                Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.3);
+
+                #region compute spring start point, spring end point, spring length
+
                 //Find length - 1.5 times the available space
                 double helicalLengthMultiplier = 1.5;//TODO adjust this value;
                 Point3d skeletonStartPoint;
@@ -575,17 +584,67 @@ namespace KinergyUtilities
                     skeletonStartPoint = skeleton.PointAtNormalizedLength(0);
                 else
                     skeletonStartPoint = skeleton.PointAtNormalizedLength(1);
-                double availableSpace = (gear_info[0].center - skeletonStartPoint) * mainAxis - gear_info[0].radius-0.3-springPadThickness;
+
+                double springGearGap = 4;
+                double availableSpace = gear_info[0].center.DistanceTo(skeletonStartPoint) - gear_info[1].radius - springGearGap;
                 double helicalLength = availableSpace * helicalLengthMultiplier;
-                Point3d helicalStartPoint = helicalEndPoint - mainAxis * helicalLength;
+                Point3d helicalStartPoint = springRkGrConPt - mainAxis * (helicalLength + gear_info[1].radius + springGearGap);
+                Point3d helicalEndPoint = helicalStartPoint + mainAxis * helicalLength;
 
                 #endregion
-                #region Step 2: construct spring and rack
-                //TODO find spring parameters. Now just using some random fixed value.
-                Helix helical = new Helix(helicalStartPoint, helicalEndPoint, 12, 1.2, 5, displacement/10.0, 0.5);
+                #endregion
+
+                #region Step 2: calculate spring parameters
+
+                double min_wire_diamter = 2;
+                double min_coil_num = 2;
+                double wireRadius = 2;
+                int roundNum = 0;
+                double springRadius = 0;
+
+                double maxDisp = Math.Max(helicalLength - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
+                double dis = (displacement * 0.05 + 0.5) * maxDisp / helicalLength;     // convert the input displacement level into percentage
+
+                // Parse the energy based on E ~= d^4/n * x^2
+                double x = dis * helicalLength;
+                double energy = energyLevel / 10.0;
+
+                Curve springCrossLineCrv = new Line(helicalEndPoint - shaftDir * int.MaxValue, helicalEndPoint + shaftDir * int.MaxValue).ToNurbsCurve();
+                Curve[] springBodyCrvs;
+                Point3d[] springBodyPts;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(springCrossLineCrv, body, myDoc.ModelAbsoluteTolerance, out springBodyCrvs, out springBodyPts);
+
+                springRadius = (springBodyPts[0].DistanceTo(springBodyPts[1]) - 2) / 2 - wireRadius * 2;
+
+                #endregion
+
+                #region Step 3: construct spring and rack
+                Helix helical = new Helix(helicalStartPoint, helicalEndPoint, springRadius, wireRadius, roundNum, dis, energy);
                 models.Add(helical);
                 #endregion
-                #region Step 3: construct connecting structure
+
+                #region Step 4: construct the handler, the central rack, and the holed base
+
+                #region generate the handler
+                double handlerThickness = 2;
+                double handlerR = springRadius;
+                Point3d handlerPos = helicalStartPoint;
+                Line handlerTraj = new Line(handlerPos, handlerPos - mainAxis * handlerThickness);
+                Curve handlerCrv = handlerTraj.ToNurbsCurve();
+                Brep handlerBrep = Brep.CreatePipe(handlerCrv, handlerR, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                handlerBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == handlerBrep.SolidOrientation)
+                    handlerBrep.Flip();
+
+                #endregion
+
+                #region generate the holded base
+
+                #endregion
+
+                #region generate the central rack that mate with the first gear in the geartrain
+
+                #endregion
 
                 #endregion
 
@@ -600,7 +659,8 @@ namespace KinergyUtilities
 
                 Point3d firstGearCen = gear_info.ElementAt(0).center;
                 Point3d secondGearCen = gear_info.ElementAt(1).center;
-                Vector3d axelDir = firstGearCen - secondGearCen;
+                //Vector3d axelDir = firstGearCen - secondGearCen;
+                Vector3d axelDir = gear_info.ElementAt(0).norm;
                 axelDir.Unitize();
 
                 Curve crossLineCrv = new Line(firstGearCen - axelDir * int.MaxValue, firstGearCen + axelDir * int.MaxValue).ToNurbsCurve();

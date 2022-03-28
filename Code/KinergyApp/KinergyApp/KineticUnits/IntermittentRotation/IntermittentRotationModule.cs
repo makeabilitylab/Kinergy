@@ -121,6 +121,9 @@ namespace InterRotation
         Entity GenevaWheel = null;
         Entity GenevaDrivingWheelWithPin = null;
         Entity GenevaStopper = null;
+
+        Vector3d eeTranslation = Vector3d.Unset;
+
         /// <summary>
         /// Initializes a new instance of the IntermittentRotationModule class.
         /// </summary>
@@ -302,30 +305,37 @@ namespace InterRotation
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-            switch (selectedAxisIndex)
-            {
-                case 1:
-                    canvasNormal = Vector3d.XAxis;
-                    canvasStart = Vector3d.YAxis;
-                    canvasEnd = Vector3d.ZAxis;
-                    canvasOrigin = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 10) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
-                    extrudeEnd = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 13) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
-                    break;
-                case 2:
-                    canvasNormal = Vector3d.YAxis;
-                    canvasStart = Vector3d.ZAxis;
-                    canvasEnd = Vector3d.XAxis;
-                    canvasOrigin = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 10) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
-                    extrudeEnd = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 13) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
-                    break;
-                case 3:
-                    canvasNormal = Vector3d.ZAxis;
-                    canvasStart = Vector3d.XAxis;
-                    canvasEnd = Vector3d.YAxis;
-                    canvasOrigin = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 10) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
-                    extrudeEnd = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 13) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
-                    break;
-            }
+            //switch (selectedAxisIndex)
+            //{
+            //    case 1:
+            //        canvasNormal = Vector3d.XAxis;
+            //        canvasStart = Vector3d.YAxis;
+            //        canvasEnd = Vector3d.ZAxis;
+            //        canvasOrigin = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 10) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+            //        extrudeEnd = ((model.GetBoundingBox(true).Max.X - model.GetBoundingBox(true).Min.X) * 0.5 + 13) * Vector3d.XAxis + model.GetBoundingBox(true).Center;
+            //        break;
+            //    case 2:
+            //        canvasNormal = Vector3d.YAxis;
+            //        canvasStart = Vector3d.ZAxis;
+            //        canvasEnd = Vector3d.XAxis;
+            //        canvasOrigin = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 10) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+            //        extrudeEnd = ((model.GetBoundingBox(true).Max.Y - model.GetBoundingBox(true).Min.Y) * 0.5 + 13) * Vector3d.YAxis + model.GetBoundingBox(true).Center;
+            //        break;
+            //    case 3:
+            //        canvasNormal = Vector3d.ZAxis;
+            //        canvasStart = Vector3d.XAxis;
+            //        canvasEnd = Vector3d.YAxis;
+            //        canvasOrigin = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 10) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+            //        extrudeEnd = ((model.GetBoundingBox(true).Max.Z - model.GetBoundingBox(true).Min.Z) * 0.5 + 13) * Vector3d.ZAxis + model.GetBoundingBox(true).Center;
+            //        break;
+            //}
+
+            canvasNormal = shaftAxis;
+            Plane t_pln = new Plane(model.GetBoundingBox(true).Center, shaftAxis);
+            canvasStart = t_pln.XAxis;
+            canvasEnd = t_pln.YAxis;
+            canvasOrigin = model.GetBoundingBox(true).Center + shaftAxis / shaftAxis.Length * 40;
+            extrudeEnd = model.GetBoundingBox(true).Center + shaftAxis / shaftAxis.Length * 43;
 
             Curve rail = new Line(canvasOrigin, extrudeEnd).ToNurbsCurve();
 
@@ -420,7 +430,8 @@ namespace InterRotation
                 dirIndicator.Transform(tran);
             }
 
-            isSpringCW = !isCCW;
+            //isSpringCW = !isCCW;
+            isSpringCW = !isSpringCW;
             rotationDirID = myDoc.Objects.AddBrep(dirIndicator, redAttribute);
             myDoc.Views.Redraw();
         }
@@ -551,6 +562,7 @@ namespace InterRotation
                 speedLevel = speed_input;
                 stepAngleLevel = step_angle_input;
                 strokeLevel = stroke_input;
+                energyLevel = energy_input;
                 toAdjustParam = true;
             }
 
@@ -558,6 +570,10 @@ namespace InterRotation
             {
                 dirReverseState = revdir_input;
                 showDirIndicator(dirReverseState);
+                if (spring_entities.Count != 0)
+                {
+                    motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, strokeLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                }
                 //motion.AdjustParameter(energyLevel, displacement, isSpringCW);
                 //motion.updateLock(dirReverseState);
             }
@@ -648,7 +664,7 @@ namespace InterRotation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new IntermittentRotation(model,innerCavity, direction, energy_input, stroke_input, speed_input);
+                    motion = new IntermittentRotation(model,innerCavity, direction, energy_input, stroke_input, speed_input, helperFun);
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -708,7 +724,6 @@ namespace InterRotation
                         }
                     }
                 }
-
 
                 #endregion
                 
@@ -779,10 +794,15 @@ namespace InterRotation
                     //myDoc.Objects.Hide(ee2, true);
                     ee1Model.Transform(Transform.Translation(translation1 + translation2 / 2));
                     ee2Model.Transform(Transform.Translation(translation1 - translation2 / 2));
+                    eeTranslation = translation1;
                 }
                 perpAxis = new Plane(eeCenPt, mainAxis, shaftAxis).Normal;
                 perpAxis.Unitize();
                 motion.Set3Axis(mainAxis, perpAxis, shaftAxis);
+                if (endEffectorState == 2)
+                {
+                    eeTranslation = eeTranslation * perpAxis * perpAxis;
+                }
                 //calculate last gear position using given params
                 double _b = 15.5;
                 double _c = _b / Math.Cos(180.0 / step_angle_input * Math.PI / 180);
@@ -1015,6 +1035,25 @@ namespace InterRotation
                     {
                         throw new Exception("Unexpected situation! Invalid end effector state");
                     }
+
+                    if (endEffectorState == 2)
+                    {
+                        foreach (Entity e in gears)
+                        {
+                            e.Model.Transform(Transform.Translation(-eeTranslation));
+                        }
+                        foreach (Entity e in axel_spacer_entities)
+                        {
+                            e.Model.Transform(Transform.Translation(-eeTranslation));
+                        }
+                        foreach (Entity e in spring_entities)
+                        {
+                            e.Model.Transform(Transform.Translation(-eeTranslation));
+                        }
+                        ee1Model.Transform(Transform.Translation(-eeTranslation));
+                        ee2Model.Transform(Transform.Translation(-eeTranslation));
+                    }
+
                     motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                     motion.AddSprings(spring_entities.ElementAt(0));
                     #endregion
@@ -1024,19 +1063,18 @@ namespace InterRotation
                 
                 #endregion
             }
-            if (toSetAxisDir)
-            {
 
-            }
 
             if (toAddLock)
             {
-
+                if (motion != null)
+                    motion.ConstructLocks(-eeTranslation, lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
             }
 
             if (toRemoveLock)
             {
-
+                if (motion != null)
+                    motion.RemoveLocks(motionControlMethod);
             }
 
             if (toPreview)
@@ -1083,7 +1121,8 @@ namespace InterRotation
 
             if (toAdjustParam)
             {
-
+                if (motion != null)
+                    motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, strokeLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
             }
 
             DA.SetData(0, motion);
