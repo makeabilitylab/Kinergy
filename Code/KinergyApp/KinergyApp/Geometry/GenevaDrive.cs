@@ -269,6 +269,7 @@ namespace Kinergy
 
                 Point3d driveCen = new Point3d(-_c, 0, -_t - _thickness + 0.1);
                 _driveWheelCurve = new Circle(new Plane(driveCen, new Vector3d(0, 0, 1)), driveCen, _a + _p).ToNurbsCurve();
+                //Make sure pin is in slot
 
                 Point3d pinCen = new Point3d(-_c, _a, -_t - _thickness + 0.1);
                 _drivePinCurve = new Circle(new Plane(pinCen, new Vector3d(0, 0, 1)), pinCen, _p/2).ToNurbsCurve();
@@ -369,6 +370,10 @@ namespace Kinergy
                 #endregion
 
                 #region transform (tranlsation, rotation, self-rotation)
+
+                //First rotate driven wheel for a better starting position
+                Transform drivenWheelSelfRotate = Transform.Rotation(Math.PI*(0.5+1.0/_n), new Vector3d(0, 0, 1), Point3d.Origin);
+                genevaWheelSolid.Transform(drivenWheelSelfRotate);
 
                 Transform move = Transform.Translation(new Vector3d(_drivenCenPos));
                 Transform rotate = Transform.Rotation(new Vector3d(0, 0, 1), _drivenAxisDir, _drivenCenPos);
