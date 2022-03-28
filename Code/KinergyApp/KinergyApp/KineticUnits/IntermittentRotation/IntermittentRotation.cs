@@ -35,7 +35,7 @@ namespace Kinergy.KineticUnit
 
         private Curve skeleton = null;
         private List<Shape> modelCut;
-        private Entity spring;
+        private List<Entity> springPartList;
         //The initial inputs
         Brep conBrep;           // the Brep that is selected and converted
         Brep innerCavity;
@@ -169,11 +169,25 @@ namespace Kinergy.KineticUnit
 
             _helperFun = helper;
         }
-        public void AddSprings(Entity springControl)
+        public void AddSprings(List<Entity> springControl)
         {
-            entityList.Remove(spring);
-            spring = springControl;
-            entityList.Add(spring);
+            if (springPartList != null)
+            {
+                for (int i = springPartList.Count - 1; i > -0; i--)
+                {
+                    entityList.Remove(springPartList.ElementAt(i));
+                }
+            }
+
+            foreach (Entity springPart in springControl)
+            {
+                entityList.Add(springPart);
+                if (springPartList == null)
+                {
+                    springPartList = new List<Entity>();
+                }
+                springPartList.Add(springPart);
+            }
         }
 
         public void AdjustParameter(Vector3d transVec, int eeMovingDirectionSelection, int speedLevel, int strokeLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod, ref List<Point3d> lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
@@ -329,7 +343,7 @@ namespace Kinergy.KineticUnit
                 {
                     Spiral spiralSpring = (Spiral)spring;
                     spiralSpring.AdjustParam(direction, selectedGearTrainParam.parameters, this.Model, eeMovingDirectionSelection, energyLevel, strokeLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
-                    AddSprings(spiralSpring);
+                    AddSprings(new List<Entity> { spiralSpring });
 
                     if (endEffectorState == 2)
                         spiralSpring.Model.Transform(Transform.Translation(transVec));
@@ -666,7 +680,7 @@ namespace Kinergy.KineticUnit
             entityList.Add(GW);
             entityList.Add(GS);
         }
-        public void CreateShell()
+        public void CreateShell(Brep socketBrep)
         {
             double shellThickness = 2;
             Brep part2=(Brep)b2.Duplicate();
@@ -752,7 +766,47 @@ namespace Kinergy.KineticUnit
 
             #endregion
             Brep part1=b1,part3 = b3;
-            
+
+            if (socketBrep != null)
+            {
+                Brep socketBrepDup1 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part1 = Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance)[0];
+                        part1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part1.SolidOrientation)
+                            part1.Flip();
+                    }
+                }
+
+                Brep socketBrepDup2 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part2 = Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance)[0];
+                        part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                            part2.Flip();
+                    }
+
+                }
+
+                Brep socketBrepDup3 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part3 = Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance)[0];
+                        part3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part3.SolidOrientation)
+                            part3.Flip();
+                    }
+                }
+            }
+
             entityList.Remove(p1);
             entityList.Remove(p2);
             entityList.Remove(p3);

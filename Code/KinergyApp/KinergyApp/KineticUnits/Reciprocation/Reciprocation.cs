@@ -93,7 +93,7 @@ namespace Kinergy.KineticUnit
         public const double clearance1 = 0.3;
         public const double clearance2 = 0.6;
 
-        private Entity spring;
+        private List<Entity> springPartList;
         List<Entity> axel_spacer_entities = new List<Entity>();
         List<Gear> gears = new List<Gear>();
         List<Entity> spring_entities = new List<Entity>();
@@ -152,11 +152,25 @@ namespace Kinergy.KineticUnit
             locks = new List<Lock>();
             _innerCavity = innerCavity;
         }
-        public void AddSprings(Entity springControl)
+        public void AddSprings(List<Entity> springControl)
         {
-            entityList.Remove(spring);
-            spring = springControl;
-            entityList.Add(spring);
+            if (springPartList != null)
+            {
+                for (int i = springPartList.Count - 1; i > -0; i--)
+                {
+                    entityList.Remove(springPartList.ElementAt(i));
+                }
+            }
+
+            foreach (Entity springPart in springControl)
+            {
+                entityList.Add(springPart);
+                if (springPartList == null)
+                {
+                    springPartList = new List<Entity>();
+                }
+                springPartList.Add(springPart);
+            }
         }
         public void SetEndEffector(Brep eeModel)
         {
@@ -362,7 +376,7 @@ namespace Kinergy.KineticUnit
                 b3 = t;
             }
         }
-        public void CreateShell()
+        public void CreateShell(Brep socketBrep)
         {
             double shellThickness = 2;
             Brep part2;
@@ -489,6 +503,47 @@ namespace Kinergy.KineticUnit
             //    part3 = Brep.CreateBooleanDifference(part3, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
             //}
             //catch { }
+
+            if (socketBrep != null)
+            {
+                Brep socketBrepDup1 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part1 = Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance)[0];
+                        part1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part1.SolidOrientation)
+                            part1.Flip();
+                    }
+                }
+
+                Brep socketBrepDup2 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part2 = Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance)[0];
+                        part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                            part2.Flip();
+                    }
+
+                }
+
+                Brep socketBrepDup3 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part3 = Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance)[0];
+                        part3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part3.SolidOrientation)
+                            part3.Flip();
+                    }
+                }
+            }
+
             entityList.Remove(p1);
             entityList.Remove(p2);
             entityList.Remove(p3);

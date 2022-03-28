@@ -123,6 +123,7 @@ namespace InterRotation
         Entity GenevaStopper = null;
 
         Vector3d eeTranslation = Vector3d.Unset;
+        Brep socketBrep = null;
 
         /// <summary>
         /// Initializes a new instance of the IntermittentRotationModule class.
@@ -886,7 +887,7 @@ namespace InterRotation
 
                 eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
                 //TODO check the param input
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
 
                 // determine the rotating direction
                 showDirIndicator(false);
@@ -1071,7 +1072,7 @@ namespace InterRotation
                         }
 
                         motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
-                        motion.AddSprings(spring_entities.ElementAt(0));
+                        motion.AddSprings(spring_entities);
                         #endregion
 
                     }
@@ -1105,7 +1106,7 @@ namespace InterRotation
                 myDoc.Objects.Delete(reserveBrepID2, true);
                 myDoc.Objects.Delete(convertedPortion, true);
                 if (motion != null)
-                    motion.CreateShell();
+                    motion.CreateShell(socketBrep);
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)

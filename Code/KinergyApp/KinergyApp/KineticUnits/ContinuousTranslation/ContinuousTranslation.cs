@@ -49,7 +49,7 @@ namespace Kinergy.KineticUnit
         private GearTrainParam _gearParam;
         private Gear drivingGear;
         private Gear lastGear;
-        private Entity spring;
+        private List<Entity> springPartList;
         private List<Entity> _axelsStoppers = new List<Entity>();
         private Helix _spring;
         private Rack endEffectorRack=null;
@@ -134,11 +134,26 @@ namespace Kinergy.KineticUnit
 
             _helperFun = helper;
         }
-        public void AddSprings(Entity springControl)
+
+        public void AddSprings(List<Entity> springControl)
         {
-            entityList.Remove(spring);
-            spring = springControl;
-            entityList.Add(spring);
+            if(springPartList != null)
+            {
+                for (int i = springPartList.Count-1; i>-0; i--)
+                {
+                    entityList.Remove(springPartList.ElementAt(i));
+                }
+            }
+            
+            foreach (Entity springPart in springControl)
+            {
+                entityList.Add(springPart);
+                if(springPartList == null)
+                {
+                    springPartList = new List<Entity>();
+                }
+                springPartList.Add(springPart);
+            }
         }
 
         /// <summary>
@@ -205,7 +220,7 @@ namespace Kinergy.KineticUnit
                 {
                     Spiral spiralSpring = (Spiral)spring;
                     spiralSpring.AdjustParam(direction, selectedGearTrainParam.parameters, _model, eeMovingDirectionSelection, energyLevel, distanceLevel, isSpringCW, ref lockPos, ref spiralLockNorm, ref spiralLockDir,eePos);
-                    AddSprings(spiralSpring);
+                    AddSprings(new List<Entity> { spiralSpring });
                 }
 
                 #endregion
@@ -303,8 +318,8 @@ namespace Kinergy.KineticUnit
                 Lock lockBase = new Lock(spiralLockDir, spiralLockCen, lockSelection.lockCtrlPointSelected, ratchetRadius, false, myDoc, ref cutBarrel, ref addBarrel, "lockbase");
                 lockBase.SetName("lockBase");
 
-                Entity tempAddBarrel = new Entity(addBarrel, false, "lockBarrel");
-                entityList.Add(tempAddBarrel);
+                //Entity tempAddBarrel = new Entity(addBarrel, false, "lockBarrel");
+                //entityList.Add(tempAddBarrel);
 
                 lockPartIdx.Add(entityList.Count - 1);
                 entityList.Add(LockHead); // the ratchet gear
@@ -695,7 +710,7 @@ namespace Kinergy.KineticUnit
             entityList.Remove(p2);
             entityList.Remove(p3);
         }
-        public void CreateShell()
+        public void CreateShell(Brep socketBrep)
         {
             double shellThickness = 2;
             Brep part2;
@@ -760,15 +775,30 @@ namespace Kinergy.KineticUnit
             part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == part2.SolidOrientation)
                 part2.Flip();
-            part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
-            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
-                part2.Flip();
+
+            try
+            {
+                part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
+
+                part2 = Brep.CreateBooleanUnion(new List<Brep> { part2, addBarrel }, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
+            }
+            catch { }
+            
  
             #endregion
 
             //Cut b3 with gear cylinder
             Brep part3 = Brep.CreateBooleanDifference(b3, lgCylinder, myDoc.ModelAbsoluteTolerance)[0];
+            part3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part3.SolidOrientation)
+                part3.Flip();
+
             //Cut b3 with a horizontal rod to let water in
             BoundingBox part3bbox = part3.GetBoundingBox(true);
             Brep cuttingRod = new Cylinder(new Circle(new Plane(part3bbox.Center, _otherAxis),5), bboxMainDimension * 10).ToBrep(true,true);
@@ -779,6 +809,10 @@ namespace Kinergy.KineticUnit
             try
             {
                 part3 = Brep.CreateBooleanDifference(part3, cuttingRod, myDoc.ModelAbsoluteTolerance)[0];
+                part3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part3.SolidOrientation)
+                    part3.Flip();
+
             }
             catch { }
             //Cut part 3 with plane to greate a gap
@@ -803,21 +837,74 @@ namespace Kinergy.KineticUnit
             constrainingStructureSpaceTaken.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == constrainingStructureSpaceTaken.SolidOrientation)
                 constrainingStructureSpaceTaken.Flip();
+
             try
             {
                 part1 = Brep.CreateBooleanDifference(part1, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
+                part1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part1.SolidOrientation)
+                    part1.Flip();
             }
             catch{}
             try
             {
                 part2 = Brep.CreateBooleanDifference(part2, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
+                part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                    part2.Flip();
+
             }
             catch{}
             try
             {
                 part3 = Brep.CreateBooleanDifference(part3, constrainingStructureSpaceTaken, myDoc.ModelAbsoluteTolerance)[0];
+                part3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == part3.SolidOrientation)
+                    part3.Flip();
             }
             catch{}
+
+
+            if (socketBrep != null)
+            {
+                Brep socketBrepDup1 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if(Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part1 = Brep.CreateBooleanDifference(part1, socketBrepDup1, myDoc.ModelAbsoluteTolerance)[0];
+                        part1.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part1.SolidOrientation)
+                            part1.Flip();
+                    }
+                }
+
+                Brep socketBrepDup2 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if (Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part2 = Brep.CreateBooleanDifference(part2, socketBrepDup2, myDoc.ModelAbsoluteTolerance)[0];
+                        part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                            part2.Flip();
+                    }
+                    
+                }
+
+                Brep socketBrepDup3 = socketBrep.DuplicateBrep();
+                if (Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance) != null)
+                {
+                    if(Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance).Count() > 0)
+                    {
+                        part3 = Brep.CreateBooleanDifference(part3, socketBrepDup3, myDoc.ModelAbsoluteTolerance)[0];
+                        part3.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == part3.SolidOrientation)
+                            part3.Flip();
+                    }
+                }
+            }
+
             entityList.Remove(p1);
             entityList.Remove(p2);
             entityList.Remove(p3);

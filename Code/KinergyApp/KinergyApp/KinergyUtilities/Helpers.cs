@@ -149,13 +149,13 @@ namespace KinergyUtilities
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - initialDir * offset2, 1, rad2, 3, (-initialDir));
+                        Spacer sp1 = new Spacer(gearCen - initialDir * offset1, 1, rad2, 3, (-initialDir));
                         models.Add(sp1);
 
                         if(idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * (offset2 + gp.faceWidth), 1, rad2, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset1, 1, rad2, 3, axelDir);
                             models.Add(sp2);
                         }
                     }
@@ -552,18 +552,21 @@ namespace KinergyUtilities
         /// <param name="dir">the move direction of the end-effector</param>
         /// <param name="lockPos"></param>
         /// <returns></returns>
-        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, int dir, out List<Point3d> lockPos, out bool lockNorm, out Vector3d lockDir, Point3d eePos = new Point3d())
+        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, int dir, out List<Point3d> lockPos, out bool lockNorm, out Vector3d lockDir, out Brep helicalSpringSocket, Gear firstPinion, Point3d eePos = new Point3d())
         {
             List<Entity> models = new List<Entity>();
             lockPos = new List<Point3d>();
             lockNorm = false;
             lockDir = new Vector3d();
+            helicalSpringSocket = null;
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
             if (controlType == 1)
             {
                 // helical spring control
                 double springPadThickness = 2;
+                double gearThickness = 3.6;
+                double rkTeethHeight = 2.25;
 
                 #region Step 1: find the spring position and length
                 //Now just use first gear center with some offset as the spring end point
@@ -573,7 +576,7 @@ namespace KinergyUtilities
                 Vector3d rkDir = Vector3d.CrossProduct(shaftDir, mainAxis);
                 rkDir.Unitize();
 
-                Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.3);
+                Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.3 + rkTeethHeight / 2) + shaftDir * gearThickness / 2;
 
                 #region compute spring start point, spring end point, spring length
 
@@ -614,21 +617,34 @@ namespace KinergyUtilities
                 Point3d[] springBodyPts;
                 Rhino.Geometry.Intersect.Intersection.CurveBrep(springCrossLineCrv, body, myDoc.ModelAbsoluteTolerance, out springBodyCrvs, out springBodyPts);
 
-                springRadius = (springBodyPts[0].DistanceTo(springBodyPts[1]) - 2) / 2 - wireRadius * 2;
+                springRadius = (springBodyPts[0].DistanceTo(springBodyPts[1]) - 2) / 2 - wireRadius - gearThickness / 2;
 
                 #endregion
 
                 #region Step 3: construct spring and rack
                 Helix helical = new Helix(helicalStartPoint, helicalEndPoint, springRadius, wireRadius, roundNum, dis, energy);
+                helical.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == helical.Model.SolidOrientation)
+                    helical.Model.Flip();
                 models.Add(helical);
+
+                // create the cylinder for deduction
+                double springSocketRadius = springRadius + wireRadius + 0.6;
+                Line socketTraj = new Line(helicalEndPoint - mainAxis * wireRadius, helicalEndPoint - mainAxis * wireRadius - mainAxis * helicalLength * 5);
+                Curve socketCrv = socketTraj.ToNurbsCurve();
+                helicalSpringSocket = Brep.CreatePipe(socketCrv, springSocketRadius, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                helicalSpringSocket.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == helicalSpringSocket.SolidOrientation)
+                    helicalSpringSocket.Flip();
+
                 #endregion
 
                 #region Step 4: construct the handler, the central rack, and the holed base
 
                 #region generate the handler
-                double handlerThickness = 2;
-                double handlerR = springRadius;
-                Point3d handlerPos = helicalStartPoint;
+                double handlerThickness = wireRadius*2;
+                double handlerR = springRadius + wireRadius;
+                Point3d handlerPos = helicalStartPoint + mainAxis*handlerThickness/2;
                 Line handlerTraj = new Line(handlerPos, handlerPos - mainAxis * handlerThickness);
                 Curve handlerCrv = handlerTraj.ToNurbsCurve();
                 Brep handlerBrep = Brep.CreatePipe(handlerCrv, handlerR, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
@@ -636,13 +652,96 @@ namespace KinergyUtilities
                 if (BrepSolidOrientation.Inward == handlerBrep.SolidOrientation)
                     handlerBrep.Flip();
 
+                Entity helicalHandler = new Entity(handlerBrep, false, "HelicalHandler");
+                models.Add(helicalHandler);
+
+                //ToDo: add the relationship between the handler and the spring end
+
                 #endregion
 
                 #region generate the holded base
 
+                double baseThickness = wireRadius*2;
+                double baseR = springRadius + wireRadius;
+                Point3d basePos = helicalEndPoint - mainAxis*baseThickness/2;
+                Line baseTraj = new Line(basePos, basePos + mainAxis * baseThickness);
+                Curve baseCrv = baseTraj.ToNurbsCurve();
+                Brep baseBrep = Brep.CreatePipe(baseCrv, baseR, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                baseBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == baseBrep.SolidOrientation)
+                    baseBrep.Flip();
+
+                //Entity helicalBase = new Entity(baseBrep, false, "HelicalBase");
+                //models.Add(helicalBase);
+
                 #endregion
 
                 #region generate the central rack that mate with the first gear in the geartrain
+
+                double rackOverflowLen = 4;
+                double rackLen = springRkGrConPt.DistanceTo(helicalStartPoint) + rackOverflowLen;
+                Vector3d rackDir = springRkGrConPt - helicalStartPoint;
+                rackDir.Unitize();
+                Point3d rackStartPt = helicalStartPoint - shaftDir * gearThickness / 2;
+                Point3d rackEndPt = rackStartPt + rackDir * rackLen;
+                Point3d rackCen = (rackStartPt + rackEndPt) / 2;
+                double gearModule = 1;
+                double gearPressureAngle = 20;
+                Rack cenRack = new Rack(rackCen, rackDir, rkDir, rackLen, gearModule, gearThickness, shaftDir, springPadThickness, gearPressureAngle);
+                
+                cenRack.MoveAndEngage(firstPinion, rackDir);
+
+                cenRack.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == cenRack.Model.SolidOrientation)
+                    cenRack.Model.Flip();
+
+                #endregion
+
+                #region prepare the holes for boolean difference
+
+                // open the base hole
+                Point3d rkDeductPt = rackStartPt;
+                double tolerance = 0.6;
+                Point3d pt1 = rkDeductPt - shaftDir * tolerance + rkDir * ( rkTeethHeight + tolerance );
+                Point3d pt2 = rkDeductPt + shaftDir * (gearThickness + tolerance) + rkDir * (rkTeethHeight + tolerance);
+                Point3d pt3 = rkDeductPt + shaftDir * (gearThickness + tolerance) - rkDir * (springPadThickness + tolerance);
+                Point3d pt4 = rkDeductPt - shaftDir * tolerance - rkDir * (springPadThickness + tolerance);
+                Point3d pt5 = pt1;
+
+                var sweep = new SweepOneRail();
+                sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
+                List<Point3d> rkDeductConnector = new List<Point3d>();
+                rkDeductConnector.Add(pt1);
+                rkDeductConnector.Add(pt2);
+                rkDeductConnector.Add(pt3);
+                rkDeductConnector.Add(pt4);
+                rkDeductConnector.Add(pt1);
+
+                Polyline rkDeductRect = new Polyline(rkDeductConnector);
+                Curve rkDeductRectCrv = rkDeductRect.ToNurbsCurve();
+
+                Line rkDeductLn = new Line(rackStartPt, rackEndPt);
+                Curve rkDeductCrv = rkDeductLn.ToNurbsCurve();
+
+                Brep[] rkDeductBreps = sweep.PerformSweep(rkDeductCrv, rkDeductRectCrv);
+                Brep rkDeductBrep = rkDeductBreps[0];
+                Brep rkDeduct = rkDeductBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                rkDeduct.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == rkDeduct.SolidOrientation)
+                    rkDeduct.Flip();
+
+                Brep baseBrepFinal = Brep.CreateBooleanDifference(baseBrep, rkDeduct, myDoc.ModelAbsoluteTolerance)[0];
+                baseBrepFinal.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == baseBrepFinal.SolidOrientation)
+                    baseBrepFinal.Flip();
+
+                Entity baseHoledEntity = new Entity(baseBrepFinal, false, "HelicalSpringBase");
+                models.Add(baseHoledEntity);
+                models.Add(cenRack);
 
                 #endregion
 

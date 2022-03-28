@@ -97,6 +97,7 @@ namespace ConTranslation
         List<double> gr_list = new List<double>();
         List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
         Point3d rackPos = new Point3d();
+        Brep socketBrep = null;
 
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
@@ -644,10 +645,10 @@ namespace ConTranslation
                 rackPos = lgp.center + lgp.norm * lgp.faceWidth;
 
                 if(eeMovingDirectionSelection == 1)
-                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, rackPos);
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0), rackPos);
                 else
-                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
-                motion.AddSprings(spring_entities.ElementAt(0));
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+                motion.AddSprings(spring_entities);
 
                 #endregion
 
@@ -696,7 +697,7 @@ namespace ConTranslation
                 myDoc.Objects.Delete(reserveBrepID2, true);
                 myDoc.Objects.Delete(convertedPortion, true);
                 if(motion!=null)
-                    motion.CreateShell();
+                    motion.CreateShell(socketBrep);
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)
@@ -896,13 +897,13 @@ namespace ConTranslation
 
                 #region crank and slotted lever
 
-                CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
+                //CrankSlottedLever tempCSL = new CrankSlottedLever(new Point3d(0, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 15, 35);
 
-                foreach (Brep b in tempCSL.CrankSlottedLeverModels)
-                {
-                    myDoc.Objects.AddBrep(b);
-                    myDoc.Views.Redraw();
-                }
+                //foreach (Brep b in tempCSL.CrankSlottedLeverModels)
+                //{
+                //    myDoc.Objects.AddBrep(b);
+                //    myDoc.Views.Redraw();
+                //}
 
                 #endregion
             }

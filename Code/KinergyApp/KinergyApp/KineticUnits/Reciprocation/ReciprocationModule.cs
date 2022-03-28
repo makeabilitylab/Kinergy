@@ -99,7 +99,8 @@ namespace InterReciprocation
         Entity crankWheel;
         Entity yokeSlider ;
         Entity stopWall ;
-        Entity bearingBlock ;
+        Entity bearingBlock;
+        Brep socketBrep = null;
 
         /// <summary>
         /// Initializes a new instance of the ReciprocationModule class.
@@ -727,8 +728,8 @@ namespace InterReciprocation
                 }
                 #endregion
                 #region generate spring
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
-                motion.AddSprings(spring_entities.ElementAt(0));
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+                motion.AddSprings(spring_entities);
                 #endregion
                 toGenerateMechanism = false;
             }
@@ -757,7 +758,7 @@ namespace InterReciprocation
                 myDoc.Objects.Delete(reserveBrepID2, true);
                 myDoc.Objects.Delete(convertedPortion, true);
                 if (motion != null)
-                    motion.CreateShell();
+                    motion.CreateShell(socketBrep);
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)

@@ -96,6 +96,7 @@ namespace InterOscillation
         bool spiralLockNorm = false;
         Vector3d spiralLockDir = new Vector3d();
         Vector3d mainAxis;
+        Brep socketBrep = null;
         /// <summary>
         /// Initializes a new instance of the IntermittentOscillation class.
         /// </summary>
@@ -685,8 +686,8 @@ namespace InterOscillation
 
                     eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
                                                     //TODO check the param input
-                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir);
-                    motion.AddSprings(spring_entities.ElementAt(0));
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+                    motion.AddSprings(spring_entities);
                 }
                 #endregion
                 toGenerateMechanism = false;
@@ -715,7 +716,7 @@ namespace InterOscillation
                 myDoc.Objects.Delete(reserveBrepID2, true);
                 myDoc.Objects.Delete(convertedPortion, true);
                 if (motion != null)
-                    motion.CreateShell();
+                    motion.CreateShell(socketBrep);
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)
