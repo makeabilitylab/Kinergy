@@ -689,7 +689,7 @@ namespace KinergyUtilities
                 double gearPressureAngle = 20;
                 Rack cenRack = new Rack(rackCen, rackDir, rkDir, rackLen, gearModule, gearThickness, shaftDir, springPadThickness, gearPressureAngle);
                 
-                cenRack.MoveAndEngage(firstPinion, rackDir);
+                cenRack.MoveAndEngage(firstPinion, -rkDir);
 
                 cenRack.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == cenRack.Model.SolidOrientation)
