@@ -825,6 +825,9 @@ namespace InterRotation
                 }
                 else
                 {
+                    Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
+                    perVec.Unitize();
+                    double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
 
                     gr_list = new List<double>();
                     foreach (GearTrainScheme gts in gear_schemes)
@@ -832,8 +835,17 @@ namespace InterRotation
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
                             //Xia's note: added a distance filter to make sure geneva driving wheel won't correlate with shaft
-                            if (gtp.bullGearRadius + gtp.pinionRadius + 0.3 > _a + 1.5 + 0.6)
-                                gr_list.Add(gtp.gearRatio);
+                            if (motionControlMethod == 1)
+                            {
+                                if ((gtp.bullGearRadius + gtp.pinionRadius + 0.3 > _a + 1.5 + 0.6) && (gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis)
+                                    gr_list.Add(gtp.gearRatio);
+                            }
+                            else
+                            {
+                                if (gtp.bullGearRadius + gtp.pinionRadius + 0.3 > _a + 1.5 + 0.6) 
+                                    gr_list.Add(gtp.gearRatio);
+                            }
+
                         }
                     }
 

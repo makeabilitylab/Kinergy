@@ -23,6 +23,175 @@ namespace Kinergy.Geom
         private bool isRachetLockHead = false;
         private Brep _handler, _beam, _axis;
         Vector3d _lockMoveVector;
+
+        // the detent (the lock base) of the lock for the helical spring
+        public Lock(Point3d lockPos, Vector3d shaftDir, Vector3d mainDir, Vector3d rackDir, double maxDis)
+        {
+            double clearance = 0.4;
+            double lockQuarterSphereRadius = 2;
+
+            Point3d detentCen = lockPos - rackDir * 2;
+
+            Brep hookRightOffset = createQuaterSphere(detentCen, lockQuarterSphereRadius, -rackDir, -shaftDir, mainDir);
+            hookRightOffset.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookRightOffset.SolidOrientation)
+                hookRightOffset.Flip();
+
+            Brep hookLeftOffset = createQuaterSphere(detentCen, lockQuarterSphereRadius, -rackDir, shaftDir, mainDir);
+            hookLeftOffset.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookLeftOffset.SolidOrientation)
+                hookLeftOffset.Flip();
+
+            Brep lockBaseBrep = Brep.CreateBooleanUnion(new List<Brep> { hookRightOffset, hookLeftOffset }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            lockBaseBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == lockBaseBrep.SolidOrientation)
+                lockBaseBrep.Flip();
+
+            lockBaseBrep.Transform(Transform.Translation(-mainDir * maxDis));
+
+            model = lockBaseBrep;
+            headOrBase = false;
+        }
+        // Liang's edit - possibly working
+        public Lock(Point3d lockPos, Vector3d shaftDir, Vector3d mainDir, Vector3d rackDir, double scalar, double maxDis)
+        {
+            double clearance = 0.4;
+            double notchBottomGap = 1;
+            double gap_spring_hook = 0.8;
+            double holderHeight = 3.6;
+            double hookWidth = 8;
+            double hookHeightDepth = 7;
+            double gap_beam_wall = 2;
+            double lockQuarterSphereRadius = 3.6;
+
+            double lockBridgeThickness = 1.2 * scalar;//Xia: Added a scaler to make bridge thicker when spring become bigger.
+            double beamThickness = 1.2 * scalar;
+
+            double gap_rack_bridge = 10;
+
+            var sweep = new SweepOneRail();
+            sweep.AngleToleranceRadians = RhinoDoc.ActiveDoc.ModelAngleToleranceRadians;
+            sweep.ClosedSweep = false;
+            sweep.SweepTolerance = RhinoDoc.ActiveDoc.ModelAbsoluteTolerance;
+
+            #region create the two hooks
+
+            double hooklen = hookWidth * 2 + 3.6;
+            Point3d hookStartPt = lockPos + shaftDir * hooklen / 2;
+            Point3d hookEndPt = lockPos - shaftDir * hooklen / 2;
+            Line hookPath = new Line(hookStartPt, hookEndPt);
+            Curve hookPathCrv = hookPath.ToNurbsCurve();
+
+            Point3d hk0 = hookStartPt + rackDir * hookHeightDepth / 2 - mainDir * hookHeightDepth / 2;
+            Point3d hk1 = hookStartPt + rackDir * hookHeightDepth / 2 + mainDir * hookHeightDepth / 2;
+            Point3d hk2 = hookStartPt - rackDir * hookHeightDepth / 2 + mainDir * hookHeightDepth / 2; 
+            Point3d hk3 = hookStartPt - rackDir * hookHeightDepth / 2 - mainDir * hookHeightDepth / 2; 
+            Point3d hk4 = hk0;
+            List<Point3d> hooksCorners = new List<Point3d>();
+            hooksCorners.Add(hk0);
+            hooksCorners.Add(hk1);
+            hooksCorners.Add(hk2);
+            hooksCorners.Add(hk3);
+            hooksCorners.Add(hk4);
+
+            Polyline hooksRect = new Polyline(hooksCorners);
+            Curve hooksRectCrv = hooksRect.ToNurbsCurve();
+
+            Brep[] hooksBreps = sweep.PerformSweep(hookPathCrv, hooksRectCrv);
+            Brep hooksBrep = hooksBreps[0];
+            Brep hookBrep = hooksBrep.CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+
+            hookBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookBrep.SolidOrientation)
+                hookBrep.Flip();
+
+            Point3d notchRightCen = hookStartPt + rackDir * (hookHeightDepth / 2 - notchBottomGap) + mainDir * (lockQuarterSphereRadius + clearance * 2) / 2;
+            Point3d notchLeftCen = hookEndPt + rackDir * (hookHeightDepth / 2 - notchBottomGap) + mainDir * (lockQuarterSphereRadius + clearance * 2) / 2;
+
+            Brep hookRightOffset = createQuaterSphere(notchRightCen, lockQuarterSphereRadius + clearance * 2, -rackDir, -shaftDir, -mainDir);
+            hookRightOffset.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookRightOffset.SolidOrientation)
+                hookRightOffset.Flip();
+
+            Brep hookLeftOffset = createQuaterSphere(notchLeftCen, lockQuarterSphereRadius + clearance * 2, -rackDir, shaftDir, -mainDir);
+            hookLeftOffset.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hookLeftOffset.SolidOrientation)
+                hookLeftOffset.Flip();
+
+
+            Brep hooks = Brep.CreateBooleanDifference(new List<Brep> { hookBrep}, new List<Brep> { hookRightOffset, hookLeftOffset }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+            hooks.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == hooks.SolidOrientation)
+                hooks.Flip();
+
+            hooks.Transform(Transform.Translation(-mainDir * maxDis));
+
+            RhinoDoc.ActiveDoc.Objects.AddBrep(hooks);
+            RhinoDoc.ActiveDoc.Views.Redraw();
+
+            #endregion
+
+            #region create the compliant latch
+
+            #endregion
+        }
+
+        Brep createQuaterSphere(Point3d cen, double r, Vector3d z_dir, Vector3d y_dir, Vector3d x_dir)
+        {
+            Brep result = new Brep();
+
+            Sphere sph = new Sphere(cen, r);
+            Brep sphereBrep = sph.ToBrep();
+
+            Plane firstPln = new Plane(cen, z_dir);
+            Plane secondPln = new Plane(cen, y_dir);
+            Plane thirdPln = new Plane(cen, x_dir);
+            Interval interval = new Interval(-1.5 * r, 1.5 * r);
+            PlaneSurface firstPlnSurf = new PlaneSurface(firstPln, interval, interval);
+            PlaneSurface secondPlnSurf = new PlaneSurface(secondPln, interval, interval);
+            PlaneSurface thirdPlnSurf = new PlaneSurface(thirdPln, interval, interval);
+            Brep firstPlaneBrep = firstPlnSurf.ToBrep();
+            Brep secondPlaneBrep = secondPlnSurf.ToBrep();
+            Brep thirdPlaneBrep = thirdPlnSurf.ToBrep();
+
+
+            var halfSphereBreps = Brep.CreateBooleanSplit(sphereBrep, firstPlaneBrep, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            Point3d testPt = cen + z_dir;
+            Brep halpSphereBrep = new Brep();
+            if (halfSphereBreps[0].IsPointInside(testPt, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, true))
+            {
+                halpSphereBrep = halfSphereBreps[0];
+            }
+            else
+            {
+                halpSphereBrep = halfSphereBreps[1];
+            }
+
+            var quarterSphereBreps = Brep.CreateBooleanSplit(halpSphereBrep, secondPlaneBrep, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            Point3d testPt1 = cen + y_dir;
+            Brep quarterSphereBrep = new Brep();
+            if (quarterSphereBreps[0].IsPointInside(testPt1, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, true))
+            {
+                quarterSphereBrep = quarterSphereBreps[0];
+            }
+            else
+            {
+                quarterSphereBrep = quarterSphereBreps[1];
+            }
+
+            var finalSphereBreps = Brep.CreateBooleanSplit(quarterSphereBrep, thirdPlaneBrep, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+            Point3d testPt2 = cen + x_dir;
+            if (finalSphereBreps[0].IsPointInside(testPt2, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, true))
+            {
+                result = finalSphereBreps[0];
+            }
+            else
+            {
+                result = finalSphereBreps[1];
+            }
+
+            return result;
+        }
         /// <summary>
         /// Lock entity.This constructor is for lock head.
         /// </summary>
@@ -143,6 +312,9 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == centralAxis.SolidOrientation)
                 centralAxis.Flip();
 
+            //myDoc.Objects.AddBrep(centralAxis);
+            //myDoc.Views.Redraw();
+
             #endregion
 
             #region create the beams
@@ -256,7 +428,24 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == beamDetentRSphereBrep.SolidOrientation)
                 beamDetentRSphereBrep.Flip();
 
-            Brep beamDetentRNotch = Brep.CreateBooleanDifference(beamDetentRSphereBrep, beamDetentR, myDoc.ModelRelativeTolerance)[0];
+            //myDoc.Objects.AddPoint(beamDetentStart);
+            //myDoc.Views.Redraw();
+            //myDoc.Objects.AddPoint(beamDetentEnd);
+            //myDoc.Views.Redraw();
+
+            //myDoc.Objects.AddCurve(beamDetentRRectCrv);
+            //myDoc.Views.Redraw();
+            //myDoc.Objects.AddCurve(beamDetentTraj);
+            //myDoc.Views.Redraw();
+
+            //myDoc.Objects.AddBrep(beamDetentR);
+            //myDoc.Views.Redraw();
+            //myDoc.Objects.AddBrep(beamDetentRSphereBrep);
+            //myDoc.Views.Redraw();
+            //myDoc.Objects.AddBrep(beamLeverR);
+            //myDoc.Views.Redraw();
+
+            Brep beamDetentRNotch = Brep.CreateBooleanDifference(beamDetentRSphereBrep, beamDetentR, myDoc.ModelAbsoluteTolerance)[0];
             beamDetentRNotch.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == beamDetentRNotch.SolidOrientation)
                 beamDetentRNotch.Flip();
@@ -275,6 +464,8 @@ namespace Kinergy.Geom
 
             Brep beam = Brep.CreateBooleanUnion(new List<Brep> { beamHolder, beamRight, beamLeft }, myDoc.ModelAbsoluteTolerance)[0];
 
+            //myDoc.Objects.AddBrep(beam);
+            //myDoc.Views.Redraw();
             #endregion
 
             #region create the barrel

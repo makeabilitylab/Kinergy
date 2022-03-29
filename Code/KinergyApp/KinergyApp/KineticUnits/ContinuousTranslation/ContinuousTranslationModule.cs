@@ -99,6 +99,8 @@ namespace ConTranslation
         Point3d rackPos = new Point3d();
         Brep socketBrep = null;
 
+        Vector3d mainAxis = Vector3d.Unset, perpAxis;
+
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
         /// </summary>
@@ -560,13 +562,21 @@ namespace ConTranslation
                     //    myDoc.Views.Redraw();
                     //}
                     #endregion
-
                     
+                    Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
+                    perVec.Unitize();
+                    double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal* perVec / 2);
+
                     foreach (GearTrainScheme gts in gear_schemes)
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
-                            gr_list.Add(gtp.gearRatio);
+                            if(motionControlMethod == 1)
+                            {
+                                if ((gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis)
+                                    gr_list.Add(gtp.gearRatio);
+                            }
+                                
                         }
                     }
 
@@ -601,7 +611,7 @@ namespace ConTranslation
             {
                 #region Select End Effector Moving Direction
                 // offer 3 options for user: one arrow referring to movement along the main axis, another 2 perpendicular to the main axis.
-                Vector3d mainAxis =Vector3d.Unset,perpAxis;
+                mainAxis =Vector3d.Unset;
                 BoundingBox Bbox = model.GetBoundingBox(false);
                 double x=0, y=0;
                 switch (selectedAxisIndex)
@@ -676,7 +686,7 @@ namespace ConTranslation
             if (toAddLock)
             {
                 if (motion != null)
-                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
+                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, spring_entities, motionControlMethod);
             }
 
             if (toRemoveLock)

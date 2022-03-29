@@ -582,13 +582,26 @@ namespace InterReciprocation
                     //}
                     #endregion
 
+                    Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
+                    perVec.Unitize();
+                    double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
+
                     List<double> gr_list = new List<double>();
                     foreach (GearTrainScheme gts in gear_schemes)
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
-                            if(gtp.gearSetNumber>1)
-                                gr_list.Add(gtp.gearRatio);
+                            if (motionControlMethod == 1)
+                            {
+                                if (gtp.gearSetNumber > 1 && (gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis)
+                                    gr_list.Add(gtp.gearRatio);
+                            }
+                            else
+                            {
+                                if (gtp.gearSetNumber > 1)
+                                    gr_list.Add(gtp.gearRatio);
+                            }
+                                
                         }
                     }
 

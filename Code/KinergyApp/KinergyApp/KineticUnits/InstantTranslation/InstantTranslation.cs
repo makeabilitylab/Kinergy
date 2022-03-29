@@ -1097,6 +1097,10 @@ namespace Kinergy.KineticUnit
 
             Brep latchBrep = Brep.CreateBooleanDifference(latches, hooks, myDoc.ModelAbsoluteTolerance)[0];
 
+            latchBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == latchBrep.SolidOrientation)
+                latchBrep.Flip();
+
             #endregion
 
             #region Step 7: create the cavity for the locking

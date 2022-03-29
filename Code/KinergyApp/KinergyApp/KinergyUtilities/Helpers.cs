@@ -576,7 +576,7 @@ namespace KinergyUtilities
                 Vector3d rkDir = Vector3d.CrossProduct(shaftDir, mainAxis);
                 rkDir.Unitize();
 
-                Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.3 + rkTeethHeight / 2) + shaftDir * gearThickness / 2;
+                Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight/2) + shaftDir * gearThickness / 2;
 
                 #region compute spring start point, spring end point, spring length
 
