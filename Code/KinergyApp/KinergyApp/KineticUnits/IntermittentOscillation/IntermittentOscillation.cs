@@ -560,6 +560,7 @@ namespace Kinergy.KineticUnit
                     }
                 }
             }
+            //Lastly, cut part2 with lever sweep and ee sweep
 
             entityList.Remove(p1);
             entityList.Remove(p2);

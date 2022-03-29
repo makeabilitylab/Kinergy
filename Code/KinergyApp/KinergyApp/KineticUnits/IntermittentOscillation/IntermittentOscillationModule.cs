@@ -610,7 +610,6 @@ namespace InterOscillation
                     Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
                     perVec.Unitize();
                     double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
-
                     List<double> gr_list = new List<double>();
                     foreach (GearTrainScheme gts in gear_schemes)
                     {
@@ -618,12 +617,12 @@ namespace InterOscillation
                         {
                             if (motionControlMethod == 1)
                             {
-                                if ((gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis && (gtp.bullGearRadius + gtp.pinionRadius + 0.3 - 1.5 > crankRadius * 1.5 + 3.5) && gtp.gearSetNumber > 1)
+                                if ((gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis && gtp.gearSetNumber > 1)
                                     gr_list.Add(gtp.gearRatio);
                             }
                             else
                             {
-                                if ((gtp.bullGearRadius + gtp.pinionRadius + 0.3 - 1.5 > crankRadius * 1.5 + 3.5) && gtp.gearSetNumber > 1)
+                                if ( gtp.gearSetNumber > 1)
                                     gr_list.Add(gtp.gearRatio);
                             }     
 
