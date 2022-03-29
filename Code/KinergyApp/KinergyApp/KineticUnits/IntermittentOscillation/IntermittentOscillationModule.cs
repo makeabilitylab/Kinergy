@@ -96,6 +96,9 @@ namespace InterOscillation
         bool spiralLockNorm = false;
         Vector3d spiralLockDir = new Vector3d();
         Vector3d mainAxis;
+        Vector3d shaftAxis;
+        Vector3d otherAxis;
+        Vector3d oscillationMidVector;
         Brep socketBrep = null;
         /// <summary>
         /// Initializes a new instance of the IntermittentOscillation class.
@@ -523,10 +526,53 @@ namespace InterOscillation
                 //reverse main axis if needed based on user selection of ee side.
                 if ((skeleton.PointAtNormalizedLength(0.5) - motionCtrlPointSelected) * mainAxis < 0)
                     mainAxis = -mainAxis;
+                shaftAxis = axelDir;
+                otherAxis = kineticUnitDir;
                 motion.Set3Axis(mainAxis, kineticUnitDir, axelDir);
                 motion.SetEndEffector(eeModel);
-                toGenerateMechanism = true;
+                //toGenerateMechanism = true;
 
+            }
+            if(toSetAxisDir)
+            {
+                //Let user select oscillation direction center line
+                double lgcInwardOffset = 15;
+                Point3d lastShaftPos = eeCenPt - mainAxis * lgcInwardOffset;
+                double sideOffsetDistance = 18;
+                double defaultCrankWheelRadius = 12;
+                //Generate candidate points and tell if they are within model
+                double positiveAngleRange = 0, negativeAngleRange = 0;
+                for(double i=0;i<=90;i++)
+                {
+                    Point3d anchorCenter = lastShaftPos + axelDir * sideOffsetDistance - mainAxis * defaultCrankWheelRadius * 1.5;
+                    Transform rotation = Transform.Rotation(i / 180 * Math.PI, axelDir, lastShaftPos);
+                    anchorCenter.Transform(rotation);
+                    Sphere s = new Sphere(anchorCenter, 2);
+                    //myDoc.Objects.AddSphere(s);
+                    //myDoc.Views.Redraw();
+                    Brep[] result = Brep.CreateBooleanDifference(brepCut[1], s.ToBrep(), myDoc.ModelAbsoluteTolerance);
+                    if (result.Count()>0)
+                        break;
+                    positiveAngleRange = i;
+                }
+                for (double i = 0; i >= -90; i--)
+                {
+                    Point3d anchorCenter = lastShaftPos + axelDir * sideOffsetDistance - mainAxis * defaultCrankWheelRadius * 1.5;
+                    Transform rotation = Transform.Rotation(i / 180 * Math.PI, axelDir, lastShaftPos);
+                    anchorCenter.Transform(rotation);
+                    Sphere s = new Sphere(anchorCenter, 2);
+                    //myDoc.Objects.AddSphere(s);
+                    //myDoc.Views.Redraw();
+                    Brep[] result = Brep.CreateBooleanDifference(brepCut[1], s.ToBrep(), myDoc.ModelAbsoluteTolerance);
+                    if (result.Count() > 0)
+                        break;
+                    negativeAngleRange = i;
+                }
+                //Then let user select direction
+                RangedCircularDirectionSelecton selection = new RangedCircularDirectionSelecton(lastShaftPos, mainAxis, shaftAxis, otherAxis, 
+                    new Interval(negativeAngleRange, positiveAngleRange),myDoc, redAttribute);
+                oscillationMidVector = selection.selectedVector;
+                toGenerateMechanism = true;
             }
             if(toGenerateMechanism)
             {
@@ -537,8 +583,7 @@ namespace InterOscillation
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                double crankRadius = 10;
-                double lgcInwardOffset =crankRadius+0.6;
+                double lgcInwardOffset =15;
                 List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt-mainAxis*lgcInwardOffset, innerCavityBox, 3.6,2);
 
                 if (gear_schemes.Count == 0)
@@ -567,7 +612,12 @@ namespace InterOscillation
                     {
                         foreach (GearTrainParam gtp in gts.parameters)
                         {
-                            if(gtp.bullGearRadius+gtp.pinionRadius+0.3-1.5>crankRadius*1.5+3.5 && gtp.gearSetNumber>1)
+                            if (gtp.pinionRadius > lgcInwardOffset)
+                                continue;
+                            //if(gtp.bullGearRadius+gtp.pinionRadius+0.3-1.5>crankRadius*1.5+3.5 && gtp.gearSetNumber>1
+                            if (motionControlMethod==2 && gtp.gearSetNumber <= 1)//When motion control method is turn, the gear set number should be more than 1 so anchor shaft wouldn't conflict with spiral
+                                continue;
+                            else
                                 gr_list.Add(gtp.gearRatio);
                         }
                     }
@@ -595,8 +645,11 @@ namespace InterOscillation
                     gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4, true);
                     #endregion
                     #region generate and add crank slotted lever
+                    double crankRadiusMax = Math.Min(lgcInwardOffset,(selectedGearTrainParam.pinionRadius+selectedGearTrainParam.bullGearRadius-1.5-3.5)/1.5);
+                    double crankRadiusMin = 5;
+                    double crankRadius = crankRadiusMin + (crankRadiusMax - crankRadiusMin) * rangeLevel / 10;
                     GearParameter lgp = selectedGearTrainParam.parameters.Last();
-                    CrankSlottedLever CSL = new CrankSlottedLever(lgp.center + lgp.norm * lgp.faceWidth, lgp.norm, mainAxis, crankRadius, 35);
+                    CrankSlottedLever CSL = new CrankSlottedLever(lgp.center + lgp.norm * lgp.faceWidth, lgp.norm, oscillationMidVector, crankRadius, 35);
                     motion.AddCrankSlottedLever(CSL);
                     #endregion
                     #region Adjust last shaft

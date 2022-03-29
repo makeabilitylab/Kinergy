@@ -848,6 +848,112 @@ namespace KinergyUtilities
         }
 
     }
+    public class RangedCircularDirectionSelecton
+    {
+        ObjectAttributes redAttribute;
+        public Point3d eeCenPt;
+        Curve skeleton;
+        RhinoDoc myDoc;
+        Guid eeCircleID;
+        Point3d eeCircleDotPt;
+        public Vector3d mainAxis;
+        public Vector3d shaftAxis;
+        Vector3d otherAxis;
+        Vector3d direction;
+        Interval range;
+        Arc availableArc;
+        double radius = 30;
+        public Vector3d selectedVector;
+        Point3d center;
+        /// <summary>
+        /// This class initiates a circular direction selection operation when one of it's instance is constructed. The selection result is the direction of end effector.
+        /// </summary>
+        /// <param name="_brepCut">Model as 3 pieces</param>
+        /// <param name="model_skeleton">Skeleton of model</param>
+        /// <param name="skeleton_direction">Vector from skeleton start to end</param>
+        /// <param name="motionCtrlPointSelected">The side of motion control as a point</param>
+        /// <param name="_t1"></param>
+        /// <param name="_t2"></param>
+        /// <param name="currDoc"></param>
+        public RangedCircularDirectionSelecton(Point3d centerPt,Vector3d main_direction,Vector3d normVector,Vector3d otherDirection,Interval selectionRange,  RhinoDoc currDoc, ObjectAttributes _redAttribute)
+        {
+            redAttribute = _redAttribute;
+            // generate the circle
+            mainAxis =main_direction;
+            myDoc = currDoc;
+            range = selectionRange;
+            shaftAxis = normVector;
+            otherAxis = otherDirection;
+            center = centerPt;
+            Curve eeCircleCrv = new Circle(new Plane(centerPt, shaftAxis), radius).ToNurbsCurve();
+            //eeCircleID = myDoc.Objects.AddCurve(eeCircleCrv, redAttribute);
+            Curve wheelCurve= new Circle(new Plane(centerPt, shaftAxis), radius*2/3).ToNurbsCurve();
+            Guid wheelCircleID = myDoc.Objects.AddCurve(wheelCurve, redAttribute);
+            Point3d anchorEdgePt1 = centerPt + - mainAxis * radius, anchorEdgePt2 = centerPt + -mainAxis * radius;
+            Transform rotation1 = Transform.Rotation(range.Max / 180 * Math.PI, normVector, centerPt);
+            Transform rotation2 = Transform.Rotation(range.Min / 180 * Math.PI, normVector, centerPt);
+            anchorEdgePt1.Transform(rotation1);
+            anchorEdgePt2.Transform(rotation2);
+            Line l1 = new Line(anchorEdgePt1, centerPt);
+            Line l2 = new Line(anchorEdgePt2, centerPt);
+            Guid l1ID = myDoc.Objects.AddLine(l1);
+            Guid l2ID = myDoc.Objects.AddLine(l2);
+            myDoc.Views.Redraw();
+            availableArc = new Arc(new Plane(centerPt,main_direction,otherDirection), radius, selectionRange.Length / 180 * Math.PI);
+            availableArc.Transform(Transform.Rotation((180+selectionRange.Min) / 180 * Math.PI, normVector, centerPt));
+            Guid arcID=myDoc.Objects.AddArc(availableArc, redAttribute);
+            Rhino.Input.Custom.GetPoint gp4 = new Rhino.Input.Custom.GetPoint();
+            gp4.SetCommandPrompt("Select the mid direction of oscillation.");
+            gp4.MouseDown += Gp4_MouseDown;
+            gp4.MouseMove += Gp4_MouseMove;
+            gp4.DynamicDraw += Gp4_DynamicDraw;
+            //gp4.AcceptNothing(true);
+            Rhino.Input.GetResult r4;
+            r4 = gp4.Get(true);
+            //do
+            //{
+            //    r4 = gp4.Get(true);
+            //} while (r4 != Rhino.Input.GetResult.Nothing);
+
+            //myDoc.Objects.Delete(eeCircleID, true);
+            myDoc.Objects.Delete(wheelCircleID, true);
+            myDoc.Objects.Delete(l1ID, true);
+            myDoc.Objects.Delete(l2ID, true);
+            myDoc.Objects.Delete(arcID, true);
+        }
+        private void Gp4_DynamicDraw(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        {
+            //e.Display.DrawSphere(new Sphere(eeCircleDotPt, 5), Color.FromArgb(16, 150, 206));
+            Line l1 = new Line(eeCircleDotPt, eeCircleDotPt + selectedVector * radius*2);
+            Line l2 = new Line(eeCircleDotPt, eeCircleDotPt + selectedVector * radius * 2);
+            Line l3 = new Line(eeCircleDotPt, eeCircleDotPt + selectedVector * radius * 2);
+            double angle = Math.Asin(0.6);
+            Arc targetArc = new Arc(new Plane(eeCircleDotPt, selectedVector, otherAxis), radius * 2, angle*2 );
+            targetArc.Transform(Transform.Rotation((-angle) , shaftAxis, eeCircleDotPt));
+            l1.Transform(Transform.Rotation((-angle) , shaftAxis, eeCircleDotPt));
+            l2.Transform(Transform.Rotation((angle), shaftAxis, eeCircleDotPt));
+            e.Display.DrawLine(l1,Color.FromArgb(16, 150, 206));
+            e.Display.DrawLine(l2, Color.FromArgb(16, 150, 206));
+            e.Display.DrawLine(l3, Color.FromArgb(255, 0, 0));
+            e.Display.DrawArc(targetArc, Color.FromArgb(16, 150, 206));
+        }
+
+        private void Gp4_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            eeCircleDotPt = availableArc.ClosestPoint(currPos);
+            selectedVector = center - eeCircleDotPt;
+            selectedVector.Unitize();
+        }
+
+        private void Gp4_MouseDown(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            Point3d currPos = e.Point;
+            eeCircleDotPt = availableArc.ClosestPoint(currPos);
+            selectedVector = center - eeCircleDotPt;
+            selectedVector.Unitize();
+        }
+    }
     public class PointOnLineSelection
     {
         RhinoDoc myDoc;
