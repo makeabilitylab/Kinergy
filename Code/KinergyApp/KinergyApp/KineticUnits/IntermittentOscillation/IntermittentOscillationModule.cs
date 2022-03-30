@@ -663,7 +663,12 @@ namespace InterOscillation
                     double crankRadiusMin = 5;
                     double crankRadius = crankRadiusMin + (crankRadiusMax - crankRadiusMin) * rangeLevel / 10;
                     GearParameter lgp = selectedGearTrainParam.parameters.Last();
-                    CrankSlottedLever CSL = new CrankSlottedLever(lgp.center + lgp.norm * lgp.faceWidth, lgp.norm, oscillationMidVector, crankRadius, 35);
+                    Point3d eeCenter = eeModel.GetBoundingBox(true).Center;
+                    Vector3d leverVec = eeCenter - lgp.center;
+                    leverVec.Unitize();
+                    double leverLen = (eeCenter - lgp.center) * oscillationMidVector / (leverVec * oscillationMidVector) / (leverVec * oscillationMidVector);
+                    CrankSlottedLever CSL = new CrankSlottedLever(lgp.center + lgp.norm * lgp.faceWidth, lgp.norm, oscillationMidVector, crankRadius, leverLen);
+                    
                     motion.AddCrankSlottedLever(CSL);
                     #endregion
                     #region Adjust last shaft
@@ -783,7 +788,10 @@ namespace InterOscillation
                 myDoc.Objects.Delete(reserveBrepID2, true);
                 myDoc.Objects.Delete(convertedPortion, true);
                 if (motion != null)
+                {
                     motion.CreateShell(socketBrep);
+                }
+                    
                 if (motion != null)
                 {
                     //foreach (Guid id in endEffectorCandidates)
