@@ -91,6 +91,8 @@ namespace Kinergy.KineticUnit
         int old_energyValue = -1;
         int old_distanceValue = -1;
 
+        LockSelectionForSpiralSpring lockSelection;
+        Point3d helicalSpringLockPos = new Point3d();
 
         public int ShaftNum { get => _shaftNum; set => _shaftNum = value; }
         public Rack EndEffectorRack { get => endEffectorRack; set => endEffectorRack = value; }
@@ -323,6 +325,8 @@ namespace Kinergy.KineticUnit
                 double latchTipOffset = 1;
                 Point3d lockHeadPos = lockBasePos - _mainAxis * latchTipOffset;
 
+                helicalSpringLockPos = lockHeadPos;
+
                 Point3d selectedLockPos = new Point3d();
                 Curve crossLineCrv = new Line(lockHeadPos - rkDir * int.MaxValue, lockHeadPos + rkDir * int.MaxValue).ToNurbsCurve();
                 Curve[] crvs;
@@ -358,7 +362,7 @@ namespace Kinergy.KineticUnit
                 // add the lock for the spiral spring
 
                 #region ask the user to select the lock position
-                LockSelectionForSpiralSpring lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
+                lockSelection = new LockSelectionForSpiralSpring(myDoc, blueAttribute, lockPos[0], lockPos[1]);
                 lockDisToAxis = gtp.parameters.ElementAt(0).radius + gtp.parameters.ElementAt(1).radius;
                 spiralLockCen = (lockPos.ElementAt(0) + lockPos.ElementAt(1)) / 2;
                 #endregion
@@ -836,8 +840,22 @@ namespace Kinergy.KineticUnit
                 
             }
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
-            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension*0.3,bboxMainDimension*0.3), new Interval(-10, 10)
+            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension*0.4,bboxMainDimension*0.4), new Interval(-15, 15)
                 , new Interval(0, bboxMainDimension*5)).ToBrep();
+
+            if (_inputType == 2 && lockSelection != null)
+            {
+                if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            }
+            else if (_inputType == 1)
+            {
+                if ((helicalSpringLockPos - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            }
+
             cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
                 cutBox.Flip();
@@ -857,6 +875,14 @@ namespace Kinergy.KineticUnit
 
             try
             {
+                cutBarrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == cutBarrel.SolidOrientation)
+                    cutBarrel.Flip();
+
+                addBarrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == addBarrel.SolidOrientation)
+                    addBarrel.Flip();
+
                 part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
                 part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == part2.SolidOrientation)

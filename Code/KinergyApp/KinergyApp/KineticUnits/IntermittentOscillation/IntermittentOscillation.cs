@@ -410,6 +410,9 @@ namespace Kinergy.KineticUnit
                     Circle c = new Circle(p, 2.1);
                     Cylinder cy = new Cylinder(c, s.Len);
                     part2 = Brep.CreateBooleanDifference(part2, cy.ToBrep(true, true), myDoc.ModelAbsoluteTolerance)[0];
+                    part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                    if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                        part2.Flip();
                 }
             }
             Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
@@ -418,7 +421,10 @@ namespace Kinergy.KineticUnit
             if (BrepSolidOrientation.Inward == innerShell.SolidOrientation)
                 innerShell.Flip();
             part2 = Brep.CreateBooleanDifference(part2, innerShell, myDoc.ModelAbsoluteTolerance)[0];
-            
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+
             //Cut part 2 open
             #region Cut part 2 open with box
             BoundingBox inncerCavityBbox = _innerCavity.GetBoundingBox(true);
@@ -468,6 +474,14 @@ namespace Kinergy.KineticUnit
                 part2.Flip();
             try
             {
+                cutBarrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == cutBarrel.SolidOrientation)
+                    cutBarrel.Flip();
+
+                addBarrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == addBarrel.SolidOrientation)
+                    addBarrel.Flip();
+
                 part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
                 part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == part2.SolidOrientation)

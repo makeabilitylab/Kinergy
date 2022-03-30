@@ -701,7 +701,7 @@ namespace ConRotation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new ContinuousRotation(model, selectedAxisIndex, direction, innerCavity, motionCtrlPointSelected, speedLevel, roundLevel, energyLevel, motionControlMethod, helperFun);
+                    motion = new ContinuousRotation(model, selectedAxisIndex, direction, innerCavity, motionCtrlPointSelected, speedLevel, roundLevel, energyLevel, motionControlMethod, helperFun, motionControlMethod);
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -860,7 +860,7 @@ namespace ConRotation
                     //}
                     #endregion
 
-                    Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
+                    Vector3d perVec = Vector3d.CrossProduct(mainAxis, shaftAxis);
                     perVec.Unitize();
                     double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
 
@@ -1699,7 +1699,7 @@ namespace ConRotation
             if (toAddLock)
             {
                 if (motion != null)
-                    motion.ConstructLocks(-eeTranslation, lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
+                    motion.ConstructLocks(-eeTranslation, lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, spring_entities, motionControlMethod);
             }
 
             if (toPreview)
