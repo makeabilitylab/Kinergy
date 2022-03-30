@@ -782,7 +782,7 @@ namespace InterOscillation
             if (toAddLock)
             {
                 if (motion != null)
-                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
+                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, spring_entities, motionControlMethod);
             }
 
             if (toRemoveLock)
