@@ -860,6 +860,7 @@ namespace ConRotation
                     //}
                     #endregion
 
+
                     Vector3d perVec = Vector3d.CrossProduct(mainAxis, shaftAxis);
                     perVec.Unitize();
                     double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
@@ -874,7 +875,8 @@ namespace ConRotation
                                 if ((gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis)
                                     gr_list.Add(gtp.gearRatio);
                             }
-                                
+                            else
+                                gr_list.Add(gtp.gearRatio);
                         }
                     }
 
