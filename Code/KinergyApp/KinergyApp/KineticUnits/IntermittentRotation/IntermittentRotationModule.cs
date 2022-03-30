@@ -665,7 +665,7 @@ namespace InterRotation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new IntermittentRotation(model,innerCavity, direction, energy_input, stroke_input, speed_input, helperFun);
+                    motion = new IntermittentRotation(model,innerCavity, direction, energy_input, stroke_input, speed_input, helperFun, motionControlMethod);
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -825,7 +825,7 @@ namespace InterRotation
                 }
                 else
                 {
-                    Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
+                    Vector3d perVec = Vector3d.CrossProduct(mainAxis, shaftAxis);
                     perVec.Unitize();
                     double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
 
@@ -1067,27 +1067,28 @@ namespace InterRotation
                         ee1Model.Transform(Transform.Translation(-eeTranslation));
                         ee2Model.Transform(Transform.Translation(-eeTranslation));
 
-                        List<Spacer> generatedSpacers = new List<Spacer>();
-                        for (int i = 0; i < axel_spacer_entities.Count; i++)
-                        {
-                            Entity e = axel_spacer_entities[i];
-                            if (e.GetType() == typeof(Spacer))
-                                generatedSpacers.Add((Spacer)e);
-                        }
-                        if ((generatedSpacers[generatedSpacers.Count - 1].StartPt - lgc) * lgp.norm > 0)
-                        {
-                            axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
-                        }
-                        else
-                        {
-                            axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
-                        }
-
-                        motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
-                        motion.AddSprings(spring_entities);
                         #endregion
-
                     }
+
+                    List<Spacer> generatedSpacers = new List<Spacer>();
+                    for (int i = 0; i < axel_spacer_entities.Count; i++)
+                    {
+                        Entity e = axel_spacer_entities[i];
+                        if (e.GetType() == typeof(Spacer))
+                            generatedSpacers.Add((Spacer)e);
+                    }
+                    if ((generatedSpacers[generatedSpacers.Count - 1].StartPt - lgc) * lgp.norm > 0)
+                    {
+                        axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 1]);
+                    }
+                    else
+                    {
+                        axel_spacer_entities.Remove(generatedSpacers[generatedSpacers.Count - 2]);
+                    }
+
+                    motion.AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
+                    motion.AddSprings(spring_entities);
+
                     #endregion
 
                     #endregion
@@ -1098,7 +1099,7 @@ namespace InterRotation
             if (toAddLock)
             {
                 if (motion != null)
-                    motion.ConstructLocks(-eeTranslation, lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
+                    motion.ConstructLocks(-eeTranslation, lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, spring_entities, motionControlMethod);
             }
 
             if (toRemoveLock)

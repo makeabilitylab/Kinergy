@@ -576,6 +576,36 @@ namespace KinergyUtilities
                 Vector3d rkDir = Vector3d.CrossProduct(shaftDir, mainAxis);
                 rkDir.Unitize();
 
+                if ((gear_info.Count - 1) % 2 == 1)
+                {
+                    if (dir != 1 && dir != 2)
+                    {
+                        // perpendicular down
+                        rkDir = -rkDir;
+                        lockNorm = false;
+                    }
+                    else
+                    {
+                        rkDir = rkDir;
+                        lockNorm = true;
+                    }
+                }
+                else
+                {
+                    if (dir != 1 && dir != 2)
+                    {
+                        // perpendicular down
+                        rkDir = rkDir;
+                        lockNorm = true;
+                    }
+                    else
+                    {
+                        rkDir = -rkDir;
+                        lockNorm = false;
+                    }
+                }
+
+
                 Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight/2) + shaftDir * gearThickness / 2;
 
                 #region compute spring start point, spring end point, spring length
@@ -682,14 +712,22 @@ namespace KinergyUtilities
                 double rackLen = springRkGrConPt.DistanceTo(helicalStartPoint) + rackOverflowLen;
                 Vector3d rackDir = springRkGrConPt - helicalStartPoint;
                 rackDir.Unitize();
-                Point3d rackStartPt = helicalStartPoint - shaftDir * gearThickness / 2;
+                Point3d rackStartPt = new Point3d();
+                if(lockNorm)
+                    rackStartPt = helicalStartPoint - shaftDir * gearThickness / 2 - mainAxis * wireRadius;
+                else
+                    rackStartPt = helicalStartPoint + shaftDir * gearThickness / 2 - mainAxis * wireRadius;
+
                 Point3d rackEndPt = rackStartPt + rackDir * rackLen;
                 Point3d rackCen = (rackStartPt + rackEndPt) / 2;
                 double gearModule = 1;
                 double gearPressureAngle = 20;
                 Rack cenRack = new Rack(rackCen, rackDir, rkDir, rackLen, gearModule, gearThickness, shaftDir, springPadThickness, gearPressureAngle);
-                
-                cenRack.MoveAndEngage(firstPinion, -rkDir);
+
+                if (lockNorm)
+                    cenRack.MoveAndEngage(firstPinion, -rkDir);
+                else
+                    cenRack.MoveAndEngage(firstPinion, rkDir);
 
                 cenRack.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == cenRack.Model.SolidOrientation)

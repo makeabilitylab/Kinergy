@@ -582,7 +582,7 @@ namespace InterReciprocation
                     //}
                     #endregion
 
-                    Vector3d perVec = Vector3d.CrossProduct(direction, axelDir);
+                    Vector3d perVec = Vector3d.CrossProduct(mainAxis, shaftAxis);
                     perVec.Unitize();
                     double gw_dis = Math.Abs(innerCavityBox.BoundingBox.Diagonal * perVec / 2);
 
@@ -751,7 +751,7 @@ namespace InterReciprocation
             if (toAddLock)
             {
                 if (motion != null)
-                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, motionControlMethod);
+                    motion.ConstructLocks(lockPos, spiralLockNorm, spiralLockDir, selectedGearTrainParam, spring_entities, motionControlMethod);
             }
 
             if (toRemoveLock)

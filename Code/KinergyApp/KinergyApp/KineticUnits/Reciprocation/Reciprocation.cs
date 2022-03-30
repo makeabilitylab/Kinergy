@@ -141,6 +141,7 @@ namespace Kinergy.KineticUnit
         Brep slider = null;
         bool reversed = false;
         LockSelectionForSpiralSpring lockSelection;
+        Point3d helicalSpringLockPos = new Point3d();
 
         public Reciprocation(Brep Model,  Vector3d Direction, double Energy, double Amplitude, Brep innerCavity)
         {
@@ -178,12 +179,100 @@ namespace Kinergy.KineticUnit
             eeBrep = eeModel;
             //TODO check if p1 and p3 will be mixed
         }
-        public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, int motionControlMethod)
+        public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, List<Entity> spring_entities, int motionControlMethod)
         {
             if (motionControlMethod == 1)
             {
                 // add the lock for the helical spring
+                double hookHeightDepth = 7;
+                double rkTeethHeight = 2.25;
+                double gearThickness = 3.6;
+                double rackBaseHeight = 2;
+                double rackOverflowLen = 4;
 
+                // add the lock for the helical spring
+
+                #region Step 1: decide the lock pos
+
+                Vector3d shaftDir = gtp.parameters.ElementAt(0).center - gtp.parameters.ElementAt(1).center;
+                shaftDir.Unitize();
+                //Find the vector that is orthogonal to both the mainAxis and the shaftDir
+                _mainAxis.Unitize();
+                Vector3d rkDir = Vector3d.CrossProduct(shaftDir, _mainAxis);
+                rkDir.Unitize();
+
+                if (!spiralLockNorm)
+                    rkDir = -rkDir;
+
+                Point3d lockBasePosInitial = gtp.parameters.ElementAt(0).center - rkDir * (gtp.parameters.ElementAt(0).radius + 0.6 + rkTeethHeight / 2) + shaftDir * gearThickness / 2;
+
+                Helix helical = (Helix)spring_entities[0];
+                double helicalStationaryLen = helical.WireRadius * helical.RoundNum;
+                double helicalMoveRange = helical.Length - helicalStationaryLen;
+
+                double t1, t2;
+                //_skeleton.ClosestPoint(gtp.parameters.ElementAt(0).center, out t1);
+                //Point3d gear1CenOnMain = _skeleton.PointAt(t1);
+                Point3d gear1CenOnMain = gtp.parameters.ElementAt(0).center;
+
+                //_skeleton.ClosestPoint(gtp.parameters.ElementAt(gtp.parameters.Count - 1).center, out t2);
+                //Point3d gear2CenOnMain = _skeleton.PointAt(t2);
+                Point3d gear2CenOnMain = gtp.parameters.ElementAt(gtp.parameters.Count - 1).center;
+
+                double spaceMoveRange = gear1CenOnMain.DistanceTo(gear2CenOnMain) - rackOverflowLen;
+
+                double realLockPosOffset = Math.Min(helicalMoveRange, spaceMoveRange);
+                //Point3d lockBasePos = lockBasePosInitial + _mainAxis * realLockPosOffset - rkDir * hookHeightDepth/2;
+                Point3d lockBasePos = lockBasePosInitial + _mainAxis * realLockPosOffset;
+
+                #endregion
+
+                #region Step 2: construct the lock head and base
+
+                double thicknessScaler = 1;
+                if (helical.SpringRadius > 15)
+                    thicknessScaler = Math.Pow(helical.SpringRadius / 15, 0.5);
+
+                //Lock helicalSpringLock = new Lock(lockBasePos, shaftDir, _mainAxis, rkDir, thicknessScaler, realLockPosOffset);
+                Lock helicalSpringLockBase = new Lock(lockBasePos, shaftDir, _mainAxis, rkDir, realLockPosOffset);
+                helicalSpringLockBase.SetName("lockBase");
+
+
+                cutBarrel = null;
+                addBarrel = null;
+                double latchTipOffset = 1;
+                Point3d lockHeadPos = lockBasePos - _mainAxis * latchTipOffset;
+
+                helicalSpringLockPos = lockHeadPos;
+
+                Point3d selectedLockPos = new Point3d();
+                Curve crossLineCrv = new Line(lockHeadPos - rkDir * int.MaxValue, lockHeadPos + rkDir * int.MaxValue).ToNurbsCurve();
+                Curve[] crvs;
+                Point3d[] pts;
+                double lockradiusdis;
+                Rhino.Geometry.Intersect.Intersection.CurveBrep(crossLineCrv, model, myDoc.ModelAbsoluteTolerance, out crvs, out pts);
+                if ((pts[0] - lockHeadPos) / pts[0].DistanceTo(lockHeadPos) == rkDir)
+                {
+                    selectedLockPos = pts[1];
+                }
+                else
+                {
+                    selectedLockPos = pts[0];
+                }
+                lockradiusdis = selectedLockPos.DistanceTo(lockHeadPos) * 0.7;
+                Lock helicalSpringLockHead = new Lock(shaftDir, lockHeadPos, selectedLockPos, lockradiusdis, false, myDoc, ref cutBarrel, ref addBarrel, "lockHead");
+                helicalSpringLockHead.SetName("lockHead");
+
+                #endregion
+
+                lockPartIdx.Add(entityList.Count - 1);
+                entityList.Add(helicalSpringLockBase); // the detent
+                lockPartIdx.Add(entityList.Count - 1);
+                entityList.Add(helicalSpringLockHead); // the latch
+                lockPartIdx.Add(entityList.Count - 1);
+                locks.Add(helicalSpringLockBase);
+                locks.Add(helicalSpringLockHead);
+                helicalSpringLockBase.RegisterOtherPart(helicalSpringLockHead);
             }
             else
             {
@@ -382,14 +471,25 @@ namespace Kinergy.KineticUnit
             Brep part2;
             GearParameter lgp = _gearParam.parameters.Last();
             Brep sliderCylinder = Brep.CreateOffsetBrep(slider, clearance2, false, true, myDoc.ModelRelativeTolerance, out _, out _)[0];
+            sliderCylinder.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == sliderCylinder.SolidOrientation)
+                sliderCylinder.Flip();
 
             part2 = Brep.CreateBooleanDifference(b2, sliderCylinder, myDoc.ModelAbsoluteTolerance)[0];
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+
             Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
             Brep innerShell = shells[0];
             innerShell.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == innerShell.SolidOrientation)
                 innerShell.Flip();
             part2 = Brep.CreateBooleanDifference(part2, innerShell, myDoc.ModelAbsoluteTolerance)[0];
+            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                part2.Flip();
+
             //Cut b2 with shaft if needed
             foreach (Entity e in entityList)
             {
@@ -425,9 +525,16 @@ namespace Kinergy.KineticUnit
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
             Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
                 , new Interval(0, bboxMainDimension * 5)).ToBrep();
-            if(lockSelection != null)
+
+            if(motionControlMethod == 2 && lockSelection != null)
             {
                 if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            }
+            else if(motionControlMethod == 1)
+            {
+                if ((helicalSpringLockPos - inncerCavityBbox.Center) * boxPlane.Normal > 0)
                     cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
                     , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
             }
@@ -444,13 +551,20 @@ namespace Kinergy.KineticUnit
 
             Brep[] cutResult = Brep.CreateBooleanDifference(part2, cutBox, myDoc.ModelAbsoluteTolerance);
             part2 = cutResult[0];
-
             part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == part2.SolidOrientation)
                 part2.Flip();
 
             try
             {
+                cutBarrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == cutBarrel.SolidOrientation)
+                    cutBarrel.Flip();
+
+                addBarrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == addBarrel.SolidOrientation)
+                    addBarrel.Flip();
+
                 part2 = Brep.CreateBooleanDifference(part2, cutBarrel, myDoc.ModelAbsoluteTolerance)[0];
                 part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == part2.SolidOrientation)
