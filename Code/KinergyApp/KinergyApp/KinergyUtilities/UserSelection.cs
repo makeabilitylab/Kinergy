@@ -888,7 +888,7 @@ namespace KinergyUtilities
             Curve eeCircleCrv = new Circle(new Plane(centerPt, shaftAxis), radius).ToNurbsCurve();
             //eeCircleID = myDoc.Objects.AddCurve(eeCircleCrv, redAttribute);
             Curve wheelCurve= new Circle(new Plane(centerPt, shaftAxis), radius*2/3).ToNurbsCurve();
-            Guid wheelCircleID = myDoc.Objects.AddCurve(wheelCurve, redAttribute);
+            //Guid wheelCircleID = myDoc.Objects.AddCurve(wheelCurve, redAttribute);
             Point3d anchorEdgePt1 = centerPt + - mainAxis * radius, anchorEdgePt2 = centerPt + -mainAxis * radius;
             Transform rotation1 = Transform.Rotation(range.Max / 180 * Math.PI, normVector, centerPt);
             Transform rotation2 = Transform.Rotation(range.Min / 180 * Math.PI, normVector, centerPt);
@@ -916,7 +916,7 @@ namespace KinergyUtilities
             //} while (r4 != Rhino.Input.GetResult.Nothing);
 
             //myDoc.Objects.Delete(eeCircleID, true);
-            myDoc.Objects.Delete(wheelCircleID, true);
+            //myDoc.Objects.Delete(wheelCircleID, true);
             myDoc.Objects.Delete(l1ID, true);
             myDoc.Objects.Delete(l2ID, true);
             myDoc.Objects.Delete(arcID, true);
@@ -936,6 +936,7 @@ namespace KinergyUtilities
             e.Display.DrawLine(l2, Color.FromArgb(16, 150, 206));
             e.Display.DrawLine(l3, Color.FromArgb(255, 0, 0));
             e.Display.DrawArc(targetArc, Color.FromArgb(16, 150, 206));
+            e.Display.DrawSphere(new Sphere(eeCircleDotPt, 5), Color.FromArgb(16, 150, 206));
         }
 
         private void Gp4_MouseMove(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)

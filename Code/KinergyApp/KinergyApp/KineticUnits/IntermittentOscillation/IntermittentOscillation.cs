@@ -398,6 +398,8 @@ namespace Kinergy.KineticUnit
         }
         public void CreateShell(Brep socketBrep)
         {
+            if (crankSlottedLever != null)
+                crankSlottedLever.AddEndEffector(ee.Model);
             double shellThickness = 2;
             Brep part2=b2.DuplicateBrep();
             //Cut b2 with shaft if needed
@@ -479,6 +481,28 @@ namespace Kinergy.KineticUnit
                     part2.Flip();
             }
             catch { }
+            //Cut part2 with CSL space taken
+            if(crankSlottedLever!=null)
+            {
+                try
+                {
+                    part2 = Brep.CreateBooleanDifference(part2, crankSlottedLever.leverSweepSpace, myDoc.ModelAbsoluteTolerance)[0];
+                    part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                    if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                        part2.Flip();
+                }
+                catch { }
+                try
+                {
+                    part2 = Brep.CreateBooleanDifference(part2, crankSlottedLever.eeSweepSpace, myDoc.ModelAbsoluteTolerance)[0];
+                    part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                    if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+                        part2.Flip();
+                }
+                catch { }
+
+            }
+
 
             #endregion
 
@@ -561,16 +585,16 @@ namespace Kinergy.KineticUnit
                 }
             }
             //Lastly, cut part2 with lever sweep and ee sweep
-
+            ee.Model.Transform(Transform.Translation(_mainAxis * 0.6));
             entityList.Remove(p1);
             entityList.Remove(p2);
-            entityList.Remove(p3);
+            //entityList.Remove(p3);
             p1 = new Entity(part1);
             entityList.Add(p1);
             p2 = new Entity(part2);
             entityList.Add(p2);
-            p3 = new Entity(part3);
-            entityList.Add(p3);
+            //p3 = new Entity(part3);
+            //entityList.Add(p3);
 
         }
         public List<Lock> Locks { get => locks; set => locks = value; }

@@ -786,7 +786,7 @@ namespace ConRotation
 
                 #region find the end effector center point
                 BoundingBox innerCavityOriginalBbox = innerCavity.GetBoundingBox(true);
-                double lastShaftInwardOffset = 3;
+                double lastShaftInwardOffset = 10;
                 eeCenPt = innerCavityOriginalBbox.Center + (innerCavityOriginalBbox.Diagonal * mainAxis / 2-lastShaftInwardOffset) * mainAxis;
                 //myDoc.Objects.AddPoint(eeCenPt);
                 //myDoc.Views.Redraw();

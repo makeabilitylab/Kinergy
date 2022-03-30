@@ -44,7 +44,8 @@ namespace Kinergy
 
             private Point3d anchorCenter;
             private List<Brep> _crankSlottedLeverModels;
-
+            public Brep leverSweepSpace=null;
+            public Brep eeSweepSpace=null;
             public CrankSlottedLever(Point3d pos, Vector3d axisDir, Vector3d dir, double wheelRadius, double connectorLen)
             {
                 _wheelCen = pos;
@@ -291,7 +292,62 @@ namespace Kinergy
                 _crankSlottedLeverModels.Add(slottedLeverSolid);
                 _crankSlottedLeverModels.Add(stopWallSolid);
             }
-
+            public void AddEndEffector(Brep ee)
+            {
+                //First create lever sweep trajectory, which is a triangle
+                Point3d anchorDirPoint1 = anchorCenter + _oscillationAxisCen * LeverLen;
+                Point3d anchorDirPoint2 = anchorCenter + _oscillationAxisCen * LeverLen;
+                double angle =Math.Asin(_crankRadius/(WheelRadius*1.5));
+                anchorDirPoint1.Transform(Transform.Rotation(angle+0.05, WheelAxisDir, anchorCenter));
+                anchorDirPoint2.Transform(Transform.Rotation(-angle-0.05, WheelAxisDir, anchorCenter));
+                List<Point3d> sectionLinePts = new List<Point3d> { anchorCenter,anchorDirPoint1,anchorDirPoint2, anchorCenter, };
+                Polyline section = new Polyline(sectionLinePts);
+                Curve sectionCurve = section.ToNurbsCurve();
+                //RhinoDoc.ActiveDoc.Objects.AddCurve(sectionCurve);
+                //RhinoDoc.ActiveDoc.Views.Redraw();
+                var sweep = new SweepOneRail();
+                sweep.AngleToleranceRadians = RhinoDoc.ActiveDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = RhinoDoc.ActiveDoc.ModelAbsoluteTolerance;
+                Curve rail1 = new Line(anchorCenter, anchorCenter+WheelAxisDir*(2+0.6*2)).ToNurbsCurve();
+                Brep[] leverSweepList = sweep.PerformSweep(rail1, sectionCurve);
+                //RhinoDoc.ActiveDoc.Objects.AddBrep(leverSweepList[0]);
+                //RhinoDoc.ActiveDoc.Views.Redraw();
+                Brep leverSweep = leverSweepList[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                leverSweep.Transform(Transform.Translation(WheelAxisDir * (-0.6)));
+                leverSweepSpace = leverSweep;
+                leverSweepSpace.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == leverSweepSpace.SolidOrientation)
+                    leverSweepSpace.Flip();
+                //Sweep ee model by rotating 5 degree once
+                Brep eeSweepResult = ee.DuplicateBrep();
+                eeSweepResult.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == eeSweepResult.SolidOrientation)
+                    eeSweepResult.Flip();
+                for (int i=1;i<=10;i++)
+                {
+                    Brep ee1= ee.DuplicateBrep();
+                    ee1.Transform(Transform.Rotation(i*angle / 10, WheelAxisDir, anchorCenter));
+                    Brep ee2 = ee.DuplicateBrep();
+                    ee2.Transform(Transform.Rotation(-i * angle / 10, WheelAxisDir, anchorCenter));
+                    try
+                    {
+                        var result = Brep.CreateBooleanUnion(new List<Brep> { eeSweepResult, ee1, ee2 }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+                        eeSweepResult = result[0];
+                        eeSweepResult.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                        if (BrepSolidOrientation.Inward == eeSweepResult.SolidOrientation)
+                            eeSweepResult.Flip();
+                    }
+                    catch { }
+                    //RhinoDoc.ActiveDoc.Objects.AddBrep(eeSweepResult);
+                    //RhinoDoc.ActiveDoc.Views.Redraw();
+                }
+                eeSweepSpace = eeSweepResult;
+                //eeSweepSpace = Brep.CreateOffsetBrep(eeSweepResult, 0.6, false, false, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out _, out _)[0];
+                //eeSweepSpace.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                //if (BrepSolidOrientation.Inward == eeSweepSpace.SolidOrientation)
+                //    eeSweepSpace.Flip();
+            }
             public Point3d WheelCen { get => _wheelCen; set => _wheelCen = value; }
             public Vector3d WheelAxisDir { get => _wheelAxisDir; set => _wheelAxisDir = value; }
             public Vector3d OscillationAxisCen { get => _oscillationAxisCen; set => _oscillationAxisCen = value; }
