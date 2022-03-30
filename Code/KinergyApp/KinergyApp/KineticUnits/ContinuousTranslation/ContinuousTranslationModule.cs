@@ -100,6 +100,7 @@ namespace ConTranslation
         Brep socketBrep = null;
 
         Vector3d mainAxis = Vector3d.Unset, perpAxis;
+        bool dirControl = false;
 
         /// <summary>
         /// Initializes a new instance of the ContinuousTranslationModule class.
@@ -654,10 +655,38 @@ namespace ConTranslation
                 GearParameter lgp = selectedGearTrainParam.parameters.Last();
                 rackPos = lgp.center + lgp.norm * lgp.faceWidth;
 
-                if(eeMovingDirectionSelection == 1)
-                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0), rackPos);
+                // ToDo: decide the direction
+
+                // determine the spring rotation direction based on the direction of the end rack
+                if ((selectedGearTrainParam.parameters.Count - 1) % 2 == 1)
+                {
+                    if (eeMovingDirectionSelection != 1 && eeMovingDirectionSelection != 2)
+                    {
+                        // perpendicular down
+                        dirControl = false;
+                    }
+                    else
+                    {
+                        dirControl = true;
+                    }
+                }
                 else
-                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+                {
+                    if (eeMovingDirectionSelection != 1 && eeMovingDirectionSelection != 2)
+                    {
+                        // perpendicular down
+                        dirControl = true;
+                    }
+                    else
+                    {
+                        dirControl = false;
+                    }
+                }
+
+                if (eeMovingDirectionSelection == 1)
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, dirControl, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0), rackPos);
+                else
+                    spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, distanceLevel, energyLevel, dirControl, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
                 motion.AddSprings(spring_entities);
 
                 #endregion

@@ -101,6 +101,7 @@ namespace InterReciprocation
         Entity stopWall ;
         Entity bearingBlock;
         Brep socketBrep = null;
+        bool dirControl = false;
 
         /// <summary>
         /// Initializes a new instance of the ReciprocationModule class.
@@ -741,7 +742,22 @@ namespace InterReciprocation
                 }
                 #endregion
                 #region generate spring
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+
+                if (selectedGearTrainParam.gearSetNumber % 2 == 1)
+                {
+                    // output direction is opposite with the input direction
+                    dirControl = false;
+                    //motion.Old_direction = dirControl;
+                }
+                else
+                {
+                    // output direction is the same with the input direction
+                    dirControl = true;
+                    //motion.Old_direction = dirControl;
+                }
+
+
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, dirControl, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
                 motion.AddSprings(spring_entities);
                 #endregion
                 toGenerateMechanism = false;

@@ -1000,6 +1000,7 @@ namespace Kinergy.KineticUnit
         public RhinoDoc MyDoc { get => _myDoc; set => _myDoc = value; }
         public int InputType { get => _inputType; set => _inputType = value; }
         public Brep InnerCavity { get => _innerCavity; set => _innerCavity = value; }
+        public bool Old_direction { get => old_direction; set => old_direction = value; }
         #endregion
     }
 }

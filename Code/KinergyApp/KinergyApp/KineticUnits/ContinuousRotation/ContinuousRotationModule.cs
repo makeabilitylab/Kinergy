@@ -130,6 +130,7 @@ namespace ConRotation
         List<GearTrainScheme> gear_schemes = new List<GearTrainScheme>();
         Vector3d eeTranslation = Vector3d.Unset;
         Brep socketBrep = null;
+        bool dirControl = false;
         /// <summary>
         /// Initializes a new instance of the ContinuousRotationModule class.
         /// </summary>
@@ -589,11 +590,13 @@ namespace ConRotation
             {
                 dirReverseState = revdir_input;
                 showDirIndicator(dirReverseState);
+                dirControl = !dirControl;
                 if(spring_entities.Count != 0)
                 {
-                    motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                    motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, dirControl, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
+                    //motion.AdjustParameter(-eeTranslation, eeMovingDirectionSelection, speedLevel, roundLevel, energyLevel, gr_list, gear_schemes, isSpringCW, spring_entities.ElementAt(0), motionControlMethod, ref lockPos, ref spiralLockNorm, ref spiralLockDir);
                 }
-               
+
                 //motion.updateLock(dirReverseState);
             }
 
@@ -922,8 +925,21 @@ namespace ConRotation
 
                 #region ask the user to select rotation direction and generate spring
 
-                eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+                eeMovingDirectionSelection = 1; // 1:CW, 3: CCW         
+                if(selectedGearTrainParam.gearSetNumber % 2 == 1)
+                {
+                    // output direction is opposite with the input direction
+                    dirControl = false;
+                    motion.Old_direction = dirControl;
+                }
+                else
+                {
+                    // output direction is the same with the input direction
+                    dirControl = true;
+                    motion.Old_direction = dirControl;
+                }
+
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, roundLevel, energyLevel, dirControl, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
 
                 // determine the rotating direction
                 showDirIndicator(false);

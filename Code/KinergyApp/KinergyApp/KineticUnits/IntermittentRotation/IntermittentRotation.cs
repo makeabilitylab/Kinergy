@@ -150,9 +150,9 @@ namespace Kinergy.KineticUnit
 
         LockSelectionForSpiralSpring lockSelection;
         Helpers _helperFun;
-        int old_speedValue = -1;
-        int old_energyValue = -1;
-        int old_strokeValue = -1;
+        int old_speedValue = 5;
+        int old_energyValue = 5;
+        int old_strokeValue = 5;
         bool old_direction = true;
 
         Point3d helicalSpringLockPos = new Point3d();
@@ -941,5 +941,6 @@ namespace Kinergy.KineticUnit
         public double Energy { get => energy; set => energy = value; }
         public int Speed { get => speed; set => speed = value; }
         public double Angle { get => angle; set => angle = value; }
+        public bool Old_direction { get => old_direction; set => old_direction = value; }
     }
 }

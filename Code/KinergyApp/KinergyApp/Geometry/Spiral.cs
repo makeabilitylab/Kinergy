@@ -138,6 +138,8 @@ namespace Kinergy
                 revLevel = maxD / 10.0;
                 energyLevel = energy / 10.0;
 
+                isSpringDirCW = isSpringCW;
+
                 ////First calculate n with dis
                 //revLevel = maxD / 10.0;
                 //thicknessX = min_strip_thickness;
@@ -317,7 +319,7 @@ namespace Kinergy
 
             //    #endregion
             //}
-            public void AdjustParam(Vector3d mainAxis, List<GearParameter> gear_info, Brep body, int dir, int e, int D, bool isSpringCW, ref List<Point3d>lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
+            public void AdjustParam(Vector3d mainAxis, List<GearParameter> gear_info, Brep body, int eeMovingDirectionSelection, int e, int D, bool isSpringCW, ref List<Point3d>lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
             {
                 if(gear_info == null)
                 {
@@ -408,30 +410,32 @@ namespace Kinergy
                     int predDir = 1;
 
                     // determine the spring rotation direction based on the direction of the end rack
-                    if ((gear_info.Count - 1) % 2 == 1)
-                    {
-                        if (dir != 1 && dir != 2)
-                        {
-                            // perpendicular down
-                            isCW = false;
-                        }
-                        else
-                        {
-                            isCW = true;
-                        }
-                    }
-                    else
-                    {
-                        if (dir != 1 && dir != 2)
-                        {
-                            // perpendicular down
-                            isCW = true;
-                        }
-                        else
-                        {
-                            isCW = false;
-                        }
-                    }
+                    //if ((gear_info.Count - 1) % 2 == 1)
+                    //{
+                    //    if (dir != 1 && dir != 2)
+                    //    {
+                    //        // perpendicular down
+                    //        isCW = false;
+                    //    }
+                    //    else
+                    //    {
+                    //        isCW = true;
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    if (dir != 1 && dir != 2)
+                    //    {
+                    //        // perpendicular down
+                    //        isCW = true;
+                    //    }
+                    //    else
+                    //    {
+                    //        isCW = false;
+                    //    }
+                    //}
+                    isCW = isSpringCW;
+                    isSpringDirCW = isSpringCW;
 
                     //Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.7, isCW, displacement, true, energyLevel, 0);
 

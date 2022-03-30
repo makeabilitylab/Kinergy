@@ -552,7 +552,7 @@ namespace KinergyUtilities
         /// <param name="dir">the move direction of the end-effector</param>
         /// <param name="lockPos"></param>
         /// <returns></returns>
-        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, int dir, out List<Point3d> lockPos, out bool lockNorm, out Vector3d lockDir, out Brep helicalSpringSocket, Gear firstPinion, Point3d eePos = new Point3d())
+        public List<Entity> genSprings(List<GearParameter> gear_info, Brep body, Curve skeleton,Vector3d mainAxis,int controlType, int displacement, int energyLevel, bool dirCtrl, out List<Point3d> lockPos, out bool lockNorm, out Vector3d lockDir, out Brep helicalSpringSocket, Gear firstPinion, Point3d eePos = new Point3d())
         {
             List<Entity> models = new List<Entity>();
             lockPos = new List<Point3d>();
@@ -576,35 +576,46 @@ namespace KinergyUtilities
                 Vector3d rkDir = Vector3d.CrossProduct(shaftDir, mainAxis);
                 rkDir.Unitize();
 
-                if ((gear_info.Count - 1) % 2 == 1)
+                //if ((gear_info.Count - 1) % 2 == 1)
+                //{
+                //    if (dir != 1 && dir != 2)
+                //    {
+                //        // perpendicular down
+                //        rkDir = -rkDir;
+                //        lockNorm = false;
+                //    }
+                //    else
+                //    {
+                //        rkDir = rkDir;
+                //        lockNorm = true;
+                //    }
+                //}
+                //else
+                //{
+                //    if (dir != 1 && dir != 2)
+                //    {
+                //        // perpendicular down
+                //        rkDir = rkDir;
+                //        lockNorm = true;
+                //    }
+                //    else
+                //    {
+                //        rkDir = -rkDir;
+                //        lockNorm = false;
+                //    }
+                //}
+
+                if (dirCtrl)
                 {
-                    if (dir != 1 && dir != 2)
-                    {
-                        // perpendicular down
-                        rkDir = -rkDir;
-                        lockNorm = false;
-                    }
-                    else
-                    {
-                        rkDir = rkDir;
-                        lockNorm = true;
-                    }
+                    rkDir = rkDir;
+                    lockNorm = true;
                 }
                 else
                 {
-                    if (dir != 1 && dir != 2)
-                    {
-                        // perpendicular down
-                        rkDir = rkDir;
-                        lockNorm = true;
-                    }
-                    else
-                    {
-                        rkDir = -rkDir;
-                        lockNorm = false;
-                    }
+                    rkDir = -rkDir;
+                    lockNorm = false;
                 }
-
+                   
 
                 Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight/2) + shaftDir * gearThickness / 2;
 
@@ -859,31 +870,32 @@ namespace KinergyUtilities
                 bool isCW = true;
                 int predDir = 1;
 
+                isCW = dirCtrl;
                 // determine the spring rotation direction based on the direction of the end rack
-                if((gear_info.Count - 1)%2 == 1)
-                {
-                    if(dir != 1 && dir != 2)
-                    {
-                        // perpendicular down
-                        isCW = false;
-                    }
-                    else
-                    {
-                        isCW = true;
-                    }
-                }
-                else
-                {
-                    if (dir != 1 && dir != 2)
-                    {
-                        // perpendicular down
-                        isCW = true;
-                    }
-                    else
-                    {
-                        isCW = false;
-                    }
-                }
+                //if((gear_info.Count - 1)%2 == 1)
+                //{
+                //    if(dir != 1 && dir != 2)
+                //    {
+                //        // perpendicular down
+                //        isCW = false;
+                //    }
+                //    else
+                //    {
+                //        isCW = true;
+                //    }
+                //}
+                //else
+                //{
+                //    if (dir != 1 && dir != 2)
+                //    {
+                //        // perpendicular down
+                //        isCW = true;
+                //    }
+                //    else
+                //    {
+                //        isCW = false;
+                //    }
+                //}
 
                 //Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.8, isCW, displacement, true, energyLevel, -Math.PI/4);
                 Spiral spiralSpring = new Spiral(body, axisStart, springDir, springCen, (gear_info.ElementAt(1).radius + gear_info.ElementAt(0).radius) * 0.7, isCW, displacement, true, energyLevel, 0);

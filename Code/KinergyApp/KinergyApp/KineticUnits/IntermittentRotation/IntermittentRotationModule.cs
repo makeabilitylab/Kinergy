@@ -70,7 +70,8 @@ namespace InterRotation
         bool dirReverseState = false;
         Guid rotationDirID = Guid.Empty;
         bool isSpringCW = true;
-        
+        bool dirControl = false;
+
         Helpers helperFun;
         
         WarningWin warningwin = new WarningWin();
@@ -899,7 +900,21 @@ namespace InterRotation
 
                 eeMovingDirectionSelection = 1; // 1:CW, 3: CCW
                 //TODO check the param input
-                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, eeMovingDirectionSelection, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
+                
+                if (selectedGearTrainParam.gearSetNumber % 2 == 1)
+                {
+                    // output direction is opposite with the input direction
+                    dirControl = false;
+                    motion.Old_direction = dirControl;
+                }
+                else
+                {
+                    // output direction is the same with the input direction
+                    dirControl = true;
+                    motion.Old_direction = dirControl;
+                }
+
+                spring_entities = helperFun.genSprings(selectedGearTrainParam.parameters, model, skeleton, mainAxis, motionControlMethod, strokeLevel, energyLevel, dirControl, out lockPos, out spiralLockNorm, out spiralLockDir, out socketBrep, gears.ElementAt(0));
 
                 // determine the rotating direction
                 showDirIndicator(false);
