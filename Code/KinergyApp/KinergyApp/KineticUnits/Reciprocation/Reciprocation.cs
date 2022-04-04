@@ -306,6 +306,7 @@ namespace Kinergy.KineticUnit
                 if (spiralLockNorm)
                     LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
                 else
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
 
 
                 #region add lock parts to the entitylist
