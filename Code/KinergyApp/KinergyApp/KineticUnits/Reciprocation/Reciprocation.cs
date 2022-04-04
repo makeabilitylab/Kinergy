@@ -304,9 +304,9 @@ namespace Kinergy.KineticUnit
                 double ratchetRadius = Math.Min(centerLinkLen * 0.45, lockDisToAxis * 0.7);
 
                 if (spiralLockNorm)
-                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
-                else
                     LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, true);
+                else
+                    LockHead = new Lock(spiralLockCen, spiralLockDir, ratchetRadius, false);
 
 
                 #region add lock parts to the entitylist
@@ -504,56 +504,56 @@ namespace Kinergy.KineticUnit
             }
             //Cut part 2 open
             #region Cut part 2 open with box
-            BoundingBox inncerCavityBbox = _innerCavity.GetBoundingBox(true);
-            double bboxMainDimension = 0, bboxPerpDimension = 0, bboxOtherDimension = 0;
+            //BoundingBox inncerCavityBbox = _innerCavity.GetBoundingBox(true);
+            //double bboxMainDimension = 0, bboxPerpDimension = 0, bboxOtherDimension = 0;
 
-            if ((Vector3d.XAxis * _mainAxis) == 1 || (Vector3d.XAxis * _mainAxis) == -1)
-            {
-                bboxMainDimension = inncerCavityBbox.Max.X - inncerCavityBbox.Min.X;
+            //if ((Vector3d.XAxis * _mainAxis) == 1 || (Vector3d.XAxis * _mainAxis) == -1)
+            //{
+            //    bboxMainDimension = inncerCavityBbox.Max.X - inncerCavityBbox.Min.X;
 
-            }
-            else if ((Vector3d.YAxis * _mainAxis) == 1 || (Vector3d.YAxis * _mainAxis) == -1)
-            {
-                bboxMainDimension = inncerCavityBbox.Max.Y - inncerCavityBbox.Min.Y;
+            //}
+            //else if ((Vector3d.YAxis * _mainAxis) == 1 || (Vector3d.YAxis * _mainAxis) == -1)
+            //{
+            //    bboxMainDimension = inncerCavityBbox.Max.Y - inncerCavityBbox.Min.Y;
 
-            }
-            else
-            {
-                bboxMainDimension = inncerCavityBbox.Max.Z - inncerCavityBbox.Min.Z;
+            //}
+            //else
+            //{
+            //    bboxMainDimension = inncerCavityBbox.Max.Z - inncerCavityBbox.Min.Z;
 
-            }
-            Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
-            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
-                , new Interval(0, bboxMainDimension * 5)).ToBrep();
+            //}
+            //Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
+            //Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+            //    , new Interval(0, bboxMainDimension * 5)).ToBrep();
 
-            if(motionControlMethod == 2 && lockSelection != null)
-            {
-                if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
-                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
-                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
-            }
-            else if(motionControlMethod == 1)
-            {
-                if ((helicalSpringLockPos - inncerCavityBbox.Center) * boxPlane.Normal > 0)
-                    cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
-                    , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
-            }
+            //if(motionControlMethod == 2 && lockSelection != null)
+            //{
+            //    if ((lockSelection.lockCtrlPointSelected - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+            //        cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+            //        , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            //}
+            //else if(motionControlMethod == 1)
+            //{
+            //    if ((helicalSpringLockPos - inncerCavityBbox.Center) * boxPlane.Normal > 0)
+            //        cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+            //        , new Interval(-bboxMainDimension * 5, 0)).ToBrep();
+            //}
            
-            cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
-                cutBox.Flip();
-            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
-                part2.Flip();
+            //cutBox.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == cutBox.SolidOrientation)
+            //    cutBox.Flip();
+            //part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+            //    part2.Flip();
 
-            //myDoc.Objects.AddBrep(part2);
-            //myDoc.Views.Redraw();
+            ////myDoc.Objects.AddBrep(part2);
+            ////myDoc.Views.Redraw();
 
-            Brep[] cutResult = Brep.CreateBooleanDifference(part2, cutBox, myDoc.ModelAbsoluteTolerance);
-            part2 = cutResult[0];
-            part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
-            if (BrepSolidOrientation.Inward == part2.SolidOrientation)
-                part2.Flip();
+            //Brep[] cutResult = Brep.CreateBooleanDifference(part2, cutBox, myDoc.ModelAbsoluteTolerance);
+            //part2 = cutResult[0];
+            //part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            //if (BrepSolidOrientation.Inward == part2.SolidOrientation)
+            //    part2.Flip();
 
             try
             {

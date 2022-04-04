@@ -33,12 +33,12 @@ namespace KinergyUtilities
         /// <param name="GearFaceWidth"></param>
         /// <param name="thickLastGear">1 for thin last gear, 2 for double face width last gear. 3(default) for thickened last gear</param>
         /// <returns></returns>
-        public static List<GearTrainScheme> GetGearTrainSchemes(Vector3d mainDirection, Vector3d axisDirection, Point3d lastGearCenter,Box InnerCavity, double GearFaceWidth,int thickLastGear=3)
+        public static List<GearTrainScheme> GetGearTrainSchemes(Vector3d mainDirection, Vector3d axisDirection, Point3d lastGearCenter,Box InnerCavity, double GearFaceWidth,int motionControlMethod,int thickLastGear=3)
         {
             List<GearTrainScheme> schemes = new List<GearTrainScheme>();
             for(int i=1;i<=10;i++)//try all cases with less than 10 gear sets. more than 10 will be not so feasible with printed material.
             {
-                GearTrainScheme newScheme = new GearTrainScheme(i, mainDirection, axisDirection, lastGearCenter, InnerCavity, GearFaceWidth,thickLastGear);
+                GearTrainScheme newScheme = new GearTrainScheme(i, mainDirection, axisDirection, lastGearCenter, InnerCavity,GearFaceWidth,motionControlMethod,thickLastGear);
                 if(newScheme.valid)
                 {
                     if (newScheme.parameters.Count > 0)
@@ -56,7 +56,7 @@ namespace KinergyUtilities
         /// <param name="InnerCavity">The available space for gear train, as a box. Be sure that this box has 3 dimensions same as world XYZ</param>
         /// <param name="GearFaceWidth"></param>
         /// <returns></returns>
-        public static List<GearTrainParam> GetGearTrainByParameter(int gearSetNumber,Vector3d mainDirection,Vector3d otherDirection, Vector3d axisDirection, Point3d firstGearCenter, Point3d lastGearCenter,Box InnerCavity ,Box InnerCavityEnlarged,double GearFaceWidth,int thickLastGear=3)
+        public static List<GearTrainParam> GetGearTrainByParameter(int gearSetNumber,Vector3d mainDirection,Vector3d otherDirection, Vector3d axisDirection, Point3d firstGearCenter, Point3d lastGearCenter,Box InnerCavity ,Box InnerCavityEnlarged,double GearFaceWidth,int motionControlMethod,int thickLastGear=3)
         {
             List<GearTrainParam> paramList=new List<GearTrainParam>();
             axisDirection.Unitize();
@@ -70,7 +70,7 @@ namespace KinergyUtilities
             {
                 double pinionRadius = pinionTeeth * GearModule / 2;
                 double bullGearRadius =Math.Floor(unitLength - 0.3 - pinionRadius);
-                GearTrainParam param = new GearTrainParam(mainDirection, otherDirection, axisDirection, firstGearCenter, lastGearCenter, InnerCavity,InnerCavityEnlarged, bullGearRadius, pinionRadius, gearSetNumber, GearFaceWidth,0.3,0.3,thickLastGear);
+                GearTrainParam param = new GearTrainParam(mainDirection, otherDirection, axisDirection, firstGearCenter, lastGearCenter, InnerCavity,InnerCavityEnlarged, bullGearRadius, pinionRadius, gearSetNumber, GearFaceWidth,motionControlMethod,0.3,0.3,thickLastGear);
                 if (param.IfValid())
                 {
                     paramList.Add(param);
@@ -102,7 +102,7 @@ namespace KinergyUtilities
         double maxBullGearRadius;
         public List<GearTrainParam> parameters;
 
-        public GearTrainScheme(int _gearSetNumber, Vector3d _mainDirection, Vector3d _axisDirection, Point3d _lastGearCenter, Box _InnerCavity, double _gearFaceWidth,int thickLastGear=3)
+        public GearTrainScheme(int _gearSetNumber, Vector3d _mainDirection, Vector3d _axisDirection, Point3d _lastGearCenter, Box _InnerCavity, double _gearFaceWidth,int motionControlMethod,int thickLastGear=3)
         {
             gearSetNumber = _gearSetNumber;
             mainDirection = _mainDirection;
@@ -212,7 +212,7 @@ namespace KinergyUtilities
                     firstGearCenter = new Point3d(innerCavity.X.Mid, innerCavity.Y.Mid, innerCavity.Z.Max - maxBullGearRadius + clearance);
             }
             //Then use all these params and existing function to generate all needed params
-            parameters=GenerateGearTrain.GetGearTrainByParameter(gearSetNumber,mainDirection,otherDirection,axisDirection, firstGearCenter, lastGearCenter, innerCavity, innerCavityEnlarged,gearFaceWidth,thickLastGear);
+            parameters=GenerateGearTrain.GetGearTrainByParameter(gearSetNumber,mainDirection,otherDirection,axisDirection, firstGearCenter, lastGearCenter, innerCavity, innerCavityEnlarged,gearFaceWidth,motionControlMethod,thickLastGear);
         }
     }
     public class GearTrainParam : IComparable<GearTrainParam>
@@ -230,7 +230,7 @@ namespace KinergyUtilities
         Point3d fgct,fgct_offset,lgct;
         Box innerCavity;
         public List<GearParameter> parameters;
-        public GearTrainParam(Vector3d _mainDirection, Vector3d _otherDirection, Vector3d _axisDirection, Point3d firstGearCenter, Point3d lastGearCenter, Box InnerCavity, Box InnerCavityEnlarged,double BullGearRadius, double PinionRadius, int GearSetNumber, double GearFaceWidth, double Clearance = 0.3, double ClearanceDepth = 0.3,int thickLastGear=3)
+        public GearTrainParam(Vector3d _mainDirection, Vector3d _otherDirection, Vector3d _axisDirection, Point3d firstGearCenter, Point3d lastGearCenter, Box InnerCavity, Box InnerCavityEnlarged,double BullGearRadius, double PinionRadius, int GearSetNumber, double GearFaceWidth,int motionControlMethod, double Clearance = 0.3, double ClearanceDepth = 0.3,int thickLastGear=3)
         {
             mainDirection = _mainDirection;
             mainDirection.Unitize();
@@ -267,7 +267,14 @@ namespace KinergyUtilities
             offset_direction_first_to_last.Unitize();
             double middle_part_thickness = gearSetNumber * (gearFaceWidth + clearance);
             //Move fgct to make sure the gear train is at the middle of box.If fgct_offset is too close to fgct(so it might come across bull gear beside it) then move it away a bit
-            fgct_offset = fgct - offset_direction_first_to_last * Math.Max(middle_part_thickness/2,2*gearFaceWidth+clearance);
+            if(motionControlMethod==1)
+            {
+                fgct_offset = fgct - offset_direction_first_to_last * Math.Max(middle_part_thickness+2 , 2 * gearFaceWidth + clearance);
+            }
+            else
+            {
+                fgct_offset = fgct - offset_direction_first_to_last * Math.Max(middle_part_thickness / 2, 2 * gearFaceWidth + clearance);
+            }
             fgct_offset -= offset_direction_first_to_last * (gearFaceWidth / 2);//Since gear generation is on one side, not in middle
             fgct -= offset_direction_first_to_last * (gearFaceWidth / 2);//Since gear generation is on one side, not in middle
             parameters = GetParameterList(thickLastGear);
@@ -311,6 +318,10 @@ namespace KinergyUtilities
             fgp_bull.xDirection = start2end;
             fgp_bull.PinionOrBull = 2;
             parameters.Add(fgp_bull);
+
+            RhinoDoc.ActiveDoc.Objects.AddPoint(fgct_offset);
+            RhinoDoc.ActiveDoc.Views.Redraw();
+
             Point3d currPt = fgct_offset;
 
             for (int i = 1; i < gearSetNumber; i++)

@@ -493,7 +493,7 @@ namespace ConTranslation
                 //Xia's note: moved eeCenPt by 2mm inward.
 
                 
-                #region select a position along the diameter that crosses the circle center
+                #region select a position along the diameter that crosses the circle centerF
                 //Construct the cross line 
                 Curve crossLineCrv = new Line(eeCenPt - axelDir * int.MaxValue, eeCenPt + axelDir * int.MaxValue).ToNurbsCurve();
                 Curve[] crvs;
@@ -541,7 +541,12 @@ namespace ConTranslation
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6);
+                //myDoc.Objects.AddBox(innerCavityBox);
+                //myDoc.Objects.AddPoint(eeLineDotPt);
+                //myDoc.Views.Redraw();
+                if (!innerCavityBox.Contains(eeLineDotPt))
+                    eeLineDotPt = innerCavityBox.ClosestPoint(eeLineDotPt);
+                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeLineDotPt, innerCavityBox, 3.6,motionControlMethod,3);
 
                 if(gear_schemes.Count == 0)
                 {
@@ -577,7 +582,10 @@ namespace ConTranslation
                                 if ((gtp.pinionRadius + 0.6 + 1.125 + 2 + 2 + 0.4) <= gw_dis)
                                     gr_list.Add(gtp.gearRatio);
                             }
-                                
+                            if(motionControlMethod==2)
+                            {
+                                gr_list.Add(gtp.gearRatio);
+                            }
                         }
                     }
 
@@ -769,7 +777,7 @@ namespace ConTranslation
                 #region gear test
                 ////参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
                 //bool isGroove = false;
-                //int numTeeth = 9;
+                //int numTeeth = 8;
                 //double stepAngle = 360.0 / numTeeth;
                 //double boundary = 90.0 / stepAngle;
                 //int floorNum = (int)Math.Floor(boundary);
@@ -851,8 +859,13 @@ namespace ConTranslation
                 //Gear temp2 = new Gear(new Point3d(14.8 + 0.4 + 32.5, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), numTeeth, 1, 20, 3.6, selfRotationAngle, true);
 
 
-                //////// the tolerance between two mating gears is 0.4
-
+                ////// the tolerance between two mating gears is 0.4
+                for(double i=1;i<=10;i++)
+                {
+                    Gear temp = new Gear(new Point3d(i*10, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 8, i/10.0, 20, 3.6, 0, false);
+                    myDoc.Objects.AddBrep(temp.Model);
+                    myDoc.Views.Redraw();
+                }
                 //myDoc.Objects.AddBrep(temp.Model);
                 //myDoc.Views.Redraw();
                 //myDoc.Objects.AddPoints(temp.TeethTips);

@@ -516,7 +516,7 @@ namespace Kinergy.KineticUnit
 
             }
             Plane boxPlane = new Plane(inncerCavityBbox.Center, _mainAxis, _otherAxis);
-            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-15, 15)
+            Brep cutBox = new Box(boxPlane, new Interval(-bboxMainDimension * 0.4, bboxMainDimension * 0.4), new Interval(-10, 10)
                 , new Interval(0, bboxMainDimension * 5)).ToBrep();
 
             if (motionControlMethod == 2 && lockSelection != null)

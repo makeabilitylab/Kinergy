@@ -560,7 +560,7 @@ namespace InterReciprocation
                 eeCenPt = innerCavityOriginalBbox.Center + (innerCavityOriginalBbox.Diagonal * mainAxis / 2 - lastShaftInwardOffset) * mainAxis;
 
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,2);
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,motionControlMethod,2);
 
                 if (gear_schemes.Count == 0)
                 {
@@ -712,8 +712,8 @@ namespace InterReciprocation
                     //Params of replaced axel, disc, revolute joint
                     
                     
-                    Shaft newLastShaft1 = new Shaft(axel1Start, axel1Start.DistanceTo(axel1End) + 0.3+1, 1.5, lgp.norm);//0.3 for clearance, 1 for spacer thickness
-                    Shaft newLastShaft2 = new Shaft(axel2Start, axel2Start.DistanceTo(axel2End), 1.5, -lgp.norm);
+                    Shaft newLastShaft1 = new Shaft(axel1Start, axel1Start.DistanceTo(axel1End) + 0.3+1,2, lgp.norm);//0.3 for clearance, 1 for spacer thickness
+                    Shaft newLastShaft2 = new Shaft(axel2Start, axel2Start.DistanceTo(axel2End), 2, -lgp.norm);
                     axel_spacer_entities.Add(newLastShaft1);
                     axel_spacer_entities.Add(newLastShaft2);
                     //Move last gear to join lg and cw

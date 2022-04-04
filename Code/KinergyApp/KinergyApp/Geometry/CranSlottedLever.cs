@@ -191,7 +191,7 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == wheelSolid.SolidOrientation)
                     wheelSolid.Flip();
 
-                double shaftRadius = 1.9;
+                double shaftRadius = 2.6;
                 Brep shaft = Brep.CreatePipe(wheelPathCrv, shaftRadius, false, PipeCapMode.Flat, true, _mydoc.ModelAbsoluteTolerance, _mydoc.ModelAngleToleranceRadians)[0];
                 shaft.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == shaft.SolidOrientation)
@@ -314,7 +314,7 @@ namespace Kinergy
                 //RhinoDoc.ActiveDoc.Objects.AddBrep(leverSweepList[0]);
                 //RhinoDoc.ActiveDoc.Views.Redraw();
                 Brep leverSweep = leverSweepList[0].CapPlanarHoles(RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                leverSweep.Transform(Transform.Translation(WheelAxisDir * (-0.6)));
+                leverSweep.Transform(Transform.Translation(WheelAxisDir * (1.6)));
                 leverSweepSpace = leverSweep;
                 leverSweepSpace.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == leverSweepSpace.SolidOrientation)

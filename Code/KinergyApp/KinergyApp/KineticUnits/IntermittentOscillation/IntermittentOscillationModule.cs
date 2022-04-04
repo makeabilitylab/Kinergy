@@ -584,8 +584,11 @@ namespace InterOscillation
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                double lgcInwardOffset =15;
-                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt-mainAxis*lgcInwardOffset, innerCavityBox, 3.6,2);
+                double lgcInwardOffset =12;
+                myDoc.Objects.AddBox(innerCavityBox,blueAttribute);
+                myDoc.Objects.AddPoint(eeCenPt - mainAxis * lgcInwardOffset, blueAttribute);
+                myDoc.Views.Redraw();
+                List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt-mainAxis*lgcInwardOffset, innerCavityBox, 3.6,motionControlMethod,1);
 
                 if (gear_schemes.Count == 0)
                 {
@@ -660,7 +663,7 @@ namespace InterOscillation
                     gears = helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4, true);
                     #endregion
                     #region generate and add crank slotted lever
-                    double crankRadiusMax = Math.Min(lgcInwardOffset,(selectedGearTrainParam.pinionRadius+selectedGearTrainParam.bullGearRadius-1.5-3.5)/1.5);
+                    double crankRadiusMax = Math.Min(lgcInwardOffset,(selectedGearTrainParam.pinionRadius+selectedGearTrainParam.bullGearRadius-2-3.5)/1.5);
                     double crankRadiusMin = 5;
                     double crankRadius = crankRadiusMin + (crankRadiusMax - crankRadiusMin) * rangeLevel / 10;
                     GearParameter lgp = selectedGearTrainParam.parameters.Last();
@@ -706,8 +709,8 @@ namespace InterOscillation
                         shaft1Dir = -lgp.norm;
                         shaft2Dir = lgp.norm;
                     }
-                    Shaft shaft1 = new Shaft(shaft1Start, shaft1Start.DistanceTo(shaft1End), 1.5, shaft1Dir);
-                    Shaft shaft2 = new Shaft(shaft2Start, shaft2Start.DistanceTo(shaft2End), 1.5, shaft2Dir);
+                    Shaft shaft1 = new Shaft(shaft1Start, shaft1Start.DistanceTo(shaft1End), 2, shaft1Dir);
+                    Shaft shaft2 = new Shaft(shaft2Start, shaft2Start.DistanceTo(shaft2End), 2, shaft2Dir);
                     axel_spacer_entities.Add(shaft1);
                     axel_spacer_entities.Add(shaft2);
                     //Adjust spacer position
@@ -749,8 +752,8 @@ namespace InterOscillation
                     }
                     Shaft anchorShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), 1.5, -lgp.norm);
                     //Add 2 spacer for anchor shaft
-                    Spacer s1 = new Spacer(ptEnd, 1, 2.2, 3, lgp.norm);
-                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.3), 1, 2.2, 3, lgp.norm);
+                    Spacer s1 = new Spacer(ptEnd, 1, 2.2, 3.0, lgp.norm);
+                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.3), 1, 2.2, 3.0, lgp.norm);
                     axel_spacer_entities.Add(s1);
                     axel_spacer_entities.Add(s2);
                     axel_spacer_entities.Add(anchorShaft);

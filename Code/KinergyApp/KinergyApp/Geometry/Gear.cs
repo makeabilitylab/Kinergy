@@ -312,7 +312,7 @@ namespace Kinergy
                 {
                     // drill a central hole so that the gear will be movable on the shaft
                     double clearance = 0.4;//Xia's note: added 0.1 to this based on experiment result
-                    double shaftRadius = 1.5;
+                    double shaftRadius = 2;
                     double holdRadius = clearance + shaftRadius;
                     Brep holeBrep = Brep.CreatePipe(gearPathCrv, holdRadius, false, PipeCapMode.Round, true, mydoc.ModelAbsoluteTolerance, mydoc.ModelAngleToleranceRadians)[0];
 

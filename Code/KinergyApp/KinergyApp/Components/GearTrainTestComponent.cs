@@ -59,7 +59,7 @@ namespace HumanUIforKinergy.Components
             if (!DA.GetData(4, ref faceWidth)) { return; }
             int selection = 0;
             if (!DA.GetData(5, ref selection)) { return; }
-            List<GearTrainScheme> schemes = GenerateGearTrain.GetGearTrainSchemes(main,axis, lgct, innerCavity, faceWidth);
+            List<GearTrainScheme> schemes = GenerateGearTrain.GetGearTrainSchemes(main,axis, lgct, innerCavity, faceWidth,1);
             //TODO Generate all the gears and output
             List<GearTrainParam> plist= new List<GearTrainParam>();
             foreach(GearTrainScheme s in schemes)

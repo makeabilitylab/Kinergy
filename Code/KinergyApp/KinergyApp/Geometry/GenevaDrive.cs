@@ -354,7 +354,7 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == pinSolid.SolidOrientation)
                     pinSolid.Flip();
 
-                double r = 1.5;
+                double r = 2;
            
                 Brep holeBrep = Brep.CreatePipe(driveWheelPathCrv, r + _t, false, PipeCapMode.Round, true, _myDoc.ModelAbsoluteTolerance, _myDoc.ModelAngleToleranceRadians)[0];
 
