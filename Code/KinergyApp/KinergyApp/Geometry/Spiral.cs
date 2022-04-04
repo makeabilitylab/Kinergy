@@ -35,7 +35,7 @@ namespace Kinergy
 
             #region spiral spring constants
             private double min_strip_thickness = 0.8;
-            private double inerRadius_constant = 1.5;
+            private double inerRadius_constant = 2;
             private double coilBandwidth = 6;
 
             private bool isSpringDirCW;

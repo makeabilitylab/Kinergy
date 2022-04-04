@@ -66,7 +66,7 @@ namespace Kinergy.KineticUnit
         public const double gearFaceWidth = 3.6;
         public const double gearModule = 1;
         public const double gearPressureAngle = 20;
-        public const double shaftRadius = 1.5;
+        public const double shaftRadius = 2;
         public RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
         Brep b1 = null, b2 = null, b3 = null;
@@ -247,7 +247,7 @@ namespace Kinergy.KineticUnit
                             axelLen = axelStart.DistanceTo(axelEnd);
                         }
                         Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
-                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 2, axelDir);
                         newLastShaft.SetName("MiddleShellBreakerShaft");
                         Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
                         axel_spacer_entities.Add(ShaftSocket);
@@ -269,7 +269,7 @@ namespace Kinergy.KineticUnit
                         Vector3d axelDir = axelEnd - axelStart;
                         double axelLen = axelDir.Length;
                         axelDir.Unitize();
-                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                        Shaft newLastShaft = new Shaft(axelStart, axelLen, 2, axelDir);
                         newLastShaft.SetName("MiddleShellBreakerShaft");
                         //TODO Add spacer along line within model ? Not adding for now to prevent bug
                         axel_spacer_entities.Add(newLastShaft);

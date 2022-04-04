@@ -840,7 +840,9 @@ namespace ConRotation
                 Box innerCavityBox = new Box(innerCavity.GetBoundingBox(true));
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
-                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,2);
+                if (!innerCavityBox.Contains(eeCenPt))
+                    eeCenPt = innerCavityBox.ClosestPoint(eeCenPt);
+                gear_schemes = GenerateGearTrain.GetGearTrainSchemes(mainAxis, shaftAxis, eeCenPt, innerCavityBox, 3.6,motionControlMethod,2);
                 //select gear param based on input param
                 if (gear_schemes.Count == 0)
                 {
@@ -987,7 +989,7 @@ namespace ConRotation
                         axelLen = axelStart.DistanceTo(axelEnd);
                     }
                     Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
-                    Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                    Shaft newLastShaft = new Shaft(axelStart, axelLen, 2, axelDir);
                     newLastShaft.SetName("MiddleShellBreakerShaft");
                     Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
                     axel_spacer_entities.Add(ShaftSocket);
@@ -1005,7 +1007,7 @@ namespace ConRotation
                     Vector3d axelDir = axelEnd - axelStart;
                     double axelLen = axelDir.Length;
                     axelDir.Unitize();
-                    Shaft newLastShaft = new Shaft(axelStart, axelLen, 1.5, axelDir);
+                    Shaft newLastShaft = new Shaft(axelStart, axelLen,2, axelDir);
                     newLastShaft.SetName("MiddleShellBreakerShaft");
                     //TODO Add spacer along line within model ? Not adding for now to prevent bug
                     axel_spacer_entities.Add(newLastShaft);

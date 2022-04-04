@@ -65,7 +65,7 @@ namespace Kinergy.KineticUnit
         public const double gearFaceWidth = 3.6;
         public const double gearModule = 1;
         public const double gearPressureAngle = 20;
-        public const double shaftRadius = 1.5;
+        public const double shaftRadius = 2;
         public RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
         Brep b1 = null, b2 = null, b3 = null;

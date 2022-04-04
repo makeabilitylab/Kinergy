@@ -88,8 +88,9 @@ namespace KinergyUtilities
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-            double rad1 = 1.5;
-            double rad2 = 2.2;
+            double rad1 =2;
+            double rad2 = 2.7;
+            double rad3 = 3.5;
 
             //TODO register entity relations
             if (controlType == 1)
@@ -149,20 +150,20 @@ namespace KinergyUtilities
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - initialDir * offset1, 1, rad2, 3, (-initialDir));
+                        Spacer sp1 = new Spacer(gearCen - initialDir * offset1, 1, rad2, rad3, (-initialDir));
                         models.Add(sp1);
 
                         if(idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * offset1, 1, rad2, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset1, 1, rad2, rad3, axelDir);
                             models.Add(sp2);
                         }
                     }
                     else
                     {
                         // bull gear
-                        Spacer sp2 = new Spacer(gearCen - axelDir * offset2, 1, rad2, 3, -axelDir);
+                        Spacer sp2 = new Spacer(gearCen - axelDir * offset2, 1, rad2, rad3, -axelDir);
                         models.Add(sp2);
                     }
 
@@ -287,13 +288,13 @@ namespace KinergyUtilities
                         // pinion gear
 
                         // add the first spacer
-                        Spacer sp1 = new Spacer(gearCen - axelDir * clearance, 1, rad2, 3, -axelDir);
+                        Spacer sp1 = new Spacer(gearCen - axelDir * clearance, 1, rad2, rad3, -axelDir);
                         models.Add(sp1);
 
                         if (idx == gear_info.Count - 1)
                         {
                             // the last gear is a pinion
-                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad2, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad2, rad3, axelDir);
                             models.Add(sp2);
                         }
                     }
@@ -302,7 +303,7 @@ namespace KinergyUtilities
                         // bull gear
                         if (idx != 1)
                         {
-                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad2, 3, axelDir);
+                            Spacer sp2 = new Spacer(gearCen + axelDir * offset, 1, rad2, rad3, axelDir);
                             models.Add(sp2);
                         }
                     }
@@ -608,16 +609,19 @@ namespace KinergyUtilities
                 if (dirCtrl)
                 {
                     rkDir = rkDir;
-                    lockNorm = true;
+                    lockNorm = false;
                 }
                 else
                 {
                     rkDir = -rkDir;
-                    lockNorm = false;
+                    lockNorm = true;
                 }
-                   
 
-                Point3d springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight/2) + shaftDir * gearThickness / 2;
+                Point3d springRkGrConPt = new Point3d();
+                if (lockNorm)
+                    springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight/2) + shaftDir * gearThickness / 2;
+                else
+                    springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight / 2) - shaftDir * gearThickness / 2;
 
                 #region compute spring start point, spring end point, spring length
 

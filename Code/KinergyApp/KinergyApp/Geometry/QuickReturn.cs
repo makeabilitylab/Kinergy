@@ -227,7 +227,7 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == crankWheel.SolidOrientation)
                     crankWheel.Flip();
 
-                double shaftRadius = 1.5;
+                double shaftRadius = 2;
                 Brep crankHoleSolid = Brep.CreatePipe(crankWheelPathCrv, shaftRadius + _t, false, PipeCapMode.Flat, true, _mydoc.ModelAbsoluteTolerance, _mydoc.ModelAngleToleranceRadians)[0];
 
                 crankHoleSolid.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
