@@ -732,42 +732,42 @@ namespace ConTranslation
             if (toBake)
             {
                 //Remove all 3 cut parts to ake space for actual shells
-                myDoc.Objects.Delete(reserveBrepID1,true);
-                myDoc.Objects.Delete(reserveBrepID2, true);
-                myDoc.Objects.Delete(convertedPortion, true);
-                if(motion!=null)
-                    motion.CreateShell(socketBrep);
-                if (motion != null)
-                {
-                    //foreach (Guid id in endEffectorCandidates)
-                    //{
-                    //    myDoc.Objects.Hide(id, true);
-                    //}
+                //myDoc.Objects.Delete(reserveBrepID1,true);
+                //myDoc.Objects.Delete(reserveBrepID2, true);
+                //myDoc.Objects.Delete(convertedPortion, true);
+                //if(motion!=null)
+                //    motion.CreateShell(socketBrep);
+                //if (motion != null)
+                //{
+                //    //foreach (Guid id in endEffectorCandidates)
+                //    //{
+                //    //    myDoc.Objects.Hide(id, true);
+                //    //}
 
-                    if (motion.EntityList != null)
-                    {
-                        foreach (Entity b in motion.EntityList)
-                        {
-                            Brep tempB = b.GetModelinWorldCoordinate();
-                            myDoc.Objects.AddBrep(tempB);
-                        }
-                        //if (motion.Spring.SpringDimensions != null)
-                        //{
-                        //    foreach (LinearDimension d in motion.Spring.SpringDimensions)
-                        //    {
-                        //        //if(d.Plane.ClosestPoint(d.Arrowhead1End))
-                        //        //{
-                        //        myDoc.Objects.AddLinearDimension(d);
-                        //        //}
-                        //    }
-                        //}
-                        myDoc.Views.Redraw();
-                        this.ExpirePreview(true);
-                    }
-                }
+                //    if (motion.EntityList != null)
+                //    {
+                //        foreach (Entity b in motion.EntityList)
+                //        {
+                //            Brep tempB = b.GetModelinWorldCoordinate();
+                //            myDoc.Objects.AddBrep(tempB);
+                //        }
+                //        //if (motion.Spring.SpringDimensions != null)
+                //        //{
+                //        //    foreach (LinearDimension d in motion.Spring.SpringDimensions)
+                //        //    {
+                //        //        //if(d.Plane.ClosestPoint(d.Arrowhead1End))
+                //        //        //{
+                //        //        myDoc.Objects.AddLinearDimension(d);
+                //        //        //}
+                //        //    }
+                //        //}
+                //        myDoc.Views.Redraw();
+                //        this.ExpirePreview(true);
+                //    }
+                //}
 
                 #region gear test
-                //参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
+                ////参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
                 //bool isGroove = false;
                 //int numTeeth = 9;
                 //double stepAngle = 360.0 / numTeeth;
@@ -894,9 +894,9 @@ namespace ConTranslation
                 //Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
                 //myDoc.Objects.AddBrep(tempRack.Model);
                 //myDoc.Views.Redraw();
-                //List<Point3d> pts = tempRack.GetTipsBtms();
-                //myDoc.Objects.AddPoints(pts);
-                //myDoc.Views.Redraw();
+                ////List<Point3d> pts = tempRack.GetTipsBtms();
+                ////myDoc.Objects.AddPoints(pts);
+                ////myDoc.Views.Redraw();
 
                 //Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
                 //myDoc.Objects.AddBrep(spacer.Model);
