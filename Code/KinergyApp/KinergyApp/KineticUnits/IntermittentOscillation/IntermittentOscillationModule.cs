@@ -752,8 +752,8 @@ namespace InterOscillation
                     }
                     Shaft anchorShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), 1.5, -lgp.norm);
                     //Add 2 spacer for anchor shaft
-                    Spacer s1 = new Spacer(ptEnd, 1, 2.7, 3.5, lgp.norm);
-                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.3), 1, 2.7, 3.5, lgp.norm);
+                    Spacer s1 = new Spacer(ptEnd, 1, 2.2, 3.0, lgp.norm);
+                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.3), 1, 2.2, 3.0, lgp.norm);
                     axel_spacer_entities.Add(s1);
                     axel_spacer_entities.Add(s2);
                     axel_spacer_entities.Add(anchorShaft);
