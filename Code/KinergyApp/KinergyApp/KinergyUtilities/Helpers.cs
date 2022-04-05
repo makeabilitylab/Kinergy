@@ -996,7 +996,7 @@ namespace KinergyUtilities
             double v_box = 0.0, v_cylinder = 0.0;
 
             // Calculate the volume of the inner box
-            for (double i = 0.2; i <= 0.8; i += 0.1)
+            for (double i = 0.1; i <= 0.9; i += 0.05)
             {
                 if (b.GetInnerEmptySpaceBox(i))
                 {
@@ -1027,6 +1027,8 @@ namespace KinergyUtilities
                 innerCavity = result1;
             else
                 innerCavity = b2;
+
+            innerCavity = result1;
             //TODO check if this translation matters
             //Transform cavityTranslation = Transform.Translation(brepCut[1].GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
             //innerCavity.Transform(cavityTranslation);

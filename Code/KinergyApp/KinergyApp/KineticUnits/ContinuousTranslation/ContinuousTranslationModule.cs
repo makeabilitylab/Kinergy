@@ -740,39 +740,39 @@ namespace ConTranslation
             if (toBake)
             {
                 //Remove all 3 cut parts to ake space for actual shells
-                //myDoc.Objects.Delete(reserveBrepID1,true);
-                //myDoc.Objects.Delete(reserveBrepID2, true);
-                //myDoc.Objects.Delete(convertedPortion, true);
-                //if(motion!=null)
-                //    motion.CreateShell(socketBrep);
-                //if (motion != null)
-                //{
-                //    //foreach (Guid id in endEffectorCandidates)
-                //    //{
-                //    //    myDoc.Objects.Hide(id, true);
-                //    //}
+                myDoc.Objects.Delete(reserveBrepID1, true);
+                myDoc.Objects.Delete(reserveBrepID2, true);
+                myDoc.Objects.Delete(convertedPortion, true);
+                if (motion != null)
+                    motion.CreateShell(socketBrep);
+                if (motion != null)
+                {
+                    //foreach (Guid id in endEffectorCandidates)
+                    //{
+                    //    myDoc.Objects.Hide(id, true);
+                    //}
 
-                //    if (motion.EntityList != null)
-                //    {
-                //        foreach (Entity b in motion.EntityList)
-                //        {
-                //            Brep tempB = b.GetModelinWorldCoordinate();
-                //            myDoc.Objects.AddBrep(tempB);
-                //        }
-                //        //if (motion.Spring.SpringDimensions != null)
-                //        //{
-                //        //    foreach (LinearDimension d in motion.Spring.SpringDimensions)
-                //        //    {
-                //        //        //if(d.Plane.ClosestPoint(d.Arrowhead1End))
-                //        //        //{
-                //        //        myDoc.Objects.AddLinearDimension(d);
-                //        //        //}
-                //        //    }
-                //        //}
-                //        myDoc.Views.Redraw();
-                //        this.ExpirePreview(true);
-                //    }
-                //}
+                    if (motion.EntityList != null)
+                    {
+                        foreach (Entity b in motion.EntityList)
+                        {
+                            Brep tempB = b.GetModelinWorldCoordinate();
+                            myDoc.Objects.AddBrep(tempB);
+                        }
+                        //if (motion.Spring.SpringDimensions != null)
+                        //{
+                        //    foreach (LinearDimension d in motion.Spring.SpringDimensions)
+                        //    {
+                        //        //if(d.Plane.ClosestPoint(d.Arrowhead1End))
+                        //        //{
+                        //        myDoc.Objects.AddLinearDimension(d);
+                        //        //}
+                        //    }
+                        //}
+                        myDoc.Views.Redraw();
+                        this.ExpirePreview(true);
+                    }
+                }
 
                 #region gear test
                 ////参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
@@ -860,12 +860,7 @@ namespace ConTranslation
 
 
                 ////// the tolerance between two mating gears is 0.4
-                for(double i=1;i<=10;i++)
-                {
-                    Gear temp = new Gear(new Point3d(i*10, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 8, i/10.0, 20, 3.6, 0, false);
-                    myDoc.Objects.AddBrep(temp.Model);
-                    myDoc.Views.Redraw();
-                }
+       
                 //myDoc.Objects.AddBrep(temp.Model);
                 //myDoc.Views.Redraw();
                 //myDoc.Objects.AddPoints(temp.TeethTips);

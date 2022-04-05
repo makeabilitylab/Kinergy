@@ -287,8 +287,14 @@ namespace Kinergy
             /// <returns></returns>
             public bool GetInnerEmptySpaceBox(double initX=0.5,double initY=0.5,double initZ=0.5,double precision=0.02)
             {
-                if (model.IsSolid && !model.IsPointInside(bbox.PointAt(initX, initY, initZ), RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, true))
-                    return false;
+                //RhinoDoc.ActiveDoc.Objects.AddBrep(model);
+                //RhinoDoc.ActiveDoc.Views.Redraw();
+                //RhinoDoc.ActiveDoc.Objects.AddPoint(bbox.PointAt(initX, initY, initZ));
+                //RhinoDoc.ActiveDoc.Views.Redraw();
+
+
+                //if (model.IsSolid && !model.IsPointInside(bbox.PointAt(initX, initY, initZ), RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, true))
+                //    return false;
                 List<double> steps = new List<double>();
                 List<double> scales = new List<double>();
                 Curve[] crv;

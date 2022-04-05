@@ -585,9 +585,9 @@ namespace InterOscillation
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
                 double lgcInwardOffset =12;
-                myDoc.Objects.AddBox(innerCavityBox,blueAttribute);
-                myDoc.Objects.AddPoint(eeCenPt - mainAxis * lgcInwardOffset, blueAttribute);
-                myDoc.Views.Redraw();
+                //myDoc.Objects.AddBox(innerCavityBox,blueAttribute);
+                //myDoc.Objects.AddPoint(eeCenPt - mainAxis * lgcInwardOffset, blueAttribute);
+                //myDoc.Views.Redraw();
                 List<GearTrainScheme> gear_schemes = GenerateGearTrain.GetGearTrainSchemes(direction, axelDir, eeCenPt-mainAxis*lgcInwardOffset, innerCavityBox, 3.6,motionControlMethod,1);
 
                 if (gear_schemes.Count == 0)
