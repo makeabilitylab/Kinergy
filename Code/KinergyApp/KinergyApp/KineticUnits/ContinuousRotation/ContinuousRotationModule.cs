@@ -131,6 +131,7 @@ namespace ConRotation
         Vector3d eeTranslation = Vector3d.Unset;
         Brep socketBrep = null;
         bool dirControl = false;
+        bool toPreview = false;
         /// <summary>
         /// Initializes a new instance of the ContinuousRotationModule class.
         /// </summary>
@@ -501,7 +502,7 @@ namespace ConRotation
             #endregion
 
             // variables to control states
-            bool toSelectRegion = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAdjustParam = false, toAddLock = false, toRemoveLock = false, toPreview = false, toBake = false, toRevDir = false;
+            bool toSelectRegion = false, toSetMotionControl = false, toSetEEPos = false, toSetAxisDir = false, toAdjustParam = false, toAddLock = false, toRemoveLock = false,  toBake = false, toRevDir = false;
 
             #region Input check. This determines how the cell respond to changed params
             if (!reg_input && testBodySelBtn)
@@ -1724,7 +1725,7 @@ namespace ConRotation
 
             if (toPreview)
             {
-
+                
             }
 
             if (toAdjustParam)
