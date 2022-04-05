@@ -740,10 +740,10 @@ namespace ConTranslation
             if (toBake)
             {
                 //Remove all 3 cut parts to ake space for actual shells
-                myDoc.Objects.Delete(reserveBrepID1,true);
+                myDoc.Objects.Delete(reserveBrepID1, true);
                 myDoc.Objects.Delete(reserveBrepID2, true);
                 myDoc.Objects.Delete(convertedPortion, true);
-                if(motion!=null)
+                if (motion != null)
                     motion.CreateShell(socketBrep);
                 if (motion != null)
                 {
@@ -775,7 +775,7 @@ namespace ConTranslation
                 }
 
                 #region gear test
-                //参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
+                ////参数列表：3个向量，分别是物体向量，轴向量，以及垂直于这两个向量的方向；最后一个齿轮的位置，123两个方向的空间大小
                 //bool isGroove = false;
                 //int numTeeth = 8;
                 //double stepAngle = 360.0 / numTeeth;
@@ -860,12 +860,7 @@ namespace ConTranslation
 
 
                 ////// the tolerance between two mating gears is 0.4
-                for(double i=1;i<=10;i++)
-                {
-                    Gear temp = new Gear(new Point3d(i*10, 0, 0), new Vector3d(0, 0, 1), new Vector3d(1, 0, 0), 8, i/10.0, 20, 3.6, 0, false);
-                    myDoc.Objects.AddBrep(temp.Model);
-                    myDoc.Views.Redraw();
-                }
+       
                 //myDoc.Objects.AddBrep(temp.Model);
                 //myDoc.Views.Redraw();
                 //myDoc.Objects.AddPoints(temp.TeethTips);
@@ -907,9 +902,9 @@ namespace ConTranslation
                 //Rack tempRack = new Rack(new Point3d(50, 0, 0), new Vector3d(1, 0, 0), new Vector3d(0, 1, 0), 90, 1, 3.6, new Vector3d(0, 0, 1), 3, 20);
                 //myDoc.Objects.AddBrep(tempRack.Model);
                 //myDoc.Views.Redraw();
-                //List<Point3d> pts = tempRack.GetTipsBtms();
-                //myDoc.Objects.AddPoints(pts);
-                //myDoc.Views.Redraw();
+                ////List<Point3d> pts = tempRack.GetTipsBtms();
+                ////myDoc.Objects.AddPoints(pts);
+                ////myDoc.Views.Redraw();
 
                 //Spacer spacer = new Spacer(new Point3d(0, 0, 0), 1, 2.2, 3, new Vector3d(0, 0, 1));
                 //myDoc.Objects.AddBrep(spacer.Model);

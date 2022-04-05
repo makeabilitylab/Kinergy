@@ -201,7 +201,7 @@ namespace Kinergy.KineticUnit
                 Vector3d rkDir = Vector3d.CrossProduct(shaftDir, _mainAxis);
                 rkDir.Unitize();
 
-                if (!spiralLockNorm)
+                if (spiralLockNorm)
                     rkDir = -rkDir;
 
                 Point3d lockBasePosInitial = gtp.parameters.ElementAt(0).center - rkDir * (gtp.parameters.ElementAt(0).radius + 0.6 + rkTeethHeight / 2) + shaftDir * gearThickness / 2;

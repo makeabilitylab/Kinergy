@@ -319,8 +319,8 @@ namespace KinergyUtilities
             fgp_bull.PinionOrBull = 2;
             parameters.Add(fgp_bull);
 
-            RhinoDoc.ActiveDoc.Objects.AddPoint(fgct_offset);
-            RhinoDoc.ActiveDoc.Views.Redraw();
+            //RhinoDoc.ActiveDoc.Objects.AddPoint(fgct_offset);
+            //RhinoDoc.ActiveDoc.Views.Redraw();
 
             Point3d currPt = fgct_offset;
 
