@@ -556,7 +556,7 @@ namespace Kinergy.KineticUnit
                 {
                     Shaft s = (Shaft)e;
                     Plane p = new Plane(s.StartPt, s.AxisDir);
-                    Circle c = new Circle(p, 2.1);
+                    Circle c = new Circle(p, 2.7);
                     Cylinder cy = new Cylinder(c, s.Len);
                     part2 = Brep.CreateBooleanDifference(part2, cy.ToBrep(true, true), myDoc.ModelAbsoluteTolerance)[0];
                     part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);

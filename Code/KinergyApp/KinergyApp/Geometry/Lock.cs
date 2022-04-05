@@ -358,7 +358,7 @@ namespace Kinergy.Geom
                 beamHolder.Flip();
 
 
-            double hookRadius = 1;
+            double hookRadius = 1-0.02;
             double notchRadius = 1.6;
             double moveDis = tipLen + latchClearance + 2 * 0.6 - 2 * hookRadius;
 
@@ -450,6 +450,9 @@ namespace Kinergy.Geom
             if (BrepSolidOrientation.Inward == beamDetentRNotch.SolidOrientation)
                 beamDetentRNotch.Flip();
 
+            //myDoc.Objects.Add(beamLeverR);
+            //myDoc.Objects.Add(beamDetentRNotch);
+            //myDoc.Views.Redraw();
             Brep beamRight = Brep.CreateBooleanUnion(new List<Brep> { beamLeverR, beamDetentRNotch }, myDoc.ModelAbsoluteTolerance)[0];
             beamRight.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
             if (BrepSolidOrientation.Inward == beamRight.SolidOrientation)
