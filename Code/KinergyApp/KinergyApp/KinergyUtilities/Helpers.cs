@@ -1023,12 +1023,12 @@ namespace KinergyUtilities
                 //DA.SetData(2, b2);
             }
 
-            if (v_box >= v_cylinder)
+            if (v_box >= v_cylinder*4/Math.PI)
                 innerCavity = result1;
             else
                 innerCavity = b2;
 
-            innerCavity = result1;
+            //innerCavity = result1;
             //TODO check if this translation matters
             //Transform cavityTranslation = Transform.Translation(brepCut[1].GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
             //innerCavity.Transform(cavityTranslation);

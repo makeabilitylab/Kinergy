@@ -673,7 +673,19 @@ namespace KinergyUtilities
             {
                 eeCenPt = startPt;
             }
-
+            # region Move eeCenPt to the middle axis of middle part
+            BoundingBox midBbox = brepCut[1].GetBoundingBox(true);
+            Point3d midPt1 = midBbox.Center + midBbox.Diagonal * skeleton_direction * skeleton_direction / 2;
+            Point3d midPt2 = midBbox.Center + midBbox.Diagonal * skeleton_direction * skeleton_direction / 2;
+            if(eeCenPt.DistanceTo(midPt1)<eeCenPt.DistanceTo(midPt2))
+            {
+                eeCenPt += (midPt1 - eeCenPt)-(midPt1 - eeCenPt)*skeleton_direction*skeleton_direction;
+            }
+            else
+            {
+                eeCenPt += (midPt2 - eeCenPt) - (midPt2 - eeCenPt) * skeleton_direction * skeleton_direction;
+            }
+            #endregion
             Curve eeCircleCrv = new Circle(new Plane(eeCenPt, direction), 50).ToNurbsCurve();
             eeCircleID = myDoc.Objects.AddCurve(eeCircleCrv, redAttribute);
             myDoc.Views.Redraw();
