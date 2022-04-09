@@ -79,7 +79,7 @@ namespace KinergyUtilities
         /// <param name="controlType">the selected controlling method: helix or spiral</param>
         /// <param name="clearance">the clearance for printing - 0.3mm</param>
         /// <returns></returns>
-        public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance)
+        public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance=0.2)
         {
             List<Entity> models = new List<Entity>();
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
@@ -359,7 +359,7 @@ namespace KinergyUtilities
                     Socket lockShaftSocket = new Socket(lockPtStart, firstGearDir);
                     models.Add(lockShaftSocket);
 
-                    Point3d shaftStartPt = lockLinePts[0] + firstGearDir * 2.75;
+                    Point3d shaftStartPt = lockLinePts[0] + firstGearDir * 2.75;//Xia's note:reduced this value by 0.25 (from 2.75 to 2.5) to make tighter//Revoked
                     Point3d shaftEndPt = lockPtEnd;
                     Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad1, firstGearDir);
 
@@ -367,7 +367,7 @@ namespace KinergyUtilities
 
                     models.Add(lockAxelShaft);
 
-                    Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 2, 3.8, firstGearDir);
+                    Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 2, 4, firstGearDir);//Xia's note: expanded shaft disc radius by 0.2 (3.8 to 4) to make tighter
                     models.Add(lockAxelShaftDisc);
 
                     Point3d handlerPt = shaftEndPt + firstGearDir * 3;
@@ -1070,12 +1070,12 @@ namespace KinergyUtilities
                 //DA.SetData(2, b2);
             }
 
-            if (v_box >= v_cylinder)
+            if (v_box >= v_cylinder*4/Math.PI)
                 innerCavity = result1;
             else
                 innerCavity = b2;
 
-            innerCavity = result1;
+            //innerCavity = result1;
             //TODO check if this translation matters
             //Transform cavityTranslation = Transform.Translation(brepCut[1].GetBoundingBox(true).Center - innerCavity.GetBoundingBox(true).Center);
             //innerCavity.Transform(cavityTranslation);

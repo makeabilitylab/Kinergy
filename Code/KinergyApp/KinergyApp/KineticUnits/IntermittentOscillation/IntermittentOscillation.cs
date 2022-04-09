@@ -564,6 +564,9 @@ namespace Kinergy.KineticUnit
                         part2.Flip();
                 }
             }
+            b2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+            if (BrepSolidOrientation.Inward == b2.SolidOrientation)
+                b2.Flip();
             Brep[] shells = Brep.CreateOffsetBrep(b2, (-1) * shellThickness, false, true, myDoc.ModelRelativeTolerance, out _, out _);
             Brep innerShell = shells[0];
             innerShell.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
