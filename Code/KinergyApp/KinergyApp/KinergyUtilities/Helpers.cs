@@ -564,6 +564,11 @@ namespace KinergyUtilities
 
             if (controlType == 1)
             {
+                var sweep = new SweepOneRail();
+                sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
+                sweep.ClosedSweep = false;
+                sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
+
                 // helical spring control
                 double springPadThickness = 2;
                 double gearThickness = 3.6;
@@ -724,7 +729,7 @@ namespace KinergyUtilities
                 #region generate the central rack that mate with the first gear in the geartrain
 
                 double rackOverflowLen = 4;
-                double rackLen = springRkGrConPt.DistanceTo(helicalStartPoint) + rackOverflowLen;
+                double rackLen = springRkGrConPt.DistanceTo(helicalStartPoint) + rackOverflowLen + Math.PI * 2;
                 Vector3d rackDir = springRkGrConPt - helicalStartPoint;
                 rackDir.Unitize();
                 Point3d rackStartPt = new Point3d();
@@ -752,19 +757,49 @@ namespace KinergyUtilities
 
                 #region prepare the holes for boolean difference
 
+                // add the barrel
+
+                double barrelThickness = 2;
+                double protrusionLen = 20;
+                double tolerance = 0.4;
+                Point3d b_pt1 = rackStartPt - shaftDir * (tolerance + barrelThickness) + rkDir * (rkTeethHeight + tolerance + barrelThickness);
+                Point3d b_pt2 = rackStartPt + shaftDir * (gearThickness + tolerance + barrelThickness) + rkDir * (rkTeethHeight + tolerance + barrelThickness);
+                Point3d b_pt3 = rackStartPt + shaftDir * (gearThickness + tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
+                Point3d b_pt4 = rackStartPt - shaftDir * (tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
+                Point3d b_pt5 = b_pt1;
+
+                List<Point3d> barrelConnector = new List<Point3d>();
+                barrelConnector.Add(b_pt1);
+                barrelConnector.Add(b_pt2);
+                barrelConnector.Add(b_pt3);
+                barrelConnector.Add(b_pt4);
+                barrelConnector.Add(b_pt1);
+
+                Polyline barrelRect = new Polyline(barrelConnector);
+                Curve barrelRectCrv = barrelRect.ToNurbsCurve();
+
+                Line barrelLn = new Line(basePos - mainAxis * protrusionLen, basePos + mainAxis * wireRadius);
+                Curve barrelCrv = barrelLn.ToNurbsCurve();
+
+                Brep[] barrelBreps = sweep.PerformSweep(barrelCrv, barrelRectCrv);
+                Brep barrelBrep = barrelBreps[0];
+                Brep barrel = barrelBrep.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                barrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == barrel.SolidOrientation)
+                    barrel.Flip();
+
+
+
+
+
                 // open the base hole
                 Point3d rkDeductPt = rackStartPt;
-                double tolerance = 0.6;
                 Point3d pt1 = rkDeductPt - shaftDir * tolerance + rkDir * ( rkTeethHeight + tolerance );
                 Point3d pt2 = rkDeductPt + shaftDir * (gearThickness + tolerance) + rkDir * (rkTeethHeight + tolerance);
                 Point3d pt3 = rkDeductPt + shaftDir * (gearThickness + tolerance) - rkDir * (springPadThickness + tolerance);
                 Point3d pt4 = rkDeductPt - shaftDir * tolerance - rkDir * (springPadThickness + tolerance);
                 Point3d pt5 = pt1;
-
-                var sweep = new SweepOneRail();
-                sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
-                sweep.ClosedSweep = false;
-                sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
                 List<Point3d> rkDeductConnector = new List<Point3d>();
                 rkDeductConnector.Add(pt1);
@@ -787,7 +822,19 @@ namespace KinergyUtilities
                 if (BrepSolidOrientation.Inward == rkDeduct.SolidOrientation)
                     rkDeduct.Flip();
 
+                Brep rkDeductDup = rkDeduct.DuplicateBrep();
+
                 Brep baseBrepFinal = Brep.CreateBooleanDifference(baseBrep, rkDeduct, myDoc.ModelAbsoluteTolerance)[0];
+                baseBrepFinal.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == baseBrepFinal.SolidOrientation)
+                    baseBrepFinal.Flip();
+
+                Brep barrelBrepFinal = Brep.CreateBooleanDifference(barrel, rkDeductDup, myDoc.ModelAbsoluteTolerance)[0];
+                barrelBrepFinal.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                if (BrepSolidOrientation.Inward == barrelBrepFinal.SolidOrientation)
+                    barrelBrepFinal.Flip();
+
+                baseBrepFinal = Brep.CreateBooleanUnion(new List<Brep> { baseBrepFinal, barrelBrepFinal }, myDoc.ModelAbsoluteTolerance)[0];
                 baseBrepFinal.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == baseBrepFinal.SolidOrientation)
                     baseBrepFinal.Flip();

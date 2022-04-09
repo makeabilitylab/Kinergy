@@ -28,7 +28,7 @@ namespace Kinergy.Geom
         public Lock(Point3d lockPos, Vector3d shaftDir, Vector3d mainDir, Vector3d rackDir, double maxDis)
         {
             double clearance = 0.4;
-            double lockQuarterSphereRadius = 2;
+            double lockQuarterSphereRadius = 4;
 
             Point3d detentCen = lockPos - rackDir * 2;
 
