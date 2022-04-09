@@ -656,7 +656,7 @@ namespace InterOscillation
                     //gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
 
                     #region generate all the axels and spacers for the gears
-                    axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
+                    axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod);
                     #endregion
 
                     #region generate all the gears
@@ -742,18 +742,18 @@ namespace InterOscillation
                     intersectVec.Unitize();
                     if (intersectVec * lgp.norm > 0.99)
                     {
-                        ptEnd = anchorCenter-lgp.norm*1.3;
+                        ptEnd = anchorCenter-lgp.norm*1.2;
                         ptStart = pts[1] - lgp.norm * 1;
                     }
                     else
                     {
-                        ptEnd = anchorCenter - lgp.norm * 1.3;
+                        ptEnd = anchorCenter - lgp.norm * 1.2;
                         ptStart = pts[0] - lgp.norm * 1;
                     }
                     Shaft anchorShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), 1.5, -lgp.norm);
                     //Add 2 spacer for anchor shaft
                     Spacer s1 = new Spacer(ptEnd, 1, 2.2, 3.0, lgp.norm);
-                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.3), 1, 2.2, 3.0, lgp.norm);
+                    Spacer s2 = new Spacer(ptEnd+lgp.norm*(2+1.3+0.2), 1, 2.2, 3.0, lgp.norm);
                     axel_spacer_entities.Add(s1);
                     axel_spacer_entities.Add(s2);
                     axel_spacer_entities.Add(anchorShaft);

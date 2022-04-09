@@ -210,7 +210,7 @@ namespace Kinergy.KineticUnit
 
                 if (isSpeedChange)
                 {
-                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod, 0.3);
+                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod);
                     List<Gear> gears = _helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4);
                     AddGears(gears, axel_spacer_entities, selectedGearTrainParam);
                 }

@@ -919,7 +919,7 @@ namespace ConRotation
                 motion.SetEndEffectors(endEffectorState,ees);
                 //Generate gear, shaft and spring
                 #region generate all the axels and spacers for the gears
-                axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
+                axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod);//Xia's note: reduced by 0.05 to make tighter
                 #endregion
 
                 #region generate all the gears
@@ -992,7 +992,7 @@ namespace ConRotation
                     Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
                     Shaft newLastShaft = new Shaft(axelStart, axelLen, 2, axelDir);
                     newLastShaft.SetName("MiddleShellBreakerShaft");
-                    Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
+                    Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 4, axelDir);
                     axel_spacer_entities.Add(ShaftSocket);
                     axel_spacer_entities.Add(newLastShaft);
                     axel_spacer_entities.Add(newLastShaftDisc);

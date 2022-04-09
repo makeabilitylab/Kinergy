@@ -203,7 +203,7 @@ namespace Kinergy.KineticUnit
 
                 if (isSpeedChange)
                 {
-                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod, 0.3);
+                    List<Entity> axel_spacer_entities = _helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, _model, motionControlMethod);
                     List<Gear> gears = _helperFun.genGears(selectedGearTrainParam.parameters, motionControlMethod, 0.4, false);
 
                     //delete last shaft and replace with needed structure
@@ -249,7 +249,7 @@ namespace Kinergy.KineticUnit
                         Socket ShaftSocket = new Socket(revoluteJointCenter, axelDir);
                         Shaft newLastShaft = new Shaft(axelStart, axelLen, 2, axelDir);
                         newLastShaft.SetName("MiddleShellBreakerShaft");
-                        Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 3.8, axelDir);
+                        Shaft newLastShaftDisc = new Shaft(axelStart, 1.5, 4, axelDir);
                         axel_spacer_entities.Add(ShaftSocket);
                         axel_spacer_entities.Add(newLastShaft);
                         axel_spacer_entities.Add(newLastShaftDisc);

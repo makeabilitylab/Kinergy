@@ -605,7 +605,7 @@ namespace ConTranslation
                     //gear_info = gear_schemes[schemeNum].parameters[paramNum].parameters;
 
                     #region generate all the axels and spacers for the gears
-                    axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod, 0.3);
+                    axel_spacer_entities = helperFun.genAxelsStoppers(selectedGearTrainParam.parameters, model, motionControlMethod);
                     #endregion
 
                     #region generate all the gears
