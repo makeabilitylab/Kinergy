@@ -90,11 +90,11 @@ namespace Kinergy
                 // constant
                 _p = 2;
                 _t = 0.5;
-                _sliderRadius = 1.5;
+                _sliderRadius = 3;
                 _yokeWidth = 1;
 
                 // calculate
-                _blockLen = 4 * _sliderRadius;
+                _blockLen = 6.5 * _sliderRadius;
                 _crankRadius = _amplitude / 2 + _p / 2 + _t + _yokeWidth + _t;
                 _crankLen = _yokeWidth + _t + _p;
                 _connectorLen = sliderLen - _blockLen - _amplitude / 2 - _p / 2 - _t - _crankLen; // sliderLen = _connectorLen + _p + _crankRadius + _blockLen

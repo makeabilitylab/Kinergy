@@ -556,7 +556,7 @@ namespace InterReciprocation
                 innerCavityBox.Inflate(-2);
 
                 BoundingBox innerCavityOriginalBbox = innerCavity.GetBoundingBox(true);
-                double lastShaftInwardOffset = 15;
+                double lastShaftInwardOffset = 20;
                 eeCenPt = innerCavityOriginalBbox.Center + (innerCavityOriginalBbox.Diagonal * mainAxis / 2 - lastShaftInwardOffset) * mainAxis;
 
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
