@@ -311,7 +311,7 @@ namespace Kinergy
                 if (_isMovable)
                 {
                     // drill a central hole so that the gear will be movable on the shaft
-                    double clearance = 0.3;//Xia's note: added 0.1 to this based on experiment result //Xia's note: reduced 0.05*2 to make tighter
+                    double clearance = 0.35;//Xia's note: added 0.1 to this based on experiment result //Xia's note: reduced 0.05*2 to make tighter//Xia's note: enlarged 0.05 for new printing orientation
                     double shaftRadius = 2;
                     double holdRadius = clearance + shaftRadius;
                     Brep holeBrep = Brep.CreatePipe(gearPathCrv, holdRadius, false, PipeCapMode.Round, true, mydoc.ModelAbsoluteTolerance, mydoc.ModelAngleToleranceRadians)[0];

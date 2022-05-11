@@ -80,7 +80,7 @@ namespace KinergyUtilities
         /// <param name="controlType">the selected controlling method: helix or spiral</param>
         /// <param name="clearance">the clearance for printing - 0.3mm</param>
         /// <returns></returns>
-        public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance=0.2)
+        public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance=0.25)
         {
             List<Entity> models = new List<Entity>();
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
@@ -89,7 +89,7 @@ namespace KinergyUtilities
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-            double rad1 =2;
+            double rad1 = 2;
             double rad2 = 2.7;
             double rad3 = 3.5;
 
