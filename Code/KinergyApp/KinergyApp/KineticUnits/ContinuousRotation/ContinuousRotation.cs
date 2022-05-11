@@ -51,7 +51,8 @@ namespace Kinergy.KineticUnit
         private Gear lastGear;
         private List<Entity> springPartList;
         private List<Entity> _axelsStoppers = new List<Entity>();
-        private Helix _spring;
+        private Helix _helical=null;
+        private Spiral _spiral=null;
         private Rack endEffectorRack = null;
         private List<Entity> endEffectorRackConfiningStructure = new List<Entity>();
         private Entity endEffectorConnectingStructure = null;
@@ -91,6 +92,7 @@ namespace Kinergy.KineticUnit
         List<Lock> locks = new List<Lock>();
         Brep cutBarrel;
         Brep addBarrel;
+        Entity _addBarrelEntity = null;
         Shaft firstGearShaft;
         LockSelectionForSpiralSpring lockSelection;
         int motionControlMethod; // 1: press; 2: turn
@@ -170,6 +172,7 @@ namespace Kinergy.KineticUnit
             {
                 isRoundChange = true;
                 old_roundValue = roundLevel;
+                _distance = roundLevel;
             }
 
             if (energyLevel != old_energyValue)
@@ -337,6 +340,10 @@ namespace Kinergy.KineticUnit
                     springPartList = new List<Entity>();
                 }
                 springPartList.Add(springPart);
+                if (springPart.GetType() == typeof(Helix))
+                    _helical = (Helix)springPart;
+                if (springPart.GetType() == typeof(Spiral))
+                    _spiral = (Spiral)springPart;
             }
         }
         public void AddGears(List<Gear> gears, List<Entity> axelsStoppers, GearTrainParam gearParam)
@@ -365,7 +372,26 @@ namespace Kinergy.KineticUnit
                 _axelsStoppers.Add(e);
                 entityList.Add(e);
             }
-            //TODO register connecting relations
+            #region register fixations if executed for the first time
+            //register connecting relations. Just connect the first and last gear since engagement inside gear train is already registered.
+            Shaft firstShaft = null;
+            foreach (Entity e in entityList)
+            {
+                if (e.Name == "SpiralShaft")
+                    firstShaft = (Shaft)e;
+            }
+            Shaft lastShaft = null;
+            foreach (Entity e in entityList)
+            {
+                if (e.Name == "MiddleShellBreakerShaft")
+                    lastShaft = (Shaft)e;
+            }
+            if (firstShaft != null && lastShaft != null)
+            {
+                _ = new Fixation(_gears[0], firstShaft);
+                _ = new Fixation(_gears.Last(), lastShaft);
+            }
+            #endregion
         }
 
         public void ConstructLocks(Vector3d transDir, List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, List<Entity> spring_entities, int motionControlMethod)
@@ -458,7 +484,10 @@ namespace Kinergy.KineticUnit
                 locks.Add(helicalSpringLockBase);
                 locks.Add(helicalSpringLockHead);
                 helicalSpringLockBase.RegisterOtherPart(helicalSpringLockHead);
-
+                Brep addBarrelBrep = addBarrel.DuplicateBrep();
+                addBarrelBrep.Transform(Transform.Translation(new Vector3d(0, 0, 3)));
+                _addBarrelEntity = new Entity(addBarrelBrep);
+                entityList.Add(_addBarrelEntity);
                 //ToDo add two end-effector case -- translate the entire lock and the spring
             }
             else
@@ -531,7 +560,7 @@ namespace Kinergy.KineticUnit
                     addBarrel.Transform(Transform.Translation(transDir));
                     cutBarrel.Transform(Transform.Translation(transDir));
                 }
-
+                lockBase._lockOffsetVector = transDir;
                 lockBase.SetName("lockBase");
 
                 //Entity tempAddBarrel = new Entity(addBarrel, false, "lockBarrel");
@@ -550,10 +579,13 @@ namespace Kinergy.KineticUnit
                 locks.Add(LockHead);
                 locks.Add(lockBase);
                 LockHead.RegisterOtherPart(lockBase);
-
+                Brep addBarrelBrep = addBarrel.DuplicateBrep();
+                addBarrelBrep.Transform(Transform.Translation(new Vector3d(0, 0, 3)));
+                _addBarrelEntity = new Entity(addBarrelBrep);
+                entityList.Add(_addBarrelEntity);
                 foreach (Entity en in entityList)
                 {
-                    if (en.Name.Equals("MiddleShellBreakerShaft"))
+                    if (en.Name.Equals("SpiralShaft"))
                     {
                         firstGearShaft = (Shaft)en;
                         _ = new Fixation(firstGearShaft, LockHead);
@@ -629,6 +661,9 @@ namespace Kinergy.KineticUnit
 
         public void Set3Parts(double T1, double T2, Brep B1, Brep B2, Brep B3)
         {
+            entityList.Remove(p1);
+            entityList.Remove(p2);
+            entityList.Remove(p3);
             t1 = T1;
             t2 = T2;
             if (t1 > t2)
@@ -649,9 +684,12 @@ namespace Kinergy.KineticUnit
                 b1 = b3;
                 b3 = t;
             }
-            entityList.Remove(p1);
-            entityList.Remove(p2);
-            entityList.Remove(p3);
+            p1 = new Entity(b1);
+            p2 = new Entity(b2);
+            p3 = new Entity(b3);
+            entityList.Add(p1);
+            entityList.Add(p2);
+            entityList.Add(p3);
         }
         public void Set3Axis(Vector3d main,Vector3d perp,Vector3d shaft)
         {
@@ -679,9 +717,18 @@ namespace Kinergy.KineticUnit
             endEffectors.Clear();
             foreach(Brep b in ees)
             {
-                Entity ee = new Entity(b, false, "endEffector");
-                entityList.Add(ee);
-                endEffectors.Add(ee);
+                if (eeState == 2)
+                {
+                    Wheel ee = new Wheel(b,this);
+                    entityList.Add(ee);
+                    endEffectors.Add(ee);
+                }
+                else
+                {
+                    Entity ee = new Entity(b, false, "endEffector");
+                    entityList.Add(ee);
+                    endEffectors.Add(ee);
+                }
             }
             if (eeState == 1)
                 ee1Model = ees[0];
@@ -693,6 +740,7 @@ namespace Kinergy.KineticUnit
         }
         public void CreateShell(Brep socketBrep)
         {
+            entityList.Remove(_addBarrelEntity);
             double shellThickness = 2;
             Brep part2=b2.DuplicateBrep();
             part2.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
@@ -705,7 +753,7 @@ namespace Kinergy.KineticUnit
 
             foreach (Entity e in entityList)
             {
-                if (e.Name == "MiddleShellBreakerShaft")
+                if (e.Name == "MiddleShellBreakerShaft" || e.Name == "SpiralShaft")
                 {
                     Shaft s = (Shaft)e;
                     //Plane p = new Plane(s.StartPt, s.AxisDir);
@@ -968,31 +1016,64 @@ namespace Kinergy.KineticUnit
             else
             {
                 // spiral
-                //Movement twist = new Movement(shaftRodShape, 2, 2* Math.PI, Transform.Rotation(2*Math.PI, direction, springSCenter));
-                //twist.Activate();
-                //locks[0].SetLocked();
-                //Loaded = true;
+                double degree =_distance/ 10.0 * 2 * Math.PI;
+                //Find the first spiral
+                Shaft centerAxis = null;
+                foreach(Entity e in entityList)
+                {
+                    if (e.Name == "SpiralShaft")
+                        centerAxis = (Shaft)e;
+                }
+                if (centerAxis == null)
+                    return false;
+                if (_spiral.Constraints.Count == 0)
+                    _ = new Fixation(centerAxis, _spiral);
+                Shaft lastShaft = null;
+                foreach (Entity e in entityList)
+                {
+                    if (e.Name == "MiddleShellBreakerShaft")
+                        lastShaft = (Shaft)e;
+                }
+                if (lastShaft == null)
+                    return false;
+                foreach(Entity e in endEffectors)
+                {
+                    if (e.Constraints.Count == 0)
+                        _ = new Fixation(e, lastShaft);
+                }
+                
+                Movement twist = new Movement(_spiral, 4, degree, Transform.Identity);
+                twist.Activate();
+                locks[0].SetLocked();
+                Loaded = true;
                 return true;
             }
            
         }
         public override bool Trigger()
         {
-            return true;
+            Loaded =false;
+            return locks[0].ActivateWithoutInteraction();
             //return locks[0].Activate();//Create point and wait for selection
         }
         public override bool TriggerWithoutInteraction()
         {
-            return true;
-            //return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
+            //return true;
+            Loaded = false;
+            return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
         }
         public override Movement Simulate(double interval = 20, double precision = 0.01)
         {
-            Movement m = null;
-            //TODO add simulation process
-            //m = spring.Activate(interval);
-            //m.Activate();
-            return m;
+            if (motionControlMethod == 2)
+            {
+                Movement m = null;
+                //TODO add simulation process
+                m = _spiral.Activate(interval);
+                
+                m.Activate();
+                return m;
+            }
+            return null;
         }
 
 

@@ -685,8 +685,8 @@ namespace ConRotation
 
                         brepCut = Helpers.cutModel(model, skeleton, t1, t2, selectedAxisVector, myDoc);
                         innerCavity = Helpers.getInnerCavity(brepCut, selectedAxisVector);
-                        myDoc.Objects.Add(innerCavity);
-                        myDoc.Views.Redraw();
+                        //myDoc.Objects.Add(innerCavity);
+                        //myDoc.Views.Redraw();
                         processingwin.Hide();
 
                         myDoc.Objects.Hide(selObjId, true);
@@ -882,7 +882,11 @@ namespace ConRotation
                                     gr_list.Add(gtp.gearRatio);
                             }
                             else
-                                gr_list.Add(gtp.gearRatio);
+                            {
+                                if(gtp.gearSetNumber<=3)
+                                    gr_list.Add(gtp.gearRatio);
+                            }
+                                
                         }
                     }
 
@@ -1791,6 +1795,7 @@ namespace ConRotation
                         this.ExpirePreview(true);
                     }
                 }
+                toPreview = false;
             }
 
 

@@ -23,6 +23,7 @@ namespace Kinergy.Geom
         private bool isRachetLockHead = false;
         private Brep _handler, _beam, _axis;
         Vector3d _lockMoveVector;
+        public Vector3d _lockOffsetVector=Vector3d.Zero;
 
         // the detent (the lock base) of the lock for the helical spring
         public Lock(Point3d lockPos, Vector3d shaftDir, Vector3d mainDir, Vector3d rackDir, double maxDis)
@@ -594,8 +595,9 @@ namespace Kinergy.Geom
             _beam = beam;
             _axis = centralAxis;
             _handler = handler;
-            _lockMoveVector = centerLinkDirection * (2 * hookRadius + moveDis);
-            
+            _lockMoveVector = centerLinkDirection * 7.2;//Xia's note: hacked here to avoid bug
+            //_lockMoveVector = centerLinkDirection * (2 * hookRadius + moveDis);//Xia's note: hacked here to avoid bug
+
             #endregion
             return JoinRachetLockHeadBrep(isLocked,myDoc);
         }
@@ -609,6 +611,7 @@ namespace Kinergy.Geom
 
             if (isLocked)
                 lockBasedBrep.Transform(Transform.Translation(_lockMoveVector));
+            lockBasedBrep.Transform(Transform.Translation(_lockOffsetVector));
             return lockBasedBrep;
         }
         public static Brep BuildRatchetLockPlate(Point3d CenterPoint, Vector3d direction, double radius,bool reverse=false, double thickness=4)
