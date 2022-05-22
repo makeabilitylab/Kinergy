@@ -584,7 +584,7 @@ namespace InterOscillation
                 //Offset inner cavity by 2mm
                 innerCavityBox.Inflate(-2);
                 // gear's facewidth is fixed for our project except for the first gear in the gear train
-                double lgcInwardOffset =12;
+                double lgcInwardOffset =18;
                 //myDoc.Objects.AddBox(innerCavityBox, blueAttribute);
                 //myDoc.Objects.AddPoint(eeCenPt - mainAxis * lgcInwardOffset, blueAttribute);
                 //myDoc.Views.Redraw();

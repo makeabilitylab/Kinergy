@@ -298,8 +298,8 @@ namespace Kinergy
                 Point3d anchorDirPoint1 = anchorCenter + _oscillationAxisCen * LeverLen;
                 Point3d anchorDirPoint2 = anchorCenter + _oscillationAxisCen * LeverLen;
                 double angle =Math.Asin(_crankRadius/(WheelRadius*1.5));
-                anchorDirPoint1.Transform(Transform.Rotation(angle+0.05, WheelAxisDir, anchorCenter));
-                anchorDirPoint2.Transform(Transform.Rotation(-angle-0.05, WheelAxisDir, anchorCenter));
+                anchorDirPoint1.Transform(Transform.Rotation(angle+0.1, WheelAxisDir, anchorCenter));
+                anchorDirPoint2.Transform(Transform.Rotation(-angle-0.1, WheelAxisDir, anchorCenter));
                 List<Point3d> sectionLinePts = new List<Point3d> { anchorCenter,anchorDirPoint1,anchorDirPoint2, anchorCenter, };
                 Polyline section = new Polyline(sectionLinePts);
                 Curve sectionCurve = section.ToNurbsCurve();
