@@ -27,9 +27,8 @@ namespace Kinergy.Geom
             KU = parent;
             Generate();
         }
-        public Wheel(Brep inputWheelBrep, Line dir, KineticUnit.KineticUnit parent)
+        public Wheel(Brep inputWheelBrep,  KineticUnit.KineticUnit parent)
         {
-            direction = dir;
             radius = 22.5;
             Model = inputWheelBrep;
             KU = parent;
@@ -56,7 +55,7 @@ namespace Kinergy.Geom
         }
         protected override void ConductMoveAndUpdateParam(Movement move)
         {
-            KU.Translate(-move.MovementValue * radius*5);
+            KU.Translate(-10*Math.Abs( move.MovementValue) * radius);
         }
 
     }

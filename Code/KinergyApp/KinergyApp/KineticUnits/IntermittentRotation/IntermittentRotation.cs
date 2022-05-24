@@ -546,7 +546,7 @@ namespace Kinergy.KineticUnit
 
                 foreach (Entity en in entityList)
                 {
-                    if (en.Name.Equals("MiddleShellBreakerShaft"))
+                    if (en.Name.Equals("SpiralShaft"))
                     {
                         firstGearShaft = (Shaft)en;
                         _ = new Fixation(firstGearShaft, LockHead);
@@ -782,7 +782,7 @@ namespace Kinergy.KineticUnit
 
             foreach (Entity e in entityList)
             {
-                if (e.Name == "MiddleShellBreakerShaft")
+                if (e.Name == "MiddleShellBreakerShaft" || e.Name == "SpiralShaft")
                 {
                     Shaft s = (Shaft)e;
                     Plane p = new Plane(s.StartPt, s.AxisDir);

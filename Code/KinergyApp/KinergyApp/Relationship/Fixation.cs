@@ -76,6 +76,13 @@ namespace Kinergy
                     Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue);
                     return transmittedMovement.Activate();
                 }
+                else if (move.Type == 2 && move.Obj.GetType() == typeof(Gear))
+                {
+                    Gear g1 =(Gear) move.Obj;
+                    Entity obj2 = base.TheOtherEntity(move.Obj);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue, Transform.Identity);
+                    return transmittedMovement.Activate();
+                }
                 if (move.Type == 2 && base.TheOtherEntity(move.Obj).GetType() == typeof(Spiral))
                 {
                     Spiral s = (Spiral)base.TheOtherEntity(move.Obj);

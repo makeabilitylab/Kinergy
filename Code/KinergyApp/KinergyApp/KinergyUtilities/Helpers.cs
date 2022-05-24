@@ -4,6 +4,7 @@ using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Kinergy.Relationship;
 
 namespace KinergyUtilities
 {
@@ -79,7 +80,7 @@ namespace KinergyUtilities
         /// <param name="controlType">the selected controlling method: helix or spiral</param>
         /// <param name="clearance">the clearance for printing - 0.3mm</param>
         /// <returns></returns>
-        public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance=0.2)
+        public List<Entity> genAxelsStoppers(List<GearParameter> gear_info, Brep body, int controlType, double clearance=0.25)
         {
             List<Entity> models = new List<Entity>();
             RhinoDoc myDoc = RhinoDoc.ActiveDoc;
@@ -88,7 +89,7 @@ namespace KinergyUtilities
             sweep.ClosedSweep = false;
             sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-            double rad1 =2;
+            double rad1 = 2;
             double rad2 = 2.7;
             double rad3 = 3.5;
 
@@ -342,7 +343,7 @@ namespace KinergyUtilities
                     Shaft lockAxelShaftDisc = new Shaft(shaftStartPt, 2, 3.8, firstGearDir);
                     models.Add(lockAxelShaftDisc);
 
-                    lockAxelShaft.SetName("MiddleShellBreakerShaft");
+                    lockAxelShaft.SetName("SpiralShaft");
 
                     Point3d handlerPt = shaftEndPt + firstGearDir * 3;
                     Plane handlerPln = new Plane(handlerPt, firstGearDir);
@@ -363,7 +364,7 @@ namespace KinergyUtilities
                     Point3d shaftEndPt = lockPtEnd;
                     Shaft lockAxelShaft = new Shaft(shaftStartPt, shaftStartPt.DistanceTo(shaftEndPt), rad1, firstGearDir);
 
-                    lockAxelShaft.SetName("MiddleShellBreakerShaft");
+                    lockAxelShaft.SetName("SpiralShaft");
 
                     models.Add(lockAxelShaft);
 
@@ -403,6 +404,7 @@ namespace KinergyUtilities
             {
                 // press control with helix springs
                 bool isGroove = false;
+                Gear prevGear = null;
                 foreach (GearParameter gp in gear_info)
                 {
                     int numTeeth = (int)(gp.radius * 2);
@@ -429,6 +431,7 @@ namespace KinergyUtilities
                         Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
                         newGear.Generate();
                         models.Add(newGear);
+                        prevGear = newGear;
                     }
                     else if(gear_info.IndexOf(gp) == 1)
                     {
@@ -448,9 +451,12 @@ namespace KinergyUtilities
                         Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
                         newGear.Generate();
                         models.Add(newGear);
+                        _ = new Fixation(newGear, prevGear);
+                        prevGear = newGear;
                     }
                     else
                     {
+
                         if (isGroove)
                         {
                             selfRotationAngle = 90;
@@ -472,12 +478,18 @@ namespace KinergyUtilities
                             newGear = new Gear(gp.center, gp.norm, gp.xDirection, numTeeth, 1, 20, gp.faceWidth, selfRotationAngle, true);
                         newGear.Generate();
                         models.Add(newGear);
+                        if(gp.PinionOrBull==1)
+                            _ = new Fixation(newGear, prevGear);
+                        else
+                            _ = new Engagement(newGear, prevGear);
+                        prevGear = newGear;
                     } 
                 }
             }
             else
             {
                 // turn control with spiral springs
+                Gear prevGear = null;
                 bool isGroove = false;
                 foreach (GearParameter gp in gear_info)
                 {
@@ -509,6 +521,7 @@ namespace KinergyUtilities
                             Gear newGear = new Gear(gp.center, gp.norm, gp.xDirection, (int)(gp.radius * 2), 1, 20, gp.faceWidth, selfRotationAngle, false);
                             newGear.Generate();
                             models.Add(newGear);
+                            prevGear = newGear;
                         }
                         else
                         {
@@ -534,6 +547,11 @@ namespace KinergyUtilities
                            
                             newGear.Generate();
                             models.Add(newGear);
+                            if (gp.PinionOrBull == 1)
+                                _ = new Fixation(newGear, prevGear);
+                            else
+                                _ = new Engagement(newGear, prevGear);
+                            prevGear = newGear;
                         }
                     }
                 }
