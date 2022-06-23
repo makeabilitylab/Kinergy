@@ -77,8 +77,8 @@ namespace Kinergy
                 if (BrepSolidOrientation.Inward == b.SolidOrientation)
                     b.Flip();
 
-                Brep spacerBrep = Brep.CreateBooleanUnion(new List<Brep> { ringBrep, b }, _myDoc.ModelAbsoluteTolerance)[0];
-
+                //Brep spacerBrep = Brep.CreateBooleanUnion(new List<Brep> { ringBrep, b }, _myDoc.ModelAbsoluteTolerance)[0];
+                Brep spacerBrep = spacerOuterBrep;
                 base.Model = spacerBrep;
             }
         }

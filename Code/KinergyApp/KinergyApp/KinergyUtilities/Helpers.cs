@@ -735,6 +735,7 @@ namespace KinergyUtilities
                 Line baseTraj = new Line(basePos, basePos + mainAxis * baseThickness);
                 Curve baseCrv = baseTraj.ToNurbsCurve();
                 Brep baseBrep = Brep.CreatePipe(baseCrv, baseR, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                //myDoc.Objects.AddBrep(baseBrep);
                 baseBrep.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == baseBrep.SolidOrientation)
                     baseBrep.Flip();
@@ -777,26 +778,41 @@ namespace KinergyUtilities
 
                 // add the barrel
 
-                double barrelThickness = 2;
+                double barrelThickness = 1;
                 double protrusionLen = 20;
                 double tolerance = 0.4;
-                Point3d b_pt1 = rackStartPt - shaftDir * (tolerance + barrelThickness) + rkDir * (rkTeethHeight + tolerance + barrelThickness);
-                Point3d b_pt2 = rackStartPt + shaftDir * (gearThickness + tolerance + barrelThickness) + rkDir * (rkTeethHeight + tolerance + barrelThickness);
-                Point3d b_pt3 = rackStartPt + shaftDir * (gearThickness + tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
-                Point3d b_pt4 = rackStartPt - shaftDir * (tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
-                Point3d b_pt5 = b_pt1;
+                //Find the closest point on base plane to rack center.
+                Point3d baseRackPt = basePos-(basePos - rackStartPt) + (basePos - rackStartPt) * mainAxis * mainAxis;
+                //Point3d b_pt1 = baseRackPt - shaftDir * (tolerance + barrelThickness) + rkDir * (rkTeethHeight + tolerance + barrelThickness);
+                //Point3d b_pt2 = baseRackPt + shaftDir * (gearThickness + tolerance + barrelThickness) + rkDir * (rkTeethHeight + tolerance + barrelThickness);
+                //Point3d b_pt3 = baseRackPt + shaftDir * (gearThickness + tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
+                //Point3d b_pt4 = baseRackPt - shaftDir * (tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
+                //Point3d b_pt5 = b_pt1;
+                //Change the barrel to just upper half and 2 sides
+                Point3d b_pt1 = baseRackPt - shaftDir * (tolerance + barrelThickness) ;
+                Point3d b_pt2 = baseRackPt - shaftDir * (tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
+                Point3d b_pt3 = baseRackPt + shaftDir * (gearThickness + tolerance + barrelThickness) - rkDir * (springPadThickness + tolerance + barrelThickness);
+                Point3d b_pt4 = baseRackPt + shaftDir * (gearThickness + tolerance + barrelThickness);
+                Point3d b_pt5 = baseRackPt + shaftDir * (gearThickness + tolerance );
+                Point3d b_pt6 = baseRackPt + shaftDir * (gearThickness + tolerance) - rkDir * (springPadThickness + tolerance);
+                Point3d b_pt7 = baseRackPt - shaftDir * (tolerance ) - rkDir * (springPadThickness + tolerance);
+                Point3d b_pt8 = baseRackPt - shaftDir * (tolerance );
+                Point3d b_pt9 = b_pt1;
 
                 List<Point3d> barrelConnector = new List<Point3d>();
                 barrelConnector.Add(b_pt1);
                 barrelConnector.Add(b_pt2);
                 barrelConnector.Add(b_pt3);
                 barrelConnector.Add(b_pt4);
-                barrelConnector.Add(b_pt1);
-
+                barrelConnector.Add(b_pt5);
+                barrelConnector.Add(b_pt6);
+                barrelConnector.Add(b_pt7);
+                barrelConnector.Add(b_pt8);
+                barrelConnector.Add(b_pt9);
                 Polyline barrelRect = new Polyline(barrelConnector);
                 Curve barrelRectCrv = barrelRect.ToNurbsCurve();
 
-                Line barrelLn = new Line(basePos - mainAxis * protrusionLen, basePos + mainAxis * wireRadius);
+                Line barrelLn = new Line( baseRackPt - mainAxis * 10,rackEndPt - mainAxis * 5);
                 Curve barrelCrv = barrelLn.ToNurbsCurve();
 
                 Brep[] barrelBreps = sweep.PerformSweep(barrelCrv, barrelRectCrv);
@@ -806,7 +822,7 @@ namespace KinergyUtilities
                 barrel.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == barrel.SolidOrientation)
                     barrel.Flip();
-
+                //myDoc.Objects.AddBrep(barrel);
 
 
 
@@ -847,7 +863,8 @@ namespace KinergyUtilities
                 if (BrepSolidOrientation.Inward == baseBrepFinal.SolidOrientation)
                     baseBrepFinal.Flip();
 
-                Brep barrelBrepFinal = Brep.CreateBooleanDifference(barrel, rkDeductDup, myDoc.ModelAbsoluteTolerance)[0];
+                //Brep barrelBrepFinal = Brep.CreateBooleanDifference(barrel, rkDeductDup, myDoc.ModelAbsoluteTolerance)[0];
+                Brep barrelBrepFinal = barrel;
                 barrelBrepFinal.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == barrelBrepFinal.SolidOrientation)
                     barrelBrepFinal.Flip();
@@ -862,7 +879,6 @@ namespace KinergyUtilities
                 models.Add(cenRack);
 
                 #endregion
-
                 #endregion
 
             }

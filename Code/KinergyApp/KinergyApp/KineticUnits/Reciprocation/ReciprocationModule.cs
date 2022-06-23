@@ -599,7 +599,7 @@ namespace InterReciprocation
                             }
                             else
                             {
-                                if (gtp.gearSetNumber > 1)
+                                if (gtp.gearSetNumber > 1 && gtp.gearSetNumber <=2)
                                     gr_list.Add(gtp.gearRatio);
                             }
                                 
