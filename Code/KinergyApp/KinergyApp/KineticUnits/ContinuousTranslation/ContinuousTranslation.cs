@@ -742,6 +742,7 @@ namespace Kinergy.KineticUnit
             }
             #endregion
             endEffectorRack = rack;
+            _ = new Engagement(lastGear, endEffectorRack);
             if(connectingStructure!=null)
                 endEffectorConnectingStructure = new Entity(connectingStructure, false, "connecting structure");
             foreach (Brep b in constrainingStructure)
@@ -1147,37 +1148,75 @@ namespace Kinergy.KineticUnit
             }
         }
 
-        //public void GenerateSpringMotor(Point3d eeCen, int speed_input, int dis_input, int energy_input)
-        //{
-        //    double shaftNum = 0;
-        //    double gearRadius = 0;
-        //    double clearance = 0.3;
-        //    CalculateShaftNumAndGearRadius(speed_input, out shaftNum, out gearRadius);
+        public override bool LoadKineticUnit()
+        {
+            Movement compression;
+            if (_inputType==1)
+            {
+                Helix h = null;
+                foreach(Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
+                
+                compression = new Movement(h, 3, -h.Length * _distance*0.9);
+                //h.SetMovement(compression);
+                compression.Activate();
+            }
+            else if(_inputType == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                double degree = _distance / 10.0 * 2 * Math.PI;
+                compression = new Movement(s, 4, degree);
+                //s.SetMovement(compression);
+                compression.Activate();
+            }
+            if(locks.Count>0)
+                locks[0].SetLocked();
+            Loaded = true;
+            return true;
+        }
+        public override bool Trigger()
+        {
+            return locks[0].Activate();//Create point and wait for selection
+        }
+        public override bool TriggerWithoutInteraction()
+        {
+            return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
+        }
+        public override Movement Simulate(double interval = 20, double precision = 0.01)
+        {
+            Movement m = null;
+            if (_inputType == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
 
-        //    double dis = clearance + 4.5 + (shaftNum - 1) * (gearRadius + clearance + 4.5);
-
-        //    double t = 0;
-        //    _skeleton.ClosestPoint(eeCen, out t);
-        //    if (t > 0.5)
-        //    {
-        //        dis = -dis;
-        //    }
-        //    Point3d enginePos = eeCen + direction * dis;
-            
-
-        //    if (_inputType == 1)
-        //    {
-        //        // press control
-
-
-
-        //    }
-        //    else
-        //    {
-        //        // turn control
-
-        //    }
-
-        //}
+                m = h.Activate(interval);
+                m.Activate();
+            }
+            else if (_inputType == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                m = s.Activate(interval);
+                m.Activate();
+            }
+            return m;
+        }
     }
 }

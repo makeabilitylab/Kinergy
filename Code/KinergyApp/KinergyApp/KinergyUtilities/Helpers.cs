@@ -771,7 +771,8 @@ namespace KinergyUtilities
                 cenRack.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
                 if (BrepSolidOrientation.Inward == cenRack.Model.SolidOrientation)
                     cenRack.Model.Flip();
-
+                _ = new Engagement(cenRack, firstPinion);
+                _ = new Fixation(helical, cenRack);
                 #endregion
 
                 #region prepare the holes for boolean difference

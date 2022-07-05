@@ -117,10 +117,12 @@
     <Compile Include="Geometry\Cam.cs" />
     <Compile Include="Geometry\Component.cs" />
     <Compile Include="Geometry\CranSlottedLever.cs" />
+    <Compile Include="Geometry\DrivingWheel.cs" />
     <Compile Include="Geometry\Entity.cs" />
     <Compile Include="Geometry\Follower.cs" />
     <Compile Include="Geometry\Gear.cs" />
     <Compile Include="Geometry\GenevaDrive.cs" />
+    <Compile Include="Geometry\GenevaDrivenWheel.cs" />
     <Compile Include="Geometry\Helix.cs" />
     <Compile Include="Geometry\Lock.cs" />
     <Compile Include="Geometry\QuickReturn.cs" />
@@ -132,6 +134,7 @@
     <Compile Include="Geometry\Spacer.cs" />
     <Compile Include="Geometry\Spiral.cs" />
     <Compile Include="Geometry\Wheel.cs" />
+    <Compile Include="Geometry\YokeSlider.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateBorder_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateExpander_Component.cs" />
     <Compile Include="HumanUIforKinergy\Components\UI Containers\CreateGrid_Component.cs" />
