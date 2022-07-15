@@ -157,6 +157,7 @@ namespace Kinergy
                                             (16 * Math.Pow(springRadius * 2, 3) * roundNumMin);
    
                 double strengthCurr = strengthMin + (strengthMax - strengthMin) * strength;
+                strengthCurr = strengthCurr * 1.5;
 
 
                 // Test if wire radius is valid
