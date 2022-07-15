@@ -491,7 +491,7 @@ namespace InterReciprocation
 
                     #region Step 5: create an instance of Continuous Translation class
 
-                    motion = new Reciprocation(model, direction,  energy_input,  speed_input,innerCavity);//TODO adjust
+                    motion = new Reciprocation(model, direction,  energy_input,  speed_input,stroke_input,innerCavity,motionControlMethod);//TODO adjust
 
                     motion.Set3Parts(t1, t2, brepCut[0], brepCut[1], brepCut[2]);
 
@@ -523,7 +523,7 @@ namespace InterReciprocation
                     warningwin.Show();
                 }
 
-                motion.SetEndEffector(eeModel);
+                //motion.SetEndEffector(eeModel);
                 toGenerateMechanism = true;
             }
             if(toGenerateMechanism)
@@ -679,7 +679,7 @@ namespace InterReciprocation
                     Vector3d bbTranslation = mainAxis * (mainAxis * (bboxMid.Max - bboxbb.Min));
                     bb.Transform(Transform.Translation(bbTranslation));
                     bearingBlock = new Entity(bb, false, "Bearing block");
-                    motion.AddQuickReturn(crankWheel, yokeSlider, bearingBlock,stopWall,slider);
+                    motion.AddQuickReturn(crankWheel, yokeSlider, bearingBlock,stopWall,slider,qr);
 
                     #region Find last shaft and replace it with 2 one sided shaft for quick return
                     Shaft lastShaft = null;

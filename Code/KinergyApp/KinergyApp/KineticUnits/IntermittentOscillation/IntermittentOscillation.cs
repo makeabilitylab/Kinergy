@@ -140,8 +140,9 @@ namespace Kinergy.KineticUnit
         Entity ee = null;
         CrankSlottedLever crankSlottedLever = null;
         Entity CSLwheel = null;
-        Entity CSLlever = null;
+        Lever CSLlever = null;
         Entity CSLstopwall = null;
+        DrivingWheel CSLDrivingWheel = null;
 
         LockSelectionForSpiralSpring lockSelection;
         Point3d helicalSpringLockPos = new Point3d();
@@ -474,6 +475,7 @@ namespace Kinergy.KineticUnit
             entityList.Remove(CSLlever);
             entityList.Remove(CSLstopwall);
             entityList.Remove(CSLwheel);
+            entityList.Remove(CSLDrivingWheel);
             Brep wheel = CSL.CrankSlottedLeverModels[0];
             Brep pin = CSL.CrankSlottedLeverModels[1];
             Brep lever = CSL.CrankSlottedLeverModels[2];
@@ -481,11 +483,14 @@ namespace Kinergy.KineticUnit
             crankSlottedLever = CSL;
             Brep wheelpin = Brep.CreateBooleanUnion(new List<Brep> { wheel, pin }, myDoc.ModelAbsoluteTolerance)[0];
             CSLwheel = new Entity(wheelpin,false,"CSLwheel");
-            CSLlever = new Entity(lever, false, "CSLlever");
+            CSLlever = CSL.lever;
             CSLstopwall = new Entity(stopwall, false, "CSLstopwall");
+            CSLDrivingWheel = CSL.drivingWheel;
+            _ = new Engagement(CSLlever, CSLDrivingWheel);
             entityList.Add(CSLwheel);
             entityList.Add(CSLstopwall);
             entityList.Add(CSLlever);
+            entityList.Add(CSLDrivingWheel);
         }
         public void CreateShell(Brep socketBrep)
         {
@@ -715,7 +720,69 @@ namespace Kinergy.KineticUnit
             entityList.Add(p2);
             //p3 = new Entity(part3);
             //entityList.Add(p3);
+            _ = new Fixation(CSLlever, ee);
+        }
+        public override Movement Simulate(double interval = 20, double precision = 0.01)
+        {
+            Movement m = null;
+            if (_inputType == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
 
+                m = h.Activate(interval);
+                m.Activate();
+            }
+            else if (_inputType == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                m = s.Activate(interval);
+                m.Activate();
+            }
+            return m;
+        }
+        public override bool LoadKineticUnit()
+        {
+            Movement compression;
+            if (_inputType == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
+
+                compression = new Movement(h, 3, -h.Length * _distance * 0.9);
+                //h.SetMovement(compression);
+                compression.Activate();
+            }
+            else if (_inputType == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                double degree = _distance / 10.0 * 2 * Math.PI;
+                compression = new Movement(s, 4, degree);
+                //s.SetMovement(compression);
+                compression.Activate();
+            }
+            if (locks.Count > 0)
+                locks[0].SetLocked();
+            Loaded = true;
+            return true;
         }
         public List<Lock> Locks { get => locks; set => locks = value; }
         public Curve Skeleton { get => skeleton; set => skeleton = value; }

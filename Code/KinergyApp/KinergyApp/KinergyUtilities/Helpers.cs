@@ -351,6 +351,7 @@ namespace KinergyUtilities
                     handlerPlnX.Unitize();
                     Point3d handlerPtNew = handlerPt - handlerPlnX * 1.5;
                     Shaft handlerDisc = new Shaft(handlerPtNew, 3, 5, handlerPlnX);
+                    handlerDisc.SetName("HandlerDisc");
                     models.Add(handlerDisc);
                 }
                 else
@@ -377,6 +378,7 @@ namespace KinergyUtilities
                     handlerPlnX.Unitize();
                     Point3d handlerPtNew = handlerPt - handlerPlnX * 1.5;
                     Shaft handlerDisc = new Shaft(handlerPtNew, 3, 5, handlerPlnX);
+                    handlerDisc.SetName("HandlerDisc");
                     models.Add(handlerDisc);
                 }
                 
@@ -547,7 +549,7 @@ namespace KinergyUtilities
                            
                             newGear.Generate();
                             models.Add(newGear);
-                            if (gp.PinionOrBull == 1)
+                            if (gp.PinionOrBull == 2)
                                 _ = new Fixation(newGear, prevGear);
                             else
                                 _ = new Engagement(newGear, prevGear);

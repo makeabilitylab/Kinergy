@@ -66,21 +66,24 @@ namespace Kinergy
                 if(move.Type==2 && base.TheOtherEntity(move.Obj).GetType()==typeof(Gear) && move.Obj.GetType() == typeof(Gear))
                 {
                     Gear g1=(Gear) move.Obj,g2=(Gear)base.TheOtherEntity(move.Obj);
-                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue);
+                    Transform rotation = Transform.Rotation(move.MovementValue, g2.Direction, g2.CenterPoint);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue,rotation);
                     return transmittedMovement.Activate();
                 }
                 else if (move.Type == 2 && base.TheOtherEntity(move.Obj).GetType() == typeof(Gear))
                 {
                     Entity g1 = move.Obj;
                     Gear g2 = (Gear)base.TheOtherEntity(move.Obj);
-                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue);
+                    Transform rotation = Transform.Rotation(move.MovementValue, g2.Direction, g2.CenterPoint);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue,rotation);
                     return transmittedMovement.Activate();
                 }
                 else if (move.Type == 2 && move.Obj.GetType() == typeof(Gear))
                 {
                     Gear g1 =(Gear) move.Obj;
                     Entity obj2 = base.TheOtherEntity(move.Obj);
-                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue, Transform.Identity);
+                    Transform rotation = Transform.Rotation(move.MovementValue, g1.Direction, g1.CenterPoint);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, move.MovementValue, rotation);
                     return transmittedMovement.Activate();
                 }
                 if (move.Type == 2 && base.TheOtherEntity(move.Obj).GetType() == typeof(Spiral))

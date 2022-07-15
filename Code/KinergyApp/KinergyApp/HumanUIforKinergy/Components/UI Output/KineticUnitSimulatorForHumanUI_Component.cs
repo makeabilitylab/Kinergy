@@ -81,41 +81,41 @@ namespace HumanUIforKinergy.Components.UI_Output
 
             if (start && isFirstTime)
             {
-                ObjRef objSel_ref1;
-                var rc1 = RhinoGet.GetOneObject("Select the extramodel. ", false, ObjectType.AnyObject, out objSel_ref1);
-                if (rc1 == Rhino.Commands.Result.Success)
-                {
-                    //set up first ee
-                    Guid eeExtra = objSel_ref1.ObjectId;
-                    ObjRef currObj = new ObjRef(eeExtra);
-                    Brep brep = currObj.Brep();
-                    //myDoc.Objects.Hide(ee1, true);
-                    //myDoc.Views.Redraw();
-                    m.EntityList.Add(new Entity(brep));
-                }
-                else
-                {
-                }
-                if (rc1 == Rhino.Commands.Result.Success)
-                {
-                    ObjRef objSel_ref2;
-                    var rc2 = RhinoGet.GetOneObject("Select the second extra model if neeed. Or press Enter to skip this selection and go with one model ", true, ObjectType.AnyObject, out objSel_ref2);
-                    if (rc2 == Rhino.Commands.Result.Success)
-                    {
-                        if (objSel_ref2 == null)
-                        {
-                        }
-                        else
-                        {
-                            Guid eeExtra = objSel_ref2.ObjectId;
-                            ObjRef currObj = new ObjRef(eeExtra);
-                            Brep brep = currObj.Brep();
-                            //myDoc.Objects.Hide(ee1, true);
-                            //myDoc.Views.Redraw();
-                            m.EntityList.Add(new Entity(brep));
-                        }
-                    }
-                }
+                //ObjRef objSel_ref1;
+                //var rc1 = RhinoGet.GetOneObject("Select the extra model. ", true, ObjectType.AnyObject, out objSel_ref1);
+                //if (rc1 == Rhino.Commands.Result.Success)
+                //{
+                //    //set up first ee
+                //    Guid eeExtra = objSel_ref1.ObjectId;
+                //    ObjRef currObj = new ObjRef(eeExtra);
+                //    Brep brep = currObj.Brep();
+                //    //myDoc.Objects.Hide(ee1, true);
+                //    //myDoc.Views.Redraw();
+                //    m.EntityList.Add(new Entity(brep));
+                //}
+                //else
+                //{
+                //}
+                //if (rc1 == Rhino.Commands.Result.Success)
+                //{
+                //    ObjRef objSel_ref2;
+                //    var rc2 = RhinoGet.GetOneObject("Select the second extra model if neeed. Or press Enter to skip this selection and go with one model ", true, ObjectType.AnyObject, out objSel_ref2);
+                //    if (rc2 == Rhino.Commands.Result.Success)
+                //    {
+                //        if (objSel_ref2 == null)
+                //        {
+                //        }
+                //        else
+                //        {
+                //            Guid eeExtra = objSel_ref2.ObjectId;
+                //            ObjRef currObj = new ObjRef(eeExtra);
+                //            Brep brep = currObj.Brep();
+                //            //myDoc.Objects.Hide(ee1, true);
+                //            //myDoc.Views.Redraw();
+                //            m.EntityList.Add(new Entity(brep));
+                //        }
+                //    }
+                //}
                 models = m.GetMeshModel();
                 vp3.Children.Clear();
                 vp3.Children.Add(new SunLight());

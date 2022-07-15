@@ -46,6 +46,8 @@ namespace Kinergy
             private List<Brep> _crankSlottedLeverModels;
             public Brep leverSweepSpace=null;
             public Brep eeSweepSpace=null;
+            public DrivingWheel drivingWheel = null;
+            public Lever lever = null;
             public CrankSlottedLever(Point3d pos, Vector3d axisDir, Vector3d dir, double wheelRadius, double connectorLen)
             {
                 _wheelCen = pos;
@@ -291,6 +293,10 @@ namespace Kinergy
                 _crankSlottedLeverModels.Add(pinSolid);
                 _crankSlottedLeverModels.Add(slottedLeverSolid);
                 _crankSlottedLeverModels.Add(stopWallSolid);
+
+                //Add components. Only lever need the model
+                drivingWheel = new DrivingWheel(null, _wheelCen, _wheelAxisDir, _oscillationAxisCen, _crankRadius, 0);
+                lever = new Lever(slottedLeverSolid,anchorCenter, _wheelAxisDir, _oscillationAxisCen, 0);
             }
             public void AddEndEffector(Brep ee)
             {

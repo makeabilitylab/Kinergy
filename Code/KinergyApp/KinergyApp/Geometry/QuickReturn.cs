@@ -51,6 +51,9 @@ namespace Kinergy
             Brep bearingBlockSolid;
             Brep stopWallSolid;
 
+            public DrivingWheel drivingWheel = null;
+            public YokeSlider yokeSlider = null;
+
             public double Amplitude { get => _amplitude; set => _amplitude = value; }
             public double CrankRadius { get => _crankRadius; set => _crankRadius = value; }
             public double P { get => _p; set => _p = value; }
@@ -332,6 +335,11 @@ namespace Kinergy
                 _quickReturnModels.Add(bearingBlockSolid);
                 _quickReturnModels.Add(stopWallSolid);
 
+                Brep yokeslider = Brep.CreateBooleanUnion(new List<Brep> { yokeSolid, sliderSolid},RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                yokeSlider = new YokeSlider(yokeslider, TrajDir, StartPt - TrajDir * Amplitude/2 );
+                
+                Brep cwpin = Brep.CreateBooleanUnion(new List<Brep> { crankWheelSolid, pinSolid }, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0];
+                drivingWheel = new DrivingWheel(cwpin, StartPt, _axisDir, TrajDir, Amplitude / 2, Math.PI);
             }
         }
     }

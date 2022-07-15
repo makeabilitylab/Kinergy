@@ -26,7 +26,13 @@ namespace Kinergy
 
                 if(!((type1.Equals(typeof(Gear)) && type2.Equals(typeof(Rack))) ||
                     (type1.Equals(typeof(Rack)) && type2.Equals(typeof(Gear))) ||
-                    (type1.Equals(typeof(Gear)) && type2.Equals(typeof(Gear)))))
+                    (type1.Equals(typeof(Gear)) && type2.Equals(typeof(Gear)))||
+                    (type1.Equals(typeof(DrivingWheel)) && type2.Equals(typeof(GenevaDrivenWheel)))||
+                    (type1.Equals(typeof(GenevaDrivenWheel)) && type2.Equals(typeof(DrivingWheel)))||
+                    (type1.Equals(typeof(DrivingWheel)) && type2.Equals(typeof(YokeSlider)))||
+                    (type1.Equals(typeof(YokeSlider)) && type2.Equals(typeof(DrivingWheel))) ||
+                    (type1.Equals(typeof(DrivingWheel)) && type2.Equals(typeof(Lever))) ||
+                    (type1.Equals(typeof(Lever)) && type2.Equals(typeof(DrivingWheel)))))
                 {
                     throw new Exception("Illegal engagement between these two objects!");
                 }
@@ -40,9 +46,40 @@ namespace Kinergy
             }
             public override bool Move(Movement move)
             {
-                Gear g1 = (Gear)move.Obj, g2 = (Gear)base.TheOtherEntity(move.Obj);
-                Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, -move.MovementValue * g1.NumTeeth / g2.NumTeeth); // ToDo: update this
-                return transmittedMovement.Activate();
+                if(move.Obj.GetType()==typeof(Gear) && base.TheOtherEntity(move.Obj).GetType()==typeof(Gear))
+                {
+                    Gear g1 = (Gear)move.Obj, g2 = (Gear)base.TheOtherEntity(move.Obj);
+                    Transform rotation = Transform.Rotation(-move.MovementValue * g1.NumTeeth / g2.NumTeeth, g2.Direction, g2.CenterPoint);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, -move.MovementValue * g1.NumTeeth / g2.NumTeeth,rotation); // ToDo: update this
+                    return transmittedMovement.Activate();
+                }
+                else if(move.Obj.GetType() == typeof(Gear) && base.TheOtherEntity(move.Obj).GetType() == typeof(Rack))
+                {
+                    throw new Exception("Haven't implement gear to rack transmission");
+                }
+                else if(move.Obj.GetType() == typeof(Rack) && base.TheOtherEntity(move.Obj).GetType() == typeof(Gear))
+                {
+                    throw new Exception("Haven't implement rack to gear transmission");
+                }
+                else if(move.Obj.GetType() == typeof(DrivingWheel)&& base.TheOtherEntity(move.Obj).GetType() == typeof(Lever))
+                {
+                    Lever l = (Lever)base.TheOtherEntity(move.Obj);
+                    Movement transmittedMovement = l.solveRotation(move);
+                    return transmittedMovement.Activate();
+                }
+                else if (move.Obj.GetType() == typeof(DrivingWheel) && base.TheOtherEntity(move.Obj).GetType() == typeof(YokeSlider))
+                {
+                    YokeSlider y = (YokeSlider)base.TheOtherEntity(move.Obj);
+                    Movement transmittedMovement = y.SolveSliding(move);
+                    return transmittedMovement.Activate();
+                }
+                else if (move.Obj.GetType() == typeof(DrivingWheel) && base.TheOtherEntity(move.Obj).GetType() == typeof(GenevaDrivenWheel))
+                {
+                    GenevaDrivenWheel g = (GenevaDrivenWheel)base.TheOtherEntity(move.Obj);
+                    Movement transmittedMovement = g.SolveRotation(move);
+                    return transmittedMovement.Activate();
+                }
+                return false;
             }
         }
     }
