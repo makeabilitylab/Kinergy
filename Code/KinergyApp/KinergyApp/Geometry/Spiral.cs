@@ -487,7 +487,7 @@ namespace Kinergy
 
                     thicknessX = (2 - revLevel) * min_strip_thickness;
 
-                    double pitch = energyLevel * (outerRadius - innerRadius) / 3;
+                    double pitch = energyLevel * (outerRadius - innerRadius) / 3 * 1.5;
                     roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
 
                     #endregion
