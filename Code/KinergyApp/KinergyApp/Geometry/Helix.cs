@@ -12,6 +12,7 @@ using Rhino.Collections;
 using Rhino.Input.Custom;
 using Rhino;
 using Kinergy.Relationship;
+using KinergyUtilities;
 
 namespace Kinergy
 {
@@ -390,11 +391,107 @@ namespace Kinergy
                     Offset =Transform.Multiply(Offset, move.Trans);
                 }
             }
-            public void AdjustParameter(double deltaR,int deltaN,double deltaT)
+            public void AdjustParam(Vector3d mainAxis, List<GearParameter> gear_info, Brep body, int eeMovingDirectionSelection, int e, int D, bool dirCtrl, Point3d eePos = new Point3d())
             {
-                deltaSpringRadius = deltaR;
-                deltaRoundNum = deltaN;
-                deltaWireRadius = deltaT;
+                if (gear_info != null)
+                {
+                    // non-instant instances
+                    bool lockNorm = false;
+
+                    double gearThickness = 3.6;
+                    double rkTeethHeight = 2.25;
+
+                    #region Step 1: find the spring position and length
+                    //Now just use first gear center with some offset as the spring end point
+                    Vector3d shaftDir = gear_info[0].center - gear_info[1].center;
+                    shaftDir.Unitize();
+                    //Find the vector that is orthogonal to both the mainAxis and the shaftDir
+                    Vector3d rkDir = Vector3d.CrossProduct(shaftDir, mainAxis);
+                    rkDir.Unitize();
+
+                    if (dirCtrl)
+                    {
+                        rkDir = rkDir;
+                        //lockNorm = false;
+                    }
+                    else
+                    {
+                        rkDir = -rkDir;
+                        //lockNorm = true;
+                    }
+
+                    Point3d springRkGrConPt = new Point3d();
+                    if (lockNorm)
+                        springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight / 2) + shaftDir * gearThickness / 2;
+                    else
+                        springRkGrConPt = gear_info[0].center - rkDir * (gear_info[0].radius + 0.6 + rkTeethHeight / 2) - shaftDir * gearThickness / 2;
+
+                    #region compute spring start point, spring end point, spring length
+
+                    //Find length - 1.5 times the available space
+                    double helicalLengthMultiplier = 1.5;//TODO adjust this value;
+                    Point3d skeletonStartPoint;
+                    if (new Vector3d(skeleton.PointAtNormalizedLength(0)) * mainAxis < new Vector3d(skeleton.PointAtNormalizedLength(1)) * mainAxis)
+                        skeletonStartPoint = skeleton.PointAtNormalizedLength(0);
+                    else
+                        skeletonStartPoint = skeleton.PointAtNormalizedLength(1);
+
+                    double springGearGap = 4;
+                    double availableSpace = gear_info[0].center.DistanceTo(skeletonStartPoint) - gear_info[1].radius - springGearGap;
+                    double helicalLength = availableSpace * helicalLengthMultiplier;
+                    Point3d helicalStartPoint = springRkGrConPt - mainAxis * (helicalLength + gear_info[1].radius + springGearGap);
+                    Point3d helicalEndPoint = helicalStartPoint + mainAxis * helicalLength;
+
+                    length = helicalLength;
+
+                    #endregion
+                    #endregion
+
+                    #region Step 2: calculate spring parameters
+
+                    //double min_wire_diamter = 2;
+                    //double min_coil_num = 2;
+                    //double wireRadius = 2;
+                    //int roundNum = 0;
+                    //double springRadius = 0;
+
+                    //double maxDisp = Math.Max(helicalLength - min_wire_diamter * min_coil_num, min_coil_num * 0.6);
+                    //double dis = (D * 0.05 + 0.5) * maxDisp / helicalLength;     // convert the input displacement level into percentage
+
+                    //// Parse the energy based on E ~= d^4/n * x^2
+                    //double x = dis * helicalLength;
+                    //double energy = e / 10.0;
+
+                    //Curve springCrossLineCrv = new Line(helicalEndPoint - shaftDir * int.MaxValue, helicalEndPoint + shaftDir * int.MaxValue).ToNurbsCurve();
+                    //Curve[] springBodyCrvs;
+                    //Point3d[] springBodyPts;
+                    //Rhino.Geometry.Intersect.Intersection.CurveBrep(springCrossLineCrv, body, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out springBodyCrvs, out springBodyPts);
+
+                    //springRadius = (springBodyPts[0].DistanceTo(springBodyPts[1]) - 2) / 2 - wireRadius - gearThickness / 2;
+
+                    strength = e / 10.0;
+                    maxPressDistance = D / 10.0;
+
+                    #endregion
+
+                    #region Step 3: construct spring and rack
+                    //Helix helical = new Helix(helicalStartPoint, helicalEndPoint, springRadius, wireRadius, roundNum, dis, energy);
+                    //helical.Model.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                    //if (BrepSolidOrientation.Inward == helical.Model.SolidOrientation)
+                    //    helical.Model.Flip();
+                    //models.Add(helical);
+
+                    //// create the cylinder for deduction
+                    //double springSocketRadius = springRadius + wireRadius + 0.6;
+                    //Line socketTraj = new Line(helicalEndPoint - mainAxis * wireRadius, helicalEndPoint - mainAxis * wireRadius - mainAxis * helicalLength * 5);
+                    //Curve socketCrv = socketTraj.ToNurbsCurve();
+                    //helicalSpringSocket = Brep.CreatePipe(socketCrv, springSocketRadius, false, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    //helicalSpringSocket.Faces.SplitKinkyFaces(RhinoMath.DefaultAngleTolerance, true);
+                    //if (BrepSolidOrientation.Inward == helicalSpringSocket.SolidOrientation)
+                    //    helicalSpringSocket.Flip();
+                    Generate();
+                    #endregion
+                }
             }
             public Movement Activate(double interval,double damp=0.05)
             {

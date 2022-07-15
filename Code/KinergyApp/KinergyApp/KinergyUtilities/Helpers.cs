@@ -584,12 +584,12 @@ namespace KinergyUtilities
 
             if (controlType == 1)
             {
+                // helical spring control
                 var sweep = new SweepOneRail();
                 sweep.AngleToleranceRadians = myDoc.ModelAngleToleranceRadians;
                 sweep.ClosedSweep = false;
                 sweep.SweepTolerance = myDoc.ModelAbsoluteTolerance;
 
-                // helical spring control
                 double springPadThickness = 2;
                 double gearThickness = 3.6;
                 double rkTeethHeight = 2.25;
