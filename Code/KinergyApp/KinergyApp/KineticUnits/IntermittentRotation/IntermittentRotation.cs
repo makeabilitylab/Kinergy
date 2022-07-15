@@ -147,7 +147,8 @@ namespace Kinergy.KineticUnit
         private int endEffectorState;
         Brep ee1Model = null, ee2Model = null;
         Entity GDWP = null, GW = null, GS = null;
-
+        DrivingWheel drivingWheel=null;
+        GenevaDrivenWheel drivenWheel = null;
         LockSelectionForSpiralSpring lockSelection;
         Helpers _helperFun;
         int old_speedValue = 5;
@@ -760,17 +761,24 @@ namespace Kinergy.KineticUnit
                 ee2Model = ees[1];
             }
         }
-        public void AddGenevaDrive(Entity GenevaDrivingWheelWithPin,Entity  GenevaWheel,Entity  GenevaStopper)
+        public void AddGenevaDrive(Entity GenevaDrivingWheelWithPin,Entity  GenevaWheel,Entity  GenevaStopper,GenevaDrive drive)
         {
             entityList.Remove(GDWP);
             entityList.Remove(GW);
             entityList.Remove(GS);
+            entityList.Remove(drivingWheel);
+            entityList.Remove(drivenWheel);
             GDWP = GenevaDrivingWheelWithPin;
             GW = GenevaWheel;
             GS = GenevaStopper;
+            drivingWheel = drive.drivingWheel;
+            drivenWheel = drive.drivenWheel;
+            _ = new Engagement(drivingWheel, drivenWheel);
             entityList.Add(GDWP);
             entityList.Add(GW);
             entityList.Add(GS);
+            entityList.Add(drivingWheel);
+            entityList.Add(drivenWheel);
         }
         public void CreateShell(Brep socketBrep)
         {
@@ -932,7 +940,72 @@ namespace Kinergy.KineticUnit
             entityList.Add(p2);
             p3 = new Entity(part3);
             entityList.Add(p3);
+            foreach(Entity e in endEffectors)
+            {
+                _ = new Fixation(e, drivenWheel);
+            }
+        }
+        public override Movement Simulate(double interval = 20, double precision = 0.01)
+        {
+            Movement m = null;
+            if (motionControlMethod == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
 
+                m = h.Activate(interval);
+                m.Activate();
+            }
+            else if (motionControlMethod == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                m = s.Activate(interval);
+                m.Activate();
+            }
+            return m;
+        }
+        public override bool LoadKineticUnit()
+        {
+            Movement compression;
+            if (motionControlMethod == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
+
+                compression = new Movement(h, 3, -h.Length * _distance * 0.9);
+                //h.SetMovement(compression);
+                compression.Activate();
+            }
+            else if (motionControlMethod == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                double degree = _distance / 10.0 * 2 * Math.PI;
+                compression = new Movement(s, 4, degree);
+                //s.SetMovement(compression);
+                compression.Activate();
+            }
+            if (locks.Count > 0)
+                locks[0].SetLocked();
+            Loaded = true;
+            return true;
         }
         public List<Lock> Locks { get => locks; set => locks = value; }
         public List<Shape> ModelCut { get => modelCut; set => modelCut = value; }

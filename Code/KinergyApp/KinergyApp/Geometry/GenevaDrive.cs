@@ -54,6 +54,8 @@ namespace Kinergy
             private Vector3d _trajDir;
 
             private List<Brep> _genevaModels;
+            public DrivingWheel drivingWheel = null;
+            public GenevaDrivenWheel drivenWheel = null;
 
             public double B { get => _b; set => _b = value; }
             public int N { get => _n; set => _n = value; }
@@ -401,6 +403,10 @@ namespace Kinergy
                 spacerSolid.Transform(rotate);
                 spacerSolid.Transform(selfRotate);
 
+                driveCen.Transform(move);
+                driveCen.Transform(rotate);
+                driveCen.Transform(selfRotate);
+
                 #endregion
 
                 _genevaModels.Add(genevaWheelSolid);
@@ -408,6 +414,8 @@ namespace Kinergy
                 _genevaModels.Add(pinSolid);
                 _genevaModels.Add(spacerSolid);
 
+                drivenWheel = new GenevaDrivenWheel(null, _drivenCenPos, _drivenAxisDir, _n, 0);
+                drivingWheel = new DrivingWheel(null, driveCen, _drivenAxisDir, _trajDir, _a,0);
             }
         }
     }

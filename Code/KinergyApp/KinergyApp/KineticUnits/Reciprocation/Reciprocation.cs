@@ -137,21 +137,25 @@ namespace Kinergy.KineticUnit
         Entity p1 = null, p2 = null, p3 = null;
         Brep eeBrep=null;
         Entity ee=null;
-        Entity CWP = null, YS = null, BB = null, SW = null;
+        Entity CWP = null,  BB = null, SW = null;
+        YokeSlider YS = null;
+        DrivingWheel drivingWheel = null;
         Brep slider = null;
         bool reversed = false;
         LockSelectionForSpiralSpring lockSelection;
         Point3d helicalSpringLockPos = new Point3d();
 
-        public Reciprocation(Brep Model,  Vector3d Direction, double Energy, double Amplitude, Brep innerCavity)
+        public Reciprocation(Brep Model,  Vector3d Direction, double Energy, double Amplitude,int Stroke, Brep innerCavity,int motionControlMethod)
         {
             model = Model;
             energy = Energy;
             amplitude = Amplitude;
+            _distance = Stroke;
             direction = Direction;
             myDoc = RhinoDoc.ActiveDoc;
             locks = new List<Lock>();
             _innerCavity = innerCavity;
+            _inputType = motionControlMethod;
         }
         public void AddSprings(List<Entity> springControl)
         {
@@ -172,6 +176,20 @@ namespace Kinergy.KineticUnit
                 }
                 springPartList.Add(springPart);
             }
+            Spiral s = null;
+            foreach (Entity e in springPartList)
+            {
+                if (e.GetType() == typeof(Spiral))
+                    s = (Spiral)e;
+            }
+            foreach (Entity en in entityList)
+            {
+                if (en.Name.Equals("SpiralShaft"))
+                {
+                    _ = new Fixation(en, s);
+                }
+            }
+            
         }
         public void SetEndEffector(Brep eeModel)
         {
@@ -396,34 +414,48 @@ namespace Kinergy.KineticUnit
                 entityList.Remove(e);
             }
             _axelsStoppers.Clear();
+            Gear first=gears.First(), last=gears.Last();
             foreach (Gear g in gears)
             {
                 _gears.Add(g);
                 entityList.Add(g);
             }
+            Shaft firstShaft=null, disc=null;
             foreach (Entity e in axelsStoppers)
             {
                 _axelsStoppers.Add(e);
                 entityList.Add(e);
+                if (e.Name == "SpiralShaft")
+                    firstShaft = (Shaft)e;
+                if (e.Name == "HandlerDisc")
+                    disc = (Shaft)e;
             }
             //TODO register connecting relations
+            _ = new Fixation(first, firstShaft);
+            _ = new Fixation(firstShaft, disc);
+            _ = new Fixation(last, drivingWheel);
         }
-        public void AddQuickReturn(Entity crankWheelPin, Entity yokeSlider, Entity bearingBlock, Entity stopWall,Brep sliderBrep)
+        public void AddQuickReturn(Entity crankWheelPin, Entity yokeSlider, Entity bearingBlock, Entity stopWall,Brep sliderBrep,QuickReturn qr)
         {
-            entityList.Remove(CWP);
+            //entityList.Remove(CWP);
             entityList.Remove(YS);
             entityList.Remove(BB);
             entityList.Remove(SW);
+            entityList.Remove(drivingWheel);
             //TODO unregister deleted things
             CWP = crankWheelPin;
-            YS = yokeSlider;
+            YS = qr.yokeSlider;
             BB = bearingBlock;
             SW = stopWall;
+            drivingWheel = qr.drivingWheel;
             //TODO register relations
-            entityList.Add(CWP);
+            _ = new Engagement(drivingWheel, YS);
+            _ = new Fixation(YS, p3);
+            //entityList.Add(CWP);
             entityList.Add(YS);
             entityList.Add(BB);
             entityList.Add(SW);
+            entityList.Add(drivingWheel);
             slider = sliderBrep;
         }
         public void Set3Parts(double T1, double T2, Brep B1, Brep B2, Brep B3)
@@ -448,9 +480,16 @@ namespace Kinergy.KineticUnit
                 b1 = b3;
                 b3 = t;
             }
-            entityList.Remove(p1);
-            entityList.Remove(p2);
-            entityList.Remove(p3);
+            p1= new Entity(b1);
+            p2 = new Entity(b2);
+            p3 = new Entity(b3);
+            entityList.Add(p1);
+            //entityList.Add(p2);
+            entityList.Add(p3);
+            
+            //entityList.Remove(p1);
+            //entityList.Remove(p2);
+            //entityList.Remove(p3);
         }
         public void Set3Axis(Vector3d main,Vector3d perp,Vector3d other)
         {
@@ -467,6 +506,8 @@ namespace Kinergy.KineticUnit
         }
         public void CreateShell(Brep socketBrep)
         {
+            entityList.Remove(p1);
+            entityList.Remove(p2);
             double shellThickness = 2;
             Brep part2;
             GearParameter lgp = _gearParam.parameters.Last();
@@ -667,7 +708,69 @@ namespace Kinergy.KineticUnit
             entityList.Add(p2);
             p3 = new Entity(part3);
             entityList.Add(p3);
+            _ = new Fixation(YS, p3);
+        }
+        public override Movement Simulate(double interval = 20, double precision = 0.01)
+        {
+            Movement m = null;
+            if (_inputType == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
 
+                m = h.Activate(interval);
+                m.Activate();
+            }
+            else if (_inputType == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                m = s.Activate(interval);
+                m.Activate();
+            }
+            return m;
+        }
+        public override bool LoadKineticUnit()
+        {
+            Movement compression;
+            if (_inputType == 1)
+            {
+                Helix h = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Helix))
+                        h = (Helix)e;
+                }
+
+                compression = new Movement(h, 3, -h.Length * _distance * 0.9);
+                //h.SetMovement(compression);
+                compression.Activate();
+            }
+            else if (_inputType == 2)
+            {
+                Spiral s = null;
+                foreach (Entity e in springPartList)
+                {
+                    if (e.GetType() == typeof(Spiral))
+                        s = (Spiral)e;
+                }
+                double degree = _distance / 10.0 * 2 * Math.PI;
+                compression = new Movement(s, 4, degree);
+                //s.SetMovement(compression);
+                compression.Activate();
+            }
+            if (locks.Count > 0)
+                locks[0].SetLocked();
+            Loaded = true;
+            return true;
         }
     }
 }

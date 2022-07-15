@@ -52,8 +52,9 @@ namespace Kinergy.KineticUnit
             List<Mesh> models = new List<Mesh>();
             foreach (Entity e in entityList)
             {
-                if (e.Model != null && e.GetType() != typeof(Gear))
-                {
+                //if (e.Model != null && e.GetType() != typeof(Gear))
+                if (e.Model != null)
+                    {
                     Brep m = e.GetModelinWorldCoordinate();
                     m.Transform(Translation);
                     if (m.IsValid)

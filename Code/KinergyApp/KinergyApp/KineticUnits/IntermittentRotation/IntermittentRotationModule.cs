@@ -966,7 +966,7 @@ namespace InterRotation
                     GenevaWheel = new Entity(gw, false, "Geneva Wheel");
                     GenevaStopper = new Entity(stopper, false, "Geneva Stopper");
 
-                    motion.AddGenevaDrive(GenevaDrivingWheelWithPin, GenevaWheel, GenevaStopper);
+                    motion.AddGenevaDrive(GenevaDrivingWheelWithPin, GenevaWheel, GenevaStopper,genevaDrive);
                     //Move last gear to join lg and cw
                     //gears.Last().Model.Transform(Transform.Translation(lgp.norm * 0.6));
 

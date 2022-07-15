@@ -124,6 +124,7 @@
     <Compile Include="Geometry\GenevaDrive.cs" />
     <Compile Include="Geometry\GenevaDrivenWheel.cs" />
     <Compile Include="Geometry\Helix.cs" />
+    <Compile Include="Geometry\Lever.cs" />
     <Compile Include="Geometry\Lock.cs" />
     <Compile Include="Geometry\QuickReturn.cs" />
     <Compile Include="Geometry\Rack.cs" />
