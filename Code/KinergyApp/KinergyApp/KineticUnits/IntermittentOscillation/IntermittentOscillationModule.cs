@@ -742,12 +742,12 @@ namespace InterOscillation
                     intersectVec.Unitize();
                     if (intersectVec * lgp.norm > 0.99)
                     {
-                        ptEnd = anchorCenter-lgp.norm*1.25;
+                        ptEnd = anchorCenter-lgp.norm*1.35;
                         ptStart = pts[1] - lgp.norm * 1;
                     }
                     else
                     {
-                        ptEnd = anchorCenter - lgp.norm * 1.25;
+                        ptEnd = anchorCenter - lgp.norm * 1.35;
                         ptStart = pts[0] - lgp.norm * 1;
                     }
                     Shaft anchorShaft = new Shaft(ptStart, ptStart.DistanceTo(ptEnd), 1.5, -lgp.norm);

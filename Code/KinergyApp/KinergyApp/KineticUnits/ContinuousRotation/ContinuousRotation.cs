@@ -63,7 +63,7 @@ namespace Kinergy.KineticUnit
         private List<Entity> endEffectors = new List<Entity>();
         private int endEffectorState;
         public const double clearance1 = 0.3;
-        public const double clearance2 = 0.6;
+        public const double clearance2 = 1;//20220623 Xia changed this clearance from 0.6 to 1 due to change in print setting
         public const double gearFaceWidth = 3.6;
         public const double gearModule = 1;
         public const double gearPressureAngle = 20;
