@@ -485,7 +485,7 @@ namespace Kinergy
                     double revolutions = revLevel * ((Math.Pow(min_strip_thickness, 3) + Math.Pow((outerRadius - innerRadius) / 6, 3)) / 2);
                     //thicknessX = Math.Pow(1 / revolutions, 1.0 / 3.0);
 
-                    thicknessX = (2 - revLevel) * min_strip_thickness;
+                    thicknessX = (2 - revLevel) * min_strip_thickness*1.2;
 
                     double pitch = energyLevel * (outerRadius - innerRadius) / 3 * 1.5;
                     roundNum = (outerRadius - innerRadius) / (pitch + thicknessX);
