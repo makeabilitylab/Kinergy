@@ -182,7 +182,7 @@ namespace Kinergy.KineticUnit
                     entityList.Remove(springPartList.ElementAt(i));
                 }
             }
-
+            Spiral s = null;
             foreach (Entity springPart in springControl)
             {
                 entityList.Add(springPart);
@@ -191,7 +191,15 @@ namespace Kinergy.KineticUnit
                     springPartList = new List<Entity>();
                 }
                 springPartList.Add(springPart);
+                if (springPart.GetType() == typeof(Spiral))
+                    s = (Spiral)springPart;
             }
+            foreach(Entity e in entityList)
+            {
+                if(e.Name== "SpiralShaft")
+                    _ = new Fixation(s, e);
+            }
+            
         }
 
         public void AdjustParameter(Vector3d transVec, int eeMovingDirectionSelection, int speedLevel, int strokeLevel, int energyLevel, List<double> gr_list, List<GearTrainScheme> gear_schemes, bool isSpringCW, Entity spring, int motionControlMethod, ref List<Point3d> lockPos, ref bool spiralLockNorm, ref Vector3d spiralLockDir, Point3d eePos = new Point3d())
@@ -694,8 +702,11 @@ namespace Kinergy.KineticUnit
             {
                 _axelsStoppers.Add(e);
                 entityList.Add(e);
+                if (e.Name == "SpiralShaft")
+                    _ = new Fixation(e, drivingGear);
             }
             //TODO register connecting relations
+            _ = new Fixation(lastGear, drivingWheel);
         }
         public void Set3Parts(double T1, double T2, Brep B1, Brep B2, Brep B3)
         {
@@ -764,7 +775,7 @@ namespace Kinergy.KineticUnit
         public void AddGenevaDrive(Entity GenevaDrivingWheelWithPin,Entity  GenevaWheel,Entity  GenevaStopper,GenevaDrive drive)
         {
             entityList.Remove(GDWP);
-            entityList.Remove(GW);
+            //entityList.Remove(GW);
             entityList.Remove(GS);
             entityList.Remove(drivingWheel);
             entityList.Remove(drivenWheel);
@@ -774,8 +785,13 @@ namespace Kinergy.KineticUnit
             drivingWheel = drive.drivingWheel;
             drivenWheel = drive.drivenWheel;
             _ = new Engagement(drivingWheel, drivenWheel);
+            
+            foreach(Entity e in endEffectors)
+            {
+                _ = new Fixation(drivenWheel,e);
+            }
             entityList.Add(GDWP);
-            entityList.Add(GW);
+            //entityList.Add(GW);
             entityList.Add(GS);
             entityList.Add(drivingWheel);
             entityList.Add(drivenWheel);
@@ -945,7 +961,7 @@ namespace Kinergy.KineticUnit
                 _ = new Fixation(e, drivenWheel);
             }
         }
-        public override Movement Simulate(double interval = 20, double precision = 0.01)
+        public override Movement Simulate(double interval = 10, double precision = 0.01)
         {
             Movement m = null;
             if (motionControlMethod == 1)
@@ -997,7 +1013,7 @@ namespace Kinergy.KineticUnit
                     if (e.GetType() == typeof(Spiral))
                         s = (Spiral)e;
                 }
-                double degree = _distance / 10.0 * 2 * Math.PI;
+                double degree = 2 * Math.PI;
                 compression = new Movement(s, 4, degree);
                 //s.SetMovement(compression);
                 compression.Activate();

@@ -32,29 +32,55 @@ namespace Kinergy.Geom
                 if(m.MovementValue>Math.PI*2)
                 {
                     rotationValue += Math.PI * 2 / _slotCount * Math.Floor(m.MovementValue / (Math.PI * 2));
-                    posAngle = posAngle - Math.Floor(m.MovementValue / (Math.PI * 2)) 
-                        * Math.PI * 2;
+                    posAngle = posAngle - Math.Floor(m.MovementValue / (Math.PI * 2)) * Math.PI * 2;
                 }
-                if (priorAngle < Math.PI * 2 / _slotCount && posAngle < Math.PI * 2 / _slotCount)
-                    rotationValue += m.MovementValue;
-                else if(priorAngle < Math.PI * 2 / _slotCount && posAngle > Math.PI * 2 / _slotCount&& posAngle < Math.PI * 2)
+                if(m.MovementValue<-Math.PI * 2)
                 {
-                    rotationValue += Math.PI * 2 / _slotCount-priorAngle;
+                    rotationValue -= Math.PI * 2 / _slotCount * Math.Floor(Math.Abs(m.MovementValue) / (Math.PI * 2));
+                    posAngle = posAngle + Math.Floor(Math.Abs(m.MovementValue) / (Math.PI * 2))* Math.PI * 2;
                 }
-                else if(priorAngle < Math.PI * 2 / _slotCount && posAngle > Math.PI * 2 / _slotCount && posAngle > Math.PI * 2)
+                if (posAngle > 0)
                 {
-                    rotationValue += Math.PI * 2 / _slotCount - priorAngle;
-                    rotationValue += Math.Min(Math.PI * 2 / _slotCount, posAngle - Math.PI * 2);
+                    if (priorAngle < Math.PI * 2 / _slotCount && posAngle < Math.PI * 2 / _slotCount)
+                        rotationValue += m.MovementValue;
+                    else if (priorAngle < Math.PI * 2 / _slotCount && posAngle > Math.PI * 2 / _slotCount && posAngle < Math.PI * 2)
+                    {
+                        rotationValue += Math.PI * 2 / _slotCount - priorAngle;
+                    }
+                    else if (priorAngle < Math.PI * 2 / _slotCount && posAngle > Math.PI * 2 / _slotCount && posAngle > Math.PI * 2)
+                    {
+                        rotationValue += Math.PI * 2 / _slotCount - priorAngle;
+                        rotationValue += Math.Min(Math.PI * 2 / _slotCount, posAngle - Math.PI * 2);
+                    }
+                    else if (priorAngle > Math.PI * 2 / _slotCount && posAngle < Math.PI * 2)
+                    {
+                        rotationValue += 0;
+                    }
+                    else if (priorAngle > Math.PI * 2 / _slotCount && posAngle > Math.PI * 2)
+                    {
+                        rotationValue += Math.Min(Math.PI * 2 / _slotCount, posAngle - Math.PI * 2);
+                    }
                 }
-                else if(priorAngle > Math.PI * 2 / _slotCount && posAngle < Math.PI * 2)
+                else
                 {
-                    rotationValue += 0;
+                    if (priorAngle < Math.PI * 2 / _slotCount && posAngle+ Math.PI * 2 > Math.PI * 2 / _slotCount)
+                        rotationValue -= priorAngle;
+                    else if (priorAngle < Math.PI * 2 / _slotCount && posAngle + Math.PI * 2 < Math.PI * 2 / _slotCount)
+                    {
+                        rotationValue -= priorAngle;
+                        rotationValue -= Math.PI * 2 / _slotCount - posAngle - Math.PI * 2;
+                    }
+                    else if (priorAngle > Math.PI * 2 / _slotCount && posAngle+Math.PI * 2 > Math.PI * 2 / _slotCount)
+                    {
+                        rotationValue -= Math.PI * 2 / _slotCount ;
+                    }
+                    else if (priorAngle > Math.PI * 2 / _slotCount && posAngle + Math.PI * 2 < Math.PI * 2 / _slotCount)
+                    {
+                        rotationValue -= Math.PI * 2 / _slotCount;
+                        rotationValue -= Math.PI * 2 / _slotCount - posAngle - Math.PI * 2;
+                    }
                 }
-                else if(priorAngle > Math.PI * 2 / _slotCount && posAngle > Math.PI * 2)
-                {
-                    rotationValue += Math.Min(Math.PI * 2 / _slotCount, posAngle - Math.PI * 2);
-                }
-                return new Movement(this, 2, rotationValue, Transform.Rotation(rotationValue, _axisDir, _axisCenter));
+                return new Movement(this, 2, -rotationValue, Transform.Rotation(-rotationValue, _axisDir, _axisCenter));
             }
             else
                 throw new Exception("Unexpected input given to rotation solver");

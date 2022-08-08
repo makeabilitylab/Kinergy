@@ -55,11 +55,21 @@ namespace Kinergy
                 }
                 else if(move.Obj.GetType() == typeof(Gear) && base.TheOtherEntity(move.Obj).GetType() == typeof(Rack))
                 {
-                    throw new Exception("Haven't implement gear to rack transmission");
+                    Gear g = (Gear)move.Obj;
+                    Rack r = (Rack) base.TheOtherEntity(move.Obj);
+                    double distance=move.MovementValue* ((g.RootRadius + g.TipRadius) / 2);
+                    Transform translation = Transform.Translation(r.RackDirection * distance);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 1, distance,translation);
+                    return transmittedMovement.Activate();
                 }
                 else if(move.Obj.GetType() == typeof(Rack) && base.TheOtherEntity(move.Obj).GetType() == typeof(Gear))
                 {
-                    throw new Exception("Haven't implement rack to gear transmission");
+                    Gear g = (Gear)base.TheOtherEntity(move.Obj);
+                    Rack r = (Rack)move.Obj;
+                    double value = -move.MovementValue / ((g.RootRadius + g.TipRadius) / 2);
+                    Transform rotation = Transform.Rotation(value, g.Direction, g.CenterPoint);
+                    Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 2, value, rotation);
+                    return transmittedMovement.Activate();
                 }
                 else if(move.Obj.GetType() == typeof(DrivingWheel)&& base.TheOtherEntity(move.Obj).GetType() == typeof(Lever))
                 {

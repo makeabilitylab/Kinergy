@@ -962,11 +962,12 @@ namespace InterRotation
                     //Add geneva models
                     Brep gw = genevaDrive.GenevaModels[0], dw = genevaDrive.GenevaModels[1], pin = genevaDrive.GenevaModels[2], stopper = genevaDrive.GenevaModels[3];
                     Brep dwpin = Brep.CreateBooleanUnion(new List<Brep> { dw, pin }, myDoc.ModelAbsoluteTolerance)[0];
-                    GenevaDrivingWheelWithPin = new Entity(dwpin, false, "Drivng wheel wheel with pin on");
+                    //GenevaDrivingWheelWithPin = new Entity(dwpin, false, "Drivng wheel wheel with pin on");
+                    Entity GenevaDrivingWheelWithoutPin = new Entity(dw, false, "Drivng wheel wheel with pin on");
                     GenevaWheel = new Entity(gw, false, "Geneva Wheel");
                     GenevaStopper = new Entity(stopper, false, "Geneva Stopper");
 
-                    motion.AddGenevaDrive(GenevaDrivingWheelWithPin, GenevaWheel, GenevaStopper,genevaDrive);
+                    motion.AddGenevaDrive(GenevaDrivingWheelWithoutPin, GenevaWheel, GenevaStopper,genevaDrive);
                     //Move last gear to join lg and cw
                     //gears.Last().Model.Transform(Transform.Translation(lgp.norm * 0.6));
 

@@ -147,7 +147,7 @@ namespace Kinergy.KineticUnit
                     entityList.Remove(springPartList.ElementAt(i));
                 }
             }
-            
+            Helix h = null;
             foreach (Entity springPart in springControl)
             {
                 entityList.Add(springPart);
@@ -156,7 +156,13 @@ namespace Kinergy.KineticUnit
                     springPartList = new List<Entity>();
                 }
                 springPartList.Add(springPart);
+                if (springPart.GetType() == typeof(Helix))
+                {
+                    h = (Helix)springPart;
+                    h.Reverse();
+                }
             }
+
         }
 
         /// <summary>
@@ -743,8 +749,12 @@ namespace Kinergy.KineticUnit
             #endregion
             endEffectorRack = rack;
             _ = new Engagement(lastGear, endEffectorRack);
-            if(connectingStructure!=null)
+            if (connectingStructure != null)
+            { 
                 endEffectorConnectingStructure = new Entity(connectingStructure, false, "connecting structure");
+                _ = new Fixation(endEffectorConnectingStructure, endEffectorRack);
+                //_ = new Fixation(endEffectorConnectingStructure, p3);
+            }
             foreach (Brep b in constrainingStructure)
             {
                 Entity newEntity = new Entity(b, false, "constraining structure");
@@ -793,9 +803,14 @@ namespace Kinergy.KineticUnit
                 b1 = b3;
                 b3 = t;
             }
-            entityList.Remove(p1);
-            entityList.Remove(p2);
-            entityList.Remove(p3);
+            p1 = new Entity(b1);
+            p3 = new Entity(b3);
+            entityList.Add(p1);
+            //entityList.Add(p2);
+            //entityList.Add(p3);
+            //entityList.Remove(p1);
+            //entityList.Remove(p2);
+            //entityList.Remove(p3);
         }
         public void CreateShell(Brep socketBrep)
         {
@@ -1160,7 +1175,7 @@ namespace Kinergy.KineticUnit
                         h = (Helix)e;
                 }
                 
-                compression = new Movement(h, 3, -h.Length * _distance*0.9);
+                compression = new Movement(h, 3, -h.Length * _distance*0.1*0.5);
                 //h.SetMovement(compression);
                 compression.Activate();
             }
@@ -1188,7 +1203,8 @@ namespace Kinergy.KineticUnit
         }
         public override bool TriggerWithoutInteraction()
         {
-            return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
+            //return locks[0].ActivateWithoutInteraction();//Just release locks, no need to wait for selection.
+            return false;
         }
         public override Movement Simulate(double interval = 20, double precision = 0.01)
         {

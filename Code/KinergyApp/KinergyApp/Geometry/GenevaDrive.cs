@@ -414,8 +414,8 @@ namespace Kinergy
                 _genevaModels.Add(pinSolid);
                 _genevaModels.Add(spacerSolid);
 
-                drivenWheel = new GenevaDrivenWheel(null, _drivenCenPos, _drivenAxisDir, _n, 0);
-                drivingWheel = new DrivingWheel(null, driveCen, _drivenAxisDir, _trajDir, _a,0);
+                drivenWheel = new GenevaDrivenWheel(genevaWheelSolid, _drivenCenPos, _drivenAxisDir, _n, 0);
+                drivingWheel = new DrivingWheel(pinSolid, driveCen, _drivenAxisDir, _trajDir, _a,0);
             }
         }
     }
