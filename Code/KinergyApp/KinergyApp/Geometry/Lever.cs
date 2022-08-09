@@ -57,5 +57,10 @@ namespace Kinergy.Geom
             }
             return engaged;
         }
+        public override bool Move(Movement move)
+        {
+            currentAngle += move.MovementValue;
+            return base.Move(move);
+        }
     }
 }

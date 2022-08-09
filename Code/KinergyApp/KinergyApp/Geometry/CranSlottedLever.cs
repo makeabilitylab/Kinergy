@@ -295,7 +295,7 @@ namespace Kinergy
                 _crankSlottedLeverModels.Add(stopWallSolid);
 
                 //Add components. Only lever need the model
-                drivingWheel = new DrivingWheel(null, _wheelCen, _wheelAxisDir, _oscillationAxisCen, _crankRadius, 0);
+                drivingWheel = new DrivingWheel(pinSolid, _wheelCen, _wheelAxisDir, _oscillationAxisCen, _crankRadius, 0);
                 lever = new Lever(slottedLeverSolid,anchorCenter, _wheelAxisDir, _oscillationAxisCen, 0);
             }
             public void AddEndEffector(Brep ee)
