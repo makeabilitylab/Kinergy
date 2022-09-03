@@ -59,6 +59,8 @@ namespace Kinergy.Geom
                 throw new Exception("Invalid move type passed to driving wheel");
             }
             currentAngle += move.MovementValue;
+            while (currentAngle < 0)
+                currentAngle += (Math.PI * 2);
             currentAngle = currentAngle % (Math.PI * 2);
             Transform tr = new Transform(offset);
             offset = Transform.Multiply(tr, move.Trans);

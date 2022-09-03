@@ -183,7 +183,7 @@ namespace Kinergy.KineticUnit
                     entityList.Remove(springPartList.ElementAt(i));
                 }
             }
-
+            Spiral s = null;
             foreach (Entity springPart in springControl)
             {
                 entityList.Add(springPart);
@@ -192,7 +192,16 @@ namespace Kinergy.KineticUnit
                     springPartList = new List<Entity>();
                 }
                 springPartList.Add(springPart);
+                if (springPart.GetType() == typeof(Spiral))
+                    s = (Spiral)springPart;
             }
+            Shaft shaft = null;
+            foreach(Entity e in entityList)
+            {
+                if (e.Name == "SpiralShaft")
+                    _ = new Fixation(s, e);
+            }
+           
         }
 
         public void ConstructLocks(List<Point3d> lockPos, bool spiralLockNorm, Vector3d spiralLockDir, GearTrainParam gtp, List<Entity> spring_entities, int inputMethod)
@@ -422,8 +431,11 @@ namespace Kinergy.KineticUnit
             {
                 _axelsStoppers.Add(e);
                 entityList.Add(e);
+                if (e.Name == "SpiralShaft")
+                    _ = new Fixation(e, drivingGear);
             }
             //TODO register connecting relations
+            _ = new Fixation(lastGear, CSLDrivingWheel);
         }
         public void Set3Parts(double T1, double T2, Brep B1, Brep B2, Brep B3)
         {
@@ -481,12 +493,13 @@ namespace Kinergy.KineticUnit
             Brep lever = CSL.CrankSlottedLeverModels[2];
             Brep stopwall = CSL.CrankSlottedLeverModels[3];
             crankSlottedLever = CSL;
-            Brep wheelpin = Brep.CreateBooleanUnion(new List<Brep> { wheel, pin }, myDoc.ModelAbsoluteTolerance)[0];
-            CSLwheel = new Entity(wheelpin,false,"CSLwheel");
+            //Brep wheelpin = Brep.CreateBooleanUnion(new List<Brep> { wheel, pin }, myDoc.ModelAbsoluteTolerance)[0];
+            CSLwheel = new Entity(wheel,false,"CSLwheel");
             CSLlever = CSL.lever;
             CSLstopwall = new Entity(stopwall, false, "CSLstopwall");
             CSLDrivingWheel = CSL.drivingWheel;
             _ = new Engagement(CSLlever, CSLDrivingWheel);
+            _ = new Fixation(CSLlever, ee);
             entityList.Add(CSLwheel);
             entityList.Add(CSLstopwall);
             entityList.Add(CSLlever);
@@ -774,7 +787,7 @@ namespace Kinergy.KineticUnit
                     if (e.GetType() == typeof(Spiral))
                         s = (Spiral)e;
                 }
-                double degree = _distance / 10.0 * 2 * Math.PI;
+                double degree = 2 * Math.PI;
                 compression = new Movement(s, 4, degree);
                 //s.SetMovement(compression);
                 compression.Activate();

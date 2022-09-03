@@ -60,7 +60,7 @@ namespace Kinergy
             {
                 if(move.Type==1)
                 {
-                    Movement transmittedMovement=new Movement(base.TheOtherEntity(move.Obj),1,move.Trans);
+                    Movement transmittedMovement=new Movement(base.TheOtherEntity(move.Obj),1,move.MovementValue,move.Trans);
                     return transmittedMovement.Activate();
                 }
                 if(move.Type==2 && base.TheOtherEntity(move.Obj).GetType()==typeof(Gear) && move.Obj.GetType() == typeof(Gear))
@@ -111,7 +111,9 @@ namespace Kinergy
                     {
                         Helix s =(Helix) move.Obj;
                         //Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 1, Transform.Translation(s.Direction/s.Direction.Length*move.MovementValue));
-                        Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 1, move.Trans);
+                        Vector3d dir = s.Direction / s.Direction.Length;
+                        Transform translation = Transform.Translation(-dir * move.MovementValue);
+                        Movement transmittedMovement = new Movement(base.TheOtherEntity(move.Obj), 1, -move.MovementValue,translation);
                         return transmittedMovement.Activate();
                     }
                     else

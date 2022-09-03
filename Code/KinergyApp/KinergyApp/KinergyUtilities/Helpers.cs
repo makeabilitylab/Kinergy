@@ -352,6 +352,7 @@ namespace KinergyUtilities
                     Point3d handlerPtNew = handlerPt - handlerPlnX * 1.5;
                     Shaft handlerDisc = new Shaft(handlerPtNew, 3, 5, handlerPlnX);
                     handlerDisc.SetName("HandlerDisc");
+                    _ = new Fixation(handlerDisc, lockAxelShaft);
                     models.Add(handlerDisc);
                 }
                 else
@@ -379,6 +380,7 @@ namespace KinergyUtilities
                     Point3d handlerPtNew = handlerPt - handlerPlnX * 1.5;
                     Shaft handlerDisc = new Shaft(handlerPtNew, 3, 5, handlerPlnX);
                     handlerDisc.SetName("HandlerDisc");
+                    _ = new Fixation(handlerDisc, lockAxelShaft);
                     models.Add(handlerDisc);
                 }
                 
@@ -724,7 +726,7 @@ namespace KinergyUtilities
 
                 Entity helicalHandler = new Entity(handlerBrep, false, "HelicalHandler");
                 models.Add(helicalHandler);
-
+                _ = new Fixation(helicalHandler, helical);
                 //ToDo: add the relationship between the handler and the spring end
 
                 #endregion
@@ -774,7 +776,8 @@ namespace KinergyUtilities
                 if (BrepSolidOrientation.Inward == cenRack.Model.SolidOrientation)
                     cenRack.Model.Flip();
                 _ = new Engagement(cenRack, firstPinion);
-                _ = new Fixation(helical, cenRack);
+                //_ = new Fixation(helical, cenRack);
+                _ = new Fixation(helicalHandler, cenRack);
                 #endregion
 
                 #region prepare the holes for boolean difference
